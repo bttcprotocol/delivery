@@ -13,6 +13,7 @@ const (
 	ListenerServiceStr = "listener"
 
 	RootChainListenerStr  = "rootchain"
+	TronChainListenerStr  = "tron"
 	HeimdallListenerStr   = "heimdall"
 	MaticChainListenerStr = "maticchain"
 )
@@ -39,6 +40,10 @@ func NewListenerService(cdc *codec.Codec, queueConnector *queue.QueueConnector, 
 	rootchainListener := NewRootChainListener()
 	rootchainListener.BaseListener = *NewBaseListener(cdc, queueConnector, httpClient, helper.GetMainClient(), RootChainListenerStr, rootchainListener)
 	listenerService.listeners = append(listenerService.listeners, rootchainListener)
+
+	tronChainListener := NewTronListener()
+	tronChainListener.BaseListener = *NewBaseListener(cdc, queueConnector, httpClient, nil, TronChainListenerStr, tronChainListener)
+	listenerService.listeners = append(listenerService.listeners, tronChainListener)
 
 	maticchainListener := &MaticChainListener{}
 	maticchainListener.BaseListener = *NewBaseListener(cdc, queueConnector, httpClient, helper.GetMaticClient(), MaticChainListenerStr, maticchainListener)

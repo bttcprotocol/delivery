@@ -46,8 +46,10 @@ const (
 	BroadcastAsync = "async"
 	// --
 
-	DefaultMainRPCUrl = "http://localhost:9545"
-	DefaultBorRPCUrl  = "http://localhost:8545"
+	DefaultMainRPCUrl  = "http://localhost:9545"
+	DefaultBorRPCUrl   = "http://localhost:8545"
+	DefaultTronRPCUrl  = "http://localhost:50051"
+	DefaultTronGridUrl = "https://api.shasta.trongrid.io"
 
 	// Services
 
@@ -88,10 +90,11 @@ func init() {
 // Configuration represents heimdall config
 type Configuration struct {
 	EthRPCUrl        string `mapstructure:"eth_rpc_url"`        // RPC endpoint for main chain
-	TronRPCUrl       string `mapstructure:"tron_rpc_url"`       // RPC endpoint for bor chain
+	TronRPCUrl       string `mapstructure:"tron_rpc_url"`       // RPC endpoint for tron chain
 	BorRPCUrl        string `mapstructure:"bor_rpc_url"`        // RPC endpoint for bor chain
 	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
+	TronGridURL       string `mapstructure:"tron_grid_url"`        // tron grid url
 	AmqpURL           string `mapstructure:"amqp_url"`             // amqp url
 	HeimdallServerURL string `mapstructure:"heimdall_rest_server"` // heimdall server url
 
@@ -213,9 +216,11 @@ func InitHeimdallConfigWith(homeDir string, heimdallConfigFilePath string) {
 func GetDefaultHeimdallConfig() Configuration {
 	return Configuration{
 		EthRPCUrl:        DefaultMainRPCUrl,
+		TronRPCUrl:       DefaultTronRPCUrl,
 		BorRPCUrl:        DefaultBorRPCUrl,
 		TendermintRPCUrl: DefaultTendermintNodeURL,
 
+		TronGridURL:       DefaultTronGridUrl,
 		AmqpURL:           DefaultAmqpURL,
 		HeimdallServerURL: DefaultHeimdallServerURL,
 

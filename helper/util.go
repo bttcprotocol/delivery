@@ -773,6 +773,13 @@ func GetHeimdallServerEndpoint(endpoint string) string {
 	return u.String()
 }
 
+// GetTronGridEndpoint returns tron server endpoint
+func GetTronGridEndpoint(endpoint string) string {
+	u, _ := url.Parse(GetConfig().TronGridURL)
+	u.Path = path.Join(u.Path, endpoint)
+	return u.String()
+}
+
 // FetchFromAPI fetches data from any URL
 func FetchFromAPI(cliCtx cliContext.CLIContext, URL string) (result rest.ResponseWithHeight, err error) {
 	resp, err := http.Get(URL)
