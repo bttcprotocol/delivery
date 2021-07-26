@@ -1,6 +1,7 @@
 package clerk_test
 
 import (
+	"github.com/maticnetwork/heimdall/helper"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -52,6 +53,8 @@ func (suite *SideHandlerTestSuite) SetupTest() {
 	// random generator
 	s1 := rand.NewSource(time.Now().UnixNano())
 	suite.r = rand.New(s1)
+
+	helper.SetTestConfig(helper.GetDefaultHeimdallConfig())
 }
 
 func TestSideHandlerTestSuite(t *testing.T) {
@@ -78,7 +81,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 
 	id := r.Uint64()
 
-	t.Run("Success", func(t *testing.T) {
+	t.Run("SuccessOnEth", func(t *testing.T) {
 		suite.contractCaller = mocks.IContractCaller{}
 
 		logIndex := uint64(10)
@@ -97,6 +100,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
+			hmTypes.DefaultRootChainType,
 		)
 
 		// mock external calls
@@ -117,8 +121,50 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		storedEventRecord, err := app.ClerkKeeper.GetEventRecord(ctx, id)
 		require.Nil(t, storedEventRecord)
 		require.Error(t, err)
+
 	})
 
+	t.Run("SuccessOnTron", func(t *testing.T) {
+		suite.contractCaller = mocks.IContractCaller{}
+
+		logIndex := uint64(10)
+		blockNumber := uint64(599)
+		txReceipt := &ethTypes.Receipt{
+			BlockNumber: new(big.Int).SetUint64(blockNumber),
+		}
+		txHash := hmTypes.HexToHeimdallHash("hello tron")
+
+		// tron
+		msg := types.NewMsgEventRecord(
+			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+			txHash,
+			logIndex,
+			blockNumber,
+			id,
+			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+			make([]byte, 0),
+			suite.chainID,
+			hmTypes.RootChainTypeTron,
+		)
+		suite.contractCaller.On("GetTronTransactionReceipt", txHash.Hex()).Return(txReceipt, nil)
+		event := &statesender.StatesenderStateSynced{
+			Id:              new(big.Int).SetUint64(msg.ID),
+			ContractAddress: msg.ContractAddress.TronAddress(),
+			Data:            msg.Data,
+		}
+		suite.contractCaller.On("DecodeStateSyncedEvent", hmTypes.HexToTronAddress(chainParams.ChainParams.TronStateSenderAddress), txReceipt, logIndex).Return(event, nil)
+
+		// execute handler
+		result := suite.sideHandler(ctx, msg)
+		require.Equal(t, uint32(sdk.CodeOK), result.Code, "Side tx handler should be success")
+		require.Equal(t, abci.SideTxResultType_Yes, result.Result, "Result should be `yes`")
+
+		// there should be no stored event record
+		storedEventRecord, err := app.ClerkKeeper.GetEventRecord(ctx, id)
+		require.Nil(t, storedEventRecord)
+		require.Error(t, err)
+
+	})
 	t.Run("NoReceipt", func(t *testing.T) {
 		suite.contractCaller = mocks.IContractCaller{}
 
@@ -135,6 +181,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
+			hmTypes.DefaultRootChainType,
 		)
 
 		// mock external calls -- no receipt
@@ -166,6 +213,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
+			hmTypes.DefaultRootChainType,
 		)
 
 		// mock external calls -- no receipt
@@ -197,7 +245,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgEventRecord() {
 	logIndex := r.Uint64()
 	blockNumber := r.Uint64()
 	txHash := hmTypes.HexToHeimdallHash("no log hash")
-
+	rootChainType := hmTypes.DefaultRootChainType
 	msg := types.NewMsgEventRecord(
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		txHash,
@@ -207,6 +255,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgEventRecord() {
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		make([]byte, 0),
 		suite.chainID,
+		rootChainType,
 	)
 
 	t.Run("NoResult", func(t *testing.T) {
@@ -216,29 +265,35 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgEventRecord() {
 		require.Equal(t, 0, len(result.Events), "No error should be emitted for failed post-tx")
 
 		// there should be no stored event record
-		storedEventRecord, err := app.ClerkKeeper.GetEventRecord(ctx, id)
+		storedEventRecord, err := app.ClerkKeeper.GetRootChainEventRecord(ctx, id, rootChainType)
 		require.Nil(t, storedEventRecord)
 		require.Error(t, err)
 	})
 
 	t.Run("YesResult", func(t *testing.T) {
+		// set latest msg ID
+		app.ClerkKeeper.SetLatestID(ctx, msg.ID)
+
 		result := suite.postHandler(ctx, msg, abci.SideTxResultType_Yes)
 		require.True(t, result.IsOK(), "Post handler should succeed")
 		require.Greater(t, len(result.Events), 0, "Events should be emitted for successful post-tx")
 
 		// sequence id
 		blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
-		sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-		sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
+		sequence := helper.CalculateSequence(blockNumber, logIndex, msg.RootChainType)
 
 		// check sequence
 		hasSequence := app.ClerkKeeper.HasRecordSequence(ctx, sequence.String())
 		require.True(t, hasSequence, "Sequence should be stored correctly")
 
 		// there should be no stored event record
-		storedEventRecord, err := app.ClerkKeeper.GetEventRecord(ctx, id)
+		storedEventRecord, err := app.ClerkKeeper.GetRootChainEventRecord(ctx, id, msg.RootChainType)
 		require.NotNil(t, storedEventRecord)
 		require.NoError(t, err)
+
+		heimdallID, err := app.ClerkKeeper.GetHeimdallIDByRootID(ctx, msg.RootChainType, msg.ID)
+		lastedID := app.ClerkKeeper.GetLatestID(ctx)
+		require.True(t, *heimdallID == lastedID, "current heimdallID should equal to lastedID")
 	})
 
 	t.Run("Replay", func(t *testing.T) {
@@ -257,7 +312,10 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr2.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
+			hmTypes.DefaultRootChainType,
 		)
+		// set latest msg ID
+		app.ClerkKeeper.SetLatestID(ctx, msg.ID)
 
 		result := suite.postHandler(ctx, msg, abci.SideTxResultType_Yes)
 		require.True(t, result.IsOK(), "Post handler should succeed")

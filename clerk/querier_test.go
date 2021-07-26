@@ -1,6 +1,7 @@
 package clerk_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -60,6 +61,7 @@ func (suite *QuerierTestSuite) TestInvalidQuery() {
 	bz, err = querier(ctx, []string{types.QuerierRoute}, req)
 	require.Error(t, err)
 	require.Nil(t, bz)
+
 }
 
 func (suite *QuerierTestSuite) TestHandleQueryRecord() {
@@ -75,28 +77,64 @@ func (suite *QuerierTestSuite) TestHandleQueryRecord() {
 	_, err := querier(ctx, path, req)
 	require.Error(t, err, "failed to parse params")
 
+	// test wrong root chain type
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordParams(2)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordRootChainParams(2, "wrongRootChain")),
+	}
+	_, err = querier(ctx, path, req)
+	require.Error(t, err, "should throw wrong rootchainType error")
+
+	// correct root chain type
+	req = abci.RequestQuery{
+		Path: route,
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordRootChainParams(2, hmTypes.RootChainTypeEth)),
+	}
+	_, err = querier(ctx, path, req)
+	require.Error(t, err, "could not get state record")
+
+	req = abci.RequestQuery{
+		Path: route,
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordRootChainParams(2, hmTypes.RootChainTypeTron)),
 	}
 	_, err = querier(ctx, path, req)
 	require.Error(t, err, "could not get state record")
 
 	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
-	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now())
+	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
 
+	// eth
 	// SetEventRecord
 	ck := app.ClerkKeeper
 	ck.SetEventRecord(ctx, testRecord1)
 
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordParams(1)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordRootChainParams(1, hmTypes.RootChainTypeEth)),
 	}
 	record, err := querier(ctx, path, req)
 	require.NoError(t, err)
 	require.NotNil(t, record)
+
+	// tron
+	testRecord2 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeTron)
+	ck.SetEventRecord(ctx, testRecord2)
+
+	req = abci.RequestQuery{
+		Path: route,
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordRootChainParams(1, hmTypes.RootChainTypeTron)),
+	}
+	// SetEventRecord
+	record, err = querier(ctx, path, req)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+
+	var recordTron types.EventRecord
+	errs := json.Unmarshal(record, &recordTron)
+	require.NoError(t, errs)
+	require.Equal(t, recordTron.ID, uint64(1), "msg id should one")
+	require.Equal(t, recordTron.RootChainType, hmTypes.RootChainTypeTron, "root chain type should be tron")
 }
 
 func (suite *QuerierTestSuite) TestHandleQueryRecordList() {
@@ -114,19 +152,34 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordList() {
 
 	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
-	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now())
+	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
+	testRecord2 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeTron)
+	testRecord3 := types.NewEventRecord(hHash, 1, 2, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
+	testRecord4 := types.NewEventRecord(hHash, 1, 2, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeTron)
 
 	// SetEventRecord
 	ck := app.ClerkKeeper
 	ck.SetEventRecord(ctx, testRecord1)
+	ck.SetEventRecord(ctx, testRecord2)
+	ck.SetEventRecord(ctx, testRecord3)
+	ck.SetEventRecord(ctx, testRecord4)
 
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(hmTypes.NewQueryPaginationParams(1, 1)),
+		Data: app.Codec().MustMarshalJSON(hmTypes.NewQueryPaginationParams(1, 4)),
 	}
 	record, err := querier(ctx, path, req)
 	require.NoError(t, err)
 	require.NotNil(t, record)
+	var recordList []types.EventRecord
+	errs := json.Unmarshal(record, &recordList)
+	require.NoError(t, errs, "should unmarshall EventRecord array")
+	require.Equal(t, len(recordList), 4, "should have four record")
+	require.Equal(t, recordList[0].ID, uint64(1), "msg id should one")
+	require.Equal(t, recordList[1].ID, uint64(2), "msg id should two")
+	require.Equal(t, recordList[2].ID, uint64(3), "msg id should three")
+	require.Equal(t, recordList[3].ID, uint64(4), "msg id should four")
+
 }
 
 func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
@@ -147,15 +200,16 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	txHash := hmTypes.HexToHeimdallHash("123")
 	index := simulation.RandIntBetween(r1, 0, 100)
 	logIndex := uint64(index)
+	rootChainType := hmTypes.DefaultRootChainType
 	chainParams := app.ChainKeeper.GetParams(ctx)
 	txreceipt := &ethTypes.Receipt{
-		BlockNumber: big.NewInt(10),
+		BlockNumber: big.NewInt(1),
 	}
 	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(nil, errors.New("err confirmed txn receipt"))
 
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("123", logIndex)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("123", logIndex, rootChainType)),
 	}
 	_, err = querier(ctx, path, req)
 	require.NotNil(t, err, "failed to parse params")
@@ -166,23 +220,36 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("1234", logIndex)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("1234", logIndex, rootChainType)),
 	}
 	resp, err := querier(ctx, path, req)
 	require.Nil(t, err)
 	require.Nil(t, resp)
 
-	testSeq := "1000010"
+	testSeq := "10000101"
 	ck := app.ClerkKeeper
 	ck.SetRecordSequence(ctx, testSeq)
-	logIndex = uint64(10)
+	logIndex = uint64(1)
 	txHash = hmTypes.HexToHeimdallHash("12345")
 	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("12345", logIndex)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("12345", logIndex, rootChainType)),
 	}
 	resp, err = querier(ctx, path, req)
 	require.Nil(t, err)
 	require.NotNil(t, resp)
+
+	// tron
+	testSeq = "10000102"
+	ck.SetRecordSequence(ctx, testSeq)
+	suite.contractCaller.On("GetTronTransactionReceipt", txHash.TronHash().String()).Return(txreceipt, nil)
+	req = abci.RequestQuery{
+		Path: route,
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("12345", logIndex, hmTypes.RootChainTypeTron)),
+	}
+	resp, err = querier(ctx, path, req)
+	require.Nil(t, err)
+	require.NotNil(t, resp)
+
 }

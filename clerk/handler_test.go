@@ -1,6 +1,7 @@
 package clerk_test
 
 import (
+	"github.com/maticnetwork/heimdall/helper"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -34,6 +35,7 @@ type HandlerTestSuite struct {
 	handler        sdk.Handler
 	contractCaller mocks.IContractCaller
 	r              *rand.Rand
+	rootChainType  string
 }
 
 func (suite *HandlerTestSuite) SetupTest() {
@@ -47,6 +49,8 @@ func (suite *HandlerTestSuite) SetupTest() {
 	// random generator
 	s1 := rand.NewSource(time.Now().UnixNano())
 	suite.r = rand.New(s1)
+	suite.rootChainType = hmTypes.DefaultRootChainType
+
 }
 
 func TestHandlerTestSuite(t *testing.T) {
@@ -58,7 +62,7 @@ func TestHandlerTestSuite(t *testing.T) {
 //
 
 func (suite *HandlerTestSuite) TestHandleMsgEventRecord() {
-	t, app, ctx, chainID, r := suite.T(), suite.app, suite.ctx, suite.chainID, suite.r
+	t, app, ctx, chainID, r, rChainType := suite.T(), suite.app, suite.ctx, suite.chainID, suite.r, suite.rootChainType
 
 	// keys and addresses
 	_, _, addr1 := sdkAuth.KeyTestPubAddr()
@@ -77,6 +81,7 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecord() {
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		make([]byte, 0),
 		chainID,
+		rChainType,
 	)
 
 	t.Run("Success", func(t *testing.T) {
@@ -100,20 +105,38 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecord() {
 				msg.Data,
 				msg.ChainID,
 				time.Now(),
+				hmTypes.DefaultRootChainType,
 			),
 		)
 
 		result := suite.handler(ctx, msg)
 		require.False(t, result.IsOK(), "should fail due to existent event record but succeeded")
 		require.Equal(t, types.CodeEventRecordAlreadySynced, result.Code)
+		// tron chain
+		app.ClerkKeeper.SetEventRecord(ctx,
+			types.NewEventRecord(
+				msg.TxHash,
+				msg.LogIndex,
+				msg.ID,
+				msg.ContractAddress,
+				msg.Data,
+				msg.ChainID,
+				time.Now(),
+				hmTypes.RootChainTypeTron,
+			),
+		)
+		result = suite.handler(ctx, msg)
+		require.False(t, result.IsOK(), "should fail due to existent event record but succeeded")
+		require.Equal(t, types.CodeEventRecordAlreadySynced, result.Code)
+
 	})
 }
 
 func (suite *HandlerTestSuite) TestHandleMsgEventRecordSequence() {
-	t, app, ctx, chainID, r := suite.T(), suite.app, suite.ctx, suite.chainID, suite.r
+	t, app, ctx, chainID, r, rChainType := suite.T(), suite.app, suite.ctx, suite.chainID, suite.r, suite.rootChainType
 
 	_, _, addr1 := sdkAuth.KeyTestPubAddr()
-
+	// eth chain
 	msg := types.NewMsgEventRecord(
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		hmTypes.HexToHeimdallHash("123"),
@@ -123,21 +146,43 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecordSequence() {
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		make([]byte, 0),
 		chainID,
+		rChainType,
 	)
 
 	// sequence id
 	blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
-	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-	sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
+	sequence := helper.CalculateSequence(blockNumber, msg.LogIndex, msg.RootChainType)
 	app.ClerkKeeper.SetRecordSequence(ctx, sequence.String())
 
 	result := suite.handler(ctx, msg)
 	require.False(t, result.IsOK(), "should fail due to existent sequence but succeeded")
 	require.Equal(t, common.CodeOldTx, result.Code)
+    // tron chain
+	msg = types.NewMsgEventRecord(
+		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+		hmTypes.HexToHeimdallHash("123"),
+		r.Uint64(),
+		r.Uint64(),
+		r.Uint64(),
+		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+		make([]byte, 0),
+		chainID,
+		hmTypes.RootChainTypeTron,
+	)
+
+	// sequence id
+	blockNumber = new(big.Int).SetUint64(msg.BlockNumber)
+	sequence = helper.CalculateSequence(blockNumber, msg.LogIndex, msg.RootChainType)
+	app.ClerkKeeper.SetRecordSequence(ctx, sequence.String())
+
+	result = suite.handler(ctx, msg)
+	require.False(t, result.IsOK(), "should fail due to existent sequence but succeeded")
+	require.Equal(t, common.CodeOldTx, result.Code)
+
 }
 
 func (suite *HandlerTestSuite) TestHandleMsgEventRecordChainID() {
-	t, app, ctx, r := suite.T(), suite.app, suite.ctx, suite.r
+	t, app, ctx, r, rChainType := suite.T(), suite.app, suite.ctx, suite.r, suite.rootChainType
 
 	_, _, addr1 := sdkAuth.KeyTestPubAddr()
 
@@ -153,6 +198,7 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecordChainID() {
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		make([]byte, 0),
 		"random chain id",
+		rChainType,
 	)
 	result := suite.handler(ctx, msg)
 	require.False(t, result.IsOK(), "error invalid bor chain id %v", result.Code)

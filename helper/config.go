@@ -44,13 +44,15 @@ const (
 	// BroadcastAsync defines a tx broadcasting mode where the client returns
 	// immediately.
 	BroadcastAsync = "async"
-	// --
+
+	// tron
 
 	DefaultMainRPCUrl  = "http://localhost:9545"
 	DefaultBorRPCUrl   = "http://localhost:8545"
 	DefaultTronRPCUrl  = "http://localhost:50051"
-	DefaultTronGridUrl = "https://api.shasta.trongrid.io"
+	DefaultTronGridUrl = "http://localhost:30080" // get log host
 
+	DefaultTronGridApiKey = "xxxxxxxx"
 	// Services
 
 	// DefaultAmqpURL represents default AMQP url
@@ -97,6 +99,10 @@ type Configuration struct {
 	TronGridURL       string `mapstructure:"tron_grid_url"`        // tron grid url
 	AmqpURL           string `mapstructure:"amqp_url"`             // amqp url
 	HeimdallServerURL string `mapstructure:"heimdall_rest_server"` // heimdall server url
+
+	// tron
+	TronGridUrl    string `mapstructure:"tron_grid_url"`     // tron server url
+	TronGridApiKey string `mapstructure:"tron_grid_api_key"` // tron api key
 
 	MainchainGasLimit uint64 `mapstructure:"main_chain_gas_limit"` // gas limit to mainchain transaction. eg....submit checkpoint.
 
@@ -234,6 +240,8 @@ func GetDefaultHeimdallConfig() Configuration {
 		SpanPollInterval:         DefaultSpanPollInterval,
 
 		NoACKWaitTime: NoACKWaitTime,
+
+		TronGridApiKey: DefaultTronGridApiKey,
 	}
 }
 

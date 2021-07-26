@@ -14,9 +14,8 @@ type CodeType = sdk.CodeType
 
 const (
 	DefaultCodespace sdk.CodespaceType = "1"
-
-	CodeInvalidMsg CodeType = 1400
-	CodeOldTx      CodeType = 1401
+	CodeInvalidMsg   CodeType          = 1400
+	CodeOldTx        CodeType          = 1401
 
 	CodeInvalidProposerInput     CodeType = 1500
 	CodeInvalidBlockInput        CodeType = 1501
@@ -72,6 +71,7 @@ const (
 	CodeSlashInfoDetails       CodeType = 6503
 	CodeTickNotInContinuity    CodeType = 6504
 	CodeTickAckNotInContinuity CodeType = 6505
+	CodeWrongRootChainType     CodeType = 6506
 )
 
 // -------- Invalid msg

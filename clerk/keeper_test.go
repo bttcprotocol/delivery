@@ -38,38 +38,67 @@ func TestKeeperTestSuite(t *testing.T) {
 // Tests
 //
 
-func (suite *KeeperTestSuite) TestHasGetSetEventRecord() {
+func (suite *KeeperTestSuite) TestHasGetSetEventRecords() {
 	t, app, ctx := suite.T(), suite.app, suite.ctx
 
 	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
-	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now())
+	EthRecord := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
 
 	// SetEventRecord
 	ck := app.ClerkKeeper
-	err := ck.SetEventRecord(ctx, testRecord1)
+	err := ck.SetEventRecord(ctx, EthRecord)
 	require.Nil(t, err)
 
-	err = ck.SetEventRecord(ctx, testRecord1)
-	require.NotNil(t, err)
+	TronRecord := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeTron)
+
+	err = ck.SetEventRecord(ctx, TronRecord)
+	require.Nil(t, err)
 
 	// GetEventRecord
-	respRecord, err := ck.GetEventRecord(ctx, testRecord1.ID)
+	latestID := ck.GetLatestID(ctx)
+	respRecord, err := ck.GetEventRecord(ctx, latestID)
 	require.Nil(t, err)
-	require.Equal(t, (*respRecord).ID, testRecord1.ID)
+	require.Equal(t, (*respRecord).ID, latestID)
 
-	respRecord, err = ck.GetEventRecord(ctx, testRecord1.ID+1)
+	respRecord, err = ck.GetRootChainEventRecord(ctx, EthRecord.ID, EthRecord.RootChainType)
+	require.Nil(t, err)
+	require.Equal(t, (*respRecord).ID, EthRecord.ID)
+
+	respRecord, err = ck.GetRootChainEventRecord(ctx, TronRecord.ID, TronRecord.RootChainType)
+	require.Nil(t, err)
+	require.Equal(t, (*respRecord).ID, TronRecord.ID)
+
+	respRecord, err = ck.GetEventRecord(ctx, latestID+1)
+	require.NotNil(t, err)
+
+	respRecord, err = ck.GetRootChainEventRecord(ctx, EthRecord.ID+1, EthRecord.RootChainType)
+	require.NotNil(t, err)
+
+	respRecord, err = ck.GetRootChainEventRecord(ctx, TronRecord.ID+1, TronRecord.RootChainType)
 	require.NotNil(t, err)
 
 	// HasEventRecord
-	recordPresent := ck.HasEventRecord(ctx, testRecord1.ID)
+	recordPresent := ck.HasEventRecord(ctx, latestID)
 	require.True(t, recordPresent)
 
-	recordPresent = ck.HasEventRecord(ctx, testRecord1.ID+1)
+	recordPresent = ck.HasRootChainEventRecord(ctx, EthRecord.RootChainType, EthRecord.ID)
+	require.True(t, recordPresent)
+
+	recordPresent = ck.HasRootChainEventRecord(ctx, TronRecord.RootChainType, TronRecord.ID)
+	require.True(t, recordPresent)
+
+	recordPresent = ck.HasEventRecord(ctx, latestID+1)
+	require.False(t, recordPresent)
+
+	recordPresent = ck.HasRootChainEventRecord(ctx, EthRecord.RootChainType, EthRecord.ID+1)
+	require.False(t, recordPresent)
+
+	recordPresent = ck.HasRootChainEventRecord(ctx, TronRecord.RootChainType, TronRecord.ID+1)
 	require.False(t, recordPresent)
 
 	recordList := ck.GetAllEventRecords(ctx)
-	require.Len(t, recordList, 1)
+	require.Len(t, recordList, 2)
 }
 
 func (suite *KeeperTestSuite) TestGetEventRecordList() {
@@ -80,7 +109,7 @@ func (suite *KeeperTestSuite) TestGetEventRecordList() {
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
 	ck := app.ClerkKeeper
 	for i = 0; i < 60; i++ {
-		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Now())
+		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.DefaultRootChainType)
 		ck.SetEventRecord(ctx, testRecord)
 	}
 
@@ -108,7 +137,7 @@ func (suite *KeeperTestSuite) TestGetEventRecordListTime() {
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
 	ck := app.ClerkKeeper
 	for i = 0; i < 30; i++ {
-		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Unix(int64(i), 0))
+		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Unix(int64(i), 0), hmTypes.DefaultRootChainType)
 		ck.SetEventRecord(ctx, testRecord)
 	}
 
@@ -133,10 +162,37 @@ func (suite *KeeperTestSuite) TestGetEventRecordKey() {
 
 	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
-	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now())
+	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.DefaultRootChainType)
 
 	respKey := clerk.GetEventRecordKey(testRecord1.ID)
 	require.Equal(t, respKey, []byte{17, 49})
+}
+
+func (suite *KeeperTestSuite) TestGetRootChainEventRecordKey() {
+	t, _, _ := suite.T(), suite.app, suite.ctx
+
+	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
+	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
+	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
+
+	respKey := clerk.GetRootChainEventRecordKey(testRecord1.RootChainType, testRecord1.ID)
+	require.Equal(t, respKey, []byte{23, 49})
+
+	testRecord1 = types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeTron)
+	respKey = clerk.GetRootChainEventRecordKey(testRecord1.RootChainType, testRecord1.ID)
+	require.Equal(t, respKey, []byte{22, 49})
+}
+
+func (suite *KeeperTestSuite) TestGetRootToHeimdallIdKey() {
+	t, _, _ := suite.T(), suite.app, suite.ctx
+
+	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
+	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
+	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
+
+	respKey := clerk.GetRootToHeimdallIdKey(testRecord1.RootChainType, testRecord1.ID)
+	require.Equal(t, respKey, []byte{25, 101, 116, 104, 49})
+
 }
 
 func (suite *KeeperTestSuite) TestSetHasGetRecordSequence() {

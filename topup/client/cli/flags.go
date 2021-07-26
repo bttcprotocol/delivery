@@ -10,4 +10,5 @@ const (
 	FlagTo              = "to"
 	FlagAmount          = "amount"
 	FlagFeeAmount       = "fee-amount"
+	RootChainType       = "root-chain-type"
 )

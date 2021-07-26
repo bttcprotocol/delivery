@@ -96,6 +96,7 @@ func TopupTxCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(FlagFeeAmount, "", "--topup-amount=<topup-amount>")
 	cmd.Flags().Uint64(FlagLogIndex, 0, "--log-index=<log-index>")
 	cmd.Flags().Uint64(FlagBlockNumber, 0, "--block-number=<block-number>")
+	cmd.Flags().String(RootChainType, types.RootChainTypeEth, "--root-chain-type=<root-chain-type>")
 
 	if err := cmd.MarkFlagRequired(FlagTxHash); err != nil {
 		cliLogger.Error("TopupTxCmd | MarkFlagRequired | FlagTxHash", "Error", err)
@@ -110,6 +111,9 @@ func TopupTxCmd(cdc *codec.Codec) *cobra.Command {
 		cliLogger.Error("TopupTxCmd | MarkFlagRequired | FlagFeeAmount", "Error", err)
 	}
 	if err := cmd.MarkFlagRequired(FlagBlockNumber); err != nil {
+		cliLogger.Error("TopupTxCmd | MarkFlagRequired | FlagBlockNumber", "Error", err)
+	}
+	if err := cmd.MarkFlagRequired(RootChainType); err != nil {
 		cliLogger.Error("TopupTxCmd | MarkFlagRequired | FlagBlockNumber", "Error", err)
 	}
 

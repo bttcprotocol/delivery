@@ -7,6 +7,8 @@ import (
 const (
 	// DefaultLogIndexUnit default tx hash + log index unit
 	DefaultLogIndexUnit = 100000
+
+	DefaultChainIdUnit = 100
 )
 
 var (

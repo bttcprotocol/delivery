@@ -3,8 +3,11 @@ package helper
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"math/big"
+	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/maticnetwork/heimdall/tron"
@@ -86,6 +89,9 @@ type IContractCaller interface {
 	GetStateSenderInstance(stateSenderAddress common.Address) (*statesender.Statesender, error)
 	GetStateReceiverInstance(stateReceiverAddress common.Address) (*statereceiver.Statereceiver, error)
 	GetMaticTokenInstance(maticTokenAddress common.Address) (*erc20.Erc20, error)
+
+	GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error)
+	GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error)
 }
 
 // ContractCaller contract caller
@@ -750,6 +756,29 @@ func (c *ContractCaller) GetMaticTxReceipt(txHash common.Hash) (*ethTypes.Receip
 func (c *ContractCaller) getTxReceipt(client *ethclient.Client, txHash common.Hash) (*ethTypes.Receipt, error) {
 	return client.TransactionReceipt(context.Background(), txHash)
 }
+func (c *ContractCaller) GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error) {
+	// create filter
+	var txIDs = []string{txID}
+	queryFilter := tron.FilterOtherParams{
+		BaseQueryParam: tron.GetDefaultBaseParm(),
+		Method:         tron.GetTransactionByHash,
+		Params:         txIDs,
+	}
+	queryByte, err := json.Marshal(queryFilter)
+	req, err := http.NewRequest("POST", GetTronGridEndpoint("/jsonrpc"), bytes.NewBuffer(queryByte))
+	if err != nil {
+		return nil, err
+	}
+	result, err := MakeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	var transactionReceipt tron.FilterTxResponse
+	if err := json.Unmarshal(result, &transactionReceipt); err != nil {
+		return nil, err
+	}
+	return &transactionReceipt.Result, nil
+}
 
 //
 // private abi methods
@@ -814,4 +843,38 @@ func (c *ContractCaller) GetTronStakingSyncNonce(validatorID uint64, stakingMana
 		return 0
 	}
 	return (*ret0).Uint64()
+}
+
+func (c *ContractCaller) GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error) {
+	var decodedAddress []string
+	for _, adr := range address {
+		decodedAddress = append(decodedAddress, adr[2:])
+	}
+	//create filter
+	filter := tron.NewFilter{
+		Address:   decodedAddress,
+		FromBlock: "0x" + strconv.FormatInt(from, 16),
+		ToBlock:   "0x" + strconv.FormatInt(to, 16),
+	}
+	filtersArray := []tron.NewFilter{filter}
+	queryFilter := tron.FilterEventParams{
+		BaseQueryParam: tron.GetDefaultBaseParm(),
+		Method:         tron.GetLogsMethod,
+		Params:         filtersArray,
+	}
+
+	queryByte, err := json.Marshal(queryFilter)
+	req, err := http.NewRequest("POST", GetTronGridEndpoint("/jsonrpc"), bytes.NewBuffer(queryByte))
+	if err != nil {
+		return nil, err
+	}
+	result, err := MakeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	var filterChangeResult tron.FilterEventResponse
+	if err := json.Unmarshal(result, &filterChangeResult); err != nil {
+		return nil, err
+	}
+	return filterChangeResult.Result, nil
 }

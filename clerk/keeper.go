@@ -25,6 +25,19 @@ var (
 	RecordSequencePrefixKey = []byte{0x12}
 
 	StateRecordPrefixKeyWithTime = []byte{0x13} // prefix key for when storing state with time
+
+	TronStateRecordPrefixKeyWithTime = []byte{0x14} // tron prefix key for when storing state with time
+
+	EthStateRecordPrefixKeyWithTime = []byte{0x15} // eth prefix key for when storing state with time
+
+	TronStateRecordPrefixKey = []byte{0x16} // tron prefix key for when storing state
+
+	EthStateRecordPrefixKey = []byte{0x17} // eth prefix key for when storing state
+
+	LatestMsgIDPrefixKey = []byte{0x18} // eth prefix key for when storing state
+
+	RootIdToHeimdallIDPrefixKey = []byte{0x19} // store <rootChainID, hemidall chainID>
+
 )
 
 // Keeper stores all related data
@@ -69,13 +82,29 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 }
 
 // SetEventRecordWithTime sets event record id with time
-func (k *Keeper) SetEventRecordWithTime(ctx sdk.Context, record types.EventRecord) error {
-	key := GetEventRecordKeyWithTime(record.ID, record.RecordTime)
+func (k *Keeper) SetEventRecordWithTime(ctx sdk.Context, record types.EventRecord, latestID uint64) error {
+	// set root chain msg ID
+	rootChainKey := GetRootChainEventRecordKeyWithTimePrefix(record.RootChainType, record.ID, record.RecordTime)
 	value, err := k.cdc.MarshalBinaryBare(record.ID)
 	if err != nil {
 		k.Logger(ctx).Error("Error marshalling record", "error", err)
 		return err
 	}
+	if rootChainKey == nil {
+		return errors.New(" unknown root chain type: " + record.RootChainType)
+	}
+	if err := k.setEventRecordStore(ctx, rootChainKey, value); err != nil {
+		return err
+	}
+
+	// set hemidall msg ID
+	record.ID = latestID + 1
+	value, err = k.cdc.MarshalBinaryBare(record.ID)
+	if err != nil {
+		k.Logger(ctx).Error("Error marshalling record", "error", err)
+		return err
+	}
+	key := GetEventRecordKeyWithTime(record.ID, record.RecordTime)
 
 	if err := k.setEventRecordStore(ctx, key, value); err != nil {
 		return err
@@ -84,18 +113,49 @@ func (k *Keeper) SetEventRecordWithTime(ctx sdk.Context, record types.EventRecor
 }
 
 // SetEventRecordWithID adds record to store with ID
-func (k *Keeper) SetEventRecordWithID(ctx sdk.Context, record types.EventRecord) error {
-	key := GetEventRecordKey(record.ID)
+func (k *Keeper) SetEventRecordWithID(ctx sdk.Context, record types.EventRecord) (uint64, error) {
+
+	// root chain ID
+	rootChainKey := GetRootChainEventRecordKey(record.RootChainType, record.ID)
 	value, err := k.cdc.MarshalBinaryBare(record)
 	if err != nil {
-		k.Logger(ctx).Error("Error marshalling record", "error", err)
-		return err
+		k.Logger(ctx).Error("Error marshalling rootChain record", "error", err)
+		return 0, err
+	}
+	if rootChainKey == nil {
+		return 0, errors.New(" unknown root chain type: " + record.RootChainType)
+	}
+	if err := k.setEventRecordStore(ctx, rootChainKey, value); err != nil {
+		return 0, err
 	}
 
-	if err := k.setEventRecordStore(ctx, key, value); err != nil {
-		return err
+	// set rootchainID and heimdall id pair
+	latestID := k.GetLatestID(ctx)
+	rootToHeimdallKey := GetRootToHeimdallIdKey(record.RootChainType, record.ID)
+	value, err = k.cdc.MarshalBinaryBare(latestID + 1)
+	if err != nil {
+		k.Logger(ctx).Error("Error marshalling record", "error", err)
+		return 0, err
 	}
-	return nil
+	if err := k.setEventRecordStore(ctx, rootToHeimdallKey, value); err != nil {
+		return 0, err
+	}
+
+	// hemidall  ID
+	record.ID = latestID + 1
+	key := GetEventRecordKey(record.ID)
+	value, err = k.cdc.MarshalBinaryBare(record)
+	if err != nil {
+		k.Logger(ctx).Error("Error marshalling hemidall record", "error", err)
+		return 0, err
+	}
+	if err := k.setEventRecordStore(ctx, key, value); err != nil {
+		return 0, err
+	}
+
+	k.SetLatestID(ctx, latestID+1) // increment latest hemidall id
+	// pass to next function
+	return latestID, nil
 }
 
 // setEventRecordStore adds value to store by key
@@ -108,20 +168,60 @@ func (k *Keeper) setEventRecordStore(ctx sdk.Context, key, value []byte) error {
 
 	// store value in provided key
 	store.Set(key, value)
-
 	// return
 	return nil
 }
 
 // SetEventRecord adds record to store
 func (k *Keeper) SetEventRecord(ctx sdk.Context, record types.EventRecord) error {
-	if err := k.SetEventRecordWithID(ctx, record); err != nil {
+	var latestID uint64
+	var err error
+	if latestID, err = k.SetEventRecordWithID(ctx, record); err != nil {
 		return err
 	}
-	if err := k.SetEventRecordWithTime(ctx, record); err != nil {
+	if err = k.SetEventRecordWithTime(ctx, record, latestID); err != nil {
 		return err
 	}
 	return nil
+}
+
+// get latest msg ID
+
+func (k *Keeper) GetLatestID(ctx sdk.Context) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	if store.Has(LatestMsgIDPrefixKey) {
+		result, err := strconv.ParseUint(string(store.Get(LatestMsgIDPrefixKey)), 10, 64)
+		if err == nil {
+			return result
+		}
+	}
+	return 0
+
+}
+
+// update latest msg ID
+func (k *Keeper) SetLatestID(ctx sdk.Context, num uint64) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(LatestMsgIDPrefixKey, []byte(strconv.FormatUint(num, 10)))
+}
+
+// update latest msg ID
+func (k *Keeper) GetHeimdallIDByRootID(ctx sdk.Context, rootChainType string, id uint64) (*uint64, error) {
+	store := ctx.KVStore(k.storeKey)
+	key := GetRootToHeimdallIdKey(rootChainType, id)
+	// check store has data
+	if store.Has(key) {
+		var heimdallID uint64
+		err := k.cdc.UnmarshalBinaryBare(store.Get(key), &heimdallID)
+		if err != nil {
+			return nil, err
+		}
+
+		return &heimdallID, nil
+	}
+
+	// return no error error
+	return nil, errors.New("No record found")
 }
 
 // GetEventRecord returns record from store
@@ -144,10 +244,37 @@ func (k *Keeper) GetEventRecord(ctx sdk.Context, stateID uint64) (*types.EventRe
 	return nil, errors.New("No record found")
 }
 
-// HasEventRecord check if state record
+// GetRootChainEventRecord returns record from store
+func (k *Keeper) GetRootChainEventRecord(ctx sdk.Context, stateID uint64, rootChainType string) (*types.EventRecord, error) {
+	store := ctx.KVStore(k.storeKey)
+	rootChainKey := GetRootChainEventRecordKey(rootChainType, stateID)
+
+	// check store has data
+	if store.Has(rootChainKey) {
+		var _record types.EventRecord
+		err := k.cdc.UnmarshalBinaryBare(store.Get(rootChainKey), &_record)
+		if err != nil {
+			return nil, err
+		}
+
+		return &_record, nil
+	}
+
+	// return no error error
+	return nil, errors.New("No root chain record found")
+}
+
+// hemidall chain id : HasEventRecord check if state record
 func (k *Keeper) HasEventRecord(ctx sdk.Context, stateID uint64) bool {
 	store := ctx.KVStore(k.storeKey)
 	key := GetEventRecordKey(stateID)
+	return store.Has(key)
+}
+
+// root chain msg id   check if msg have been processed
+func (k *Keeper) HasRootChainEventRecord(ctx sdk.Context, rootChainType string, stateID uint64) bool {
+	store := ctx.KVStore(k.storeKey)
+	key := GetRootChainEventRecordKey(rootChainType, stateID)
 	return store.Has(key)
 }
 
@@ -229,23 +356,57 @@ func (k *Keeper) GetEventRecordListWithTime(ctx sdk.Context, fromTime, toTime ti
 //
 // GetEventRecordKey returns key for state record
 //
+func GetRecordKey(prefix []byte, stateID uint64) []byte {
+	stateIDBytes := []byte(strconv.FormatUint(stateID, 10))
+	return append(prefix, stateIDBytes...)
+}
 
 // GetEventRecordKey appends prefix to state id
 func GetEventRecordKey(stateID uint64) []byte {
-	stateIDBytes := []byte(strconv.FormatUint(stateID, 10))
-	return append(StateRecordPrefixKey, stateIDBytes...)
+	return GetRecordKey(StateRecordPrefixKey, stateID)
+}
+
+// GetRootChainEventRecordKey appends prefix to state id
+func GetRootChainEventRecordKey(rootChainType string, stateID uint64) []byte {
+	if rootChainType == hmTypes.RootChainTypeEth {
+		return GetRecordKey(EthStateRecordPrefixKey, stateID)
+	} else if rootChainType == hmTypes.RootChainTypeTron {
+		return GetRecordKey(TronStateRecordPrefixKey, stateID)
+	} else {
+		return nil
+	}
 }
 
 // GetEventRecordKeyWithTime appends prefix to state id and record time
 func GetEventRecordKeyWithTime(stateID uint64, recordTime time.Time) []byte {
-	stateIDBytes := []byte(strconv.FormatUint(stateID, 10))
-	return append(GetEventRecordKeyWithTimePrefix(recordTime), stateIDBytes...)
+	return GetRecordKey(GetEventRecordKeyWithTimePrefix(recordTime), stateID)
+}
+
+// GetEventRecordKeyWithTime appends prefix to state id and record time
+func GetRootToHeimdallIdKey(rootChainType string, stateID uint64) []byte {
+	rootToHeimdallPrefix := append(RootIdToHeimdallIDPrefixKey, []byte(rootChainType)...)
+	return GetRecordKey(rootToHeimdallPrefix, stateID)
 }
 
 // GetEventRecordKeyWithTimePrefix gives prefix for record time key
 func GetEventRecordKeyWithTimePrefix(recordTime time.Time) []byte {
+	return GetRecordKeyWithTimePrefix(StateRecordPrefixKeyWithTime, recordTime)
+}
+
+// GetRootChainEventRecordKeyWithTimePrefix gives prefix for record time key
+func GetRootChainEventRecordKeyWithTimePrefix(rootChainType string, id uint64, recordTime time.Time) []byte {
+	if rootChainType == hmTypes.RootChainTypeEth {
+		return GetRecordKey(GetRecordKeyWithTimePrefix(EthStateRecordPrefixKeyWithTime, recordTime), id)
+	} else if rootChainType == hmTypes.RootChainTypeTron {
+		return GetRecordKey(GetRecordKeyWithTimePrefix(TronStateRecordPrefixKeyWithTime, recordTime), id)
+	} else {
+		return nil
+	}
+}
+
+func GetRecordKeyWithTimePrefix(prefix []byte, recordTime time.Time) []byte {
 	recordTimeBytes := sdk.FormatTimeBytes(recordTime)
-	return append(StateRecordPrefixKeyWithTime, recordTimeBytes...)
+	return append(prefix, recordTimeBytes...)
 }
 
 // GetRecordSequenceKey returns record sequence key

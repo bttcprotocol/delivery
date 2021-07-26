@@ -51,7 +51,7 @@ func (cp *ClerkProcessor) RegisterTasks() {
 // HandleStateSyncEvent - handle state sync event from rootchain
 // 1. check if this deposit event has to be broadcasted to heimdall
 // 2. create and broadcast  record transaction to heimdall
-func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes string) error {
+func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes string, rootChainType string) error {
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
 		cp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
@@ -69,7 +69,7 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 	if err := helper.UnpackLog(cp.stateSenderAbi, event, eventName, &vLog); err != nil {
 		cp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
 	} else {
-		if isOld, _ := cp.isOldTx(cp.cliCtx, vLog.TxHash.String(), uint64(vLog.Index)); isOld {
+		if isOld, _ := cp.isOldTx(cp.cliCtx, vLog.TxHash.String(), uint64(vLog.Index), rootChainType); isOld {
 			cp.Logger.Info("Ignoring task to send deposit to heimdall as already processed",
 				"event", eventName,
 				"id", event.Id,
@@ -79,6 +79,7 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 				"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
 				"logIndex", uint64(vLog.Index),
 				"blockNumber", vLog.BlockNumber,
+				"rootChainType", rootChainType,
 			)
 			return nil
 		}
@@ -93,6 +94,7 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 			"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
 			"logIndex", uint64(vLog.Index),
 			"blockNumber", vLog.BlockNumber,
+			"rootChainType", rootChainType,
 		)
 
 		msg := clerkTypes.NewMsgEventRecord(
@@ -104,6 +106,7 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 			hmTypes.BytesToHeimdallAddress(event.ContractAddress.Bytes()),
 			event.Data,
 			chainParams.BorChainID,
+			rootChainType,
 		)
 
 		// return broadcast to heimdall
@@ -116,10 +119,11 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 }
 
 // isOldTx  checks if tx is already processed or not
-func (cp *ClerkProcessor) isOldTx(cliCtx cliContext.CLIContext, txHash string, logIndex uint64) (bool, error) {
+func (cp *ClerkProcessor) isOldTx(cliCtx cliContext.CLIContext, txHash string, logIndex uint64, rootChainType string) (bool, error) {
 	queryParam := map[string]interface{}{
-		"txhash":   txHash,
-		"logindex": logIndex,
+		"txhash":        txHash,
+		"logindex":      logIndex,
+		"rootchaintype": rootChainType,
 	}
 
 	endpoint := helper.GetHeimdallServerEndpoint(util.ClerkTxStatusURL)

@@ -219,6 +219,7 @@ func (sp *StakingProcessor) sendUnstakeInitToHeimdall(eventName string, logBytes
 	return nil
 }
 
+//todo: add rootChainType in param
 func (sp *StakingProcessor) sendStakeUpdateToHeimdall(eventName string, logBytes string) error {
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {

@@ -31,6 +31,11 @@ func (aa HeimdallAddress) EthAddress() common.Address {
 	return common.Address(aa)
 }
 
+// tronAddress get tron address
+func (aa HeimdallAddress) TronAddress() common.Address {
+	return common.Address(aa)
+}
+
 // Equals returns boolean for whether two AccAddresses are Equal
 func (aa HeimdallAddress) Equals(aa2 sdk.Address) bool {
 	if aa.Empty() && aa2.Empty() {
@@ -127,6 +132,16 @@ func BytesToHeimdallAddress(b []byte) HeimdallAddress {
 // HexToHeimdallAddress returns Address with value b.
 func HexToHeimdallAddress(b string) HeimdallAddress {
 	return HeimdallAddress(common.HexToAddress(b))
+}
+
+func HexToTronAddress(b string) common.Address {
+	if len(b) != 0 {
+		prefix := b[0:2]
+		if prefix == "0x" {
+			b = b[2:]
+		}
+	}
+	return common.HexToAddress(b)
 }
 
 // AccAddressToHeimdallAddress returns Address with value b.
