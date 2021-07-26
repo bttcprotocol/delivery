@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maticnetwork/heimdall/tron"
+
 	ethCrypto "github.com/maticnetwork/bor/crypto"
 	"github.com/maticnetwork/bor/eth"
 	"github.com/maticnetwork/bor/ethclient"
@@ -86,6 +88,7 @@ func init() {
 // Configuration represents heimdall config
 type Configuration struct {
 	EthRPCUrl        string `mapstructure:"eth_rpc_url"`        // RPC endpoint for main chain
+	TronRPCUrl       string `mapstructure:"tron_rpc_url"`       // RPC endpoint for bor chain
 	BorRPCUrl        string `mapstructure:"bor_rpc_url"`        // RPC endpoint for bor chain
 	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
@@ -110,6 +113,8 @@ var conf Configuration
 // MainChainClient stores eth clie nt for Main chain Network
 var mainChainClient *ethclient.Client
 var mainRPCClient *rpc.Client
+
+var tronRPCClient *tron.Client
 
 // MaticClient stores eth/rpc client for Matic Network
 var maticClient *ethclient.Client
@@ -184,6 +189,8 @@ func InitHeimdallConfigWith(homeDir string, heimdallConfigFilePath string) {
 		log.Fatal(err)
 	}
 
+	tronRPCClient = tron.NewClient(conf.TronRPCUrl)
+
 	maticClient = ethclient.NewClient(maticRPCClient)
 	// Loading genesis doc
 	genDoc, err := tmTypes.GenesisDocFromFile(filepath.Join(configDir, "genesis.json"))
@@ -251,6 +258,11 @@ func GetMainChainRPCClient() *rpc.Client {
 // GetMainClient returns main chain's eth client
 func GetMainClient() *ethclient.Client {
 	return mainChainClient
+}
+
+// GetTronChainRPCClient returns main chain RPC client
+func GetTronChainRPCClient() *tron.Client {
+	return tronRPCClient
 }
 
 // GetMaticClient returns matic's eth client

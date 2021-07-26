@@ -3,7 +3,7 @@ module github.com/maticnetwork/heimdall
 go 1.12
 
 require (
-	github.com/RichardKnop/machinery v1.7.4
+	github.com/RichardKnop/machinery v1.10.6
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20191206003309-5d8d36c240c9 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
@@ -19,6 +19,7 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/go-kit/kit v0.9.0
 	github.com/gogo/protobuf v1.3.0
+	github.com/golang/protobuf v1.5.0
 	github.com/gorilla/mux v1.7.3
 	github.com/graph-gophers/graphql-go v0.0.0-20200207002730-8334863f2c8b // indirect
 	github.com/hashicorp/golang-lru v0.5.3
@@ -39,18 +40,19 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
 	github.com/status-im/keycard-go v0.0.0-20191119114148-6dd40a46baa0 // indirect
-	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
-	github.com/stretchr/testify v1.4.0
+	github.com/streadway/amqp v1.0.0
+	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tendermint/crypto v0.0.0-20191022145703-50d29ede1e15
 	github.com/tendermint/go-amino v0.15.0
 	github.com/tendermint/tendermint v0.32.7
 	github.com/tendermint/tm-db v0.2.0
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
-	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79 // indirect
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	google.golang.org/genproto v0.0.0-20210207032614-bba0dbe2a9ea
+	google.golang.org/grpc v1.37.0
+	google.golang.org/protobuf v1.27.1
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 replace github.com/tendermint/tendermint => github.com/maticnetwork/tendermint v0.26.0-dev0.0.20200429080413-edc079e7d4c9
