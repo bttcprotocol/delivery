@@ -134,7 +134,7 @@ func (suite *QuerierTestSuite) TestQueryCheckpoint() {
 
 	req := abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryCheckpointParams(headerNumber)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryCheckpointParams(headerNumber, "")),
 	}
 
 	res, err := querier(ctx, path, req)

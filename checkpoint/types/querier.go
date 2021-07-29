@@ -16,12 +16,16 @@ const (
 
 // QueryCheckpointParams defines the params for querying accounts.
 type QueryCheckpointParams struct {
-	Number uint64
+	Number    uint64
+	RootChain string
 }
 
 // NewQueryCheckpointParams creates a new instance of QueryCheckpointHeaderIndex.
-func NewQueryCheckpointParams(number uint64) QueryCheckpointParams {
-	return QueryCheckpointParams{Number: number}
+func NewQueryCheckpointParams(number uint64, rootChain string) QueryCheckpointParams {
+	return QueryCheckpointParams{
+		Number:    number,
+		RootChain: rootChain,
+	}
 }
 
 // QueryBorChainID defines the params for querying with bor chain id

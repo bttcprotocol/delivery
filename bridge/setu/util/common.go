@@ -34,8 +34,8 @@ const (
 	CheckpointParamsURL     = "/checkpoints/params"
 	ChainManagerParamsURL   = "/chainmanager/params"
 	ProposersURL            = "/staking/proposer/%v"
-	BufferedCheckpointURL   = "/checkpoints/buffer"
-	LatestCheckpointURL     = "/checkpoints/latest"
+	BufferedCheckpointURL   = "/checkpoints/buffer/%v"
+	LatestCheckpointURL     = "/checkpoints/latest/%v"
 	CurrentProposerURL      = "/staking/current-proposer"
 	LatestSpanURL           = "/bor/latest-span"
 	NextSpanInfoURL         = "/bor/prepare-next-span"
@@ -332,10 +332,10 @@ func GetCheckpointParams(cliCtx cliContext.CLIContext) (*checkpointTypes.Params,
 }
 
 // GetBufferedCheckpoint return checkpoint from bueffer
-func GetBufferedCheckpoint(cliCtx cliContext.CLIContext) (*hmtypes.Checkpoint, error) {
+func GetBufferedCheckpoint(cliCtx cliContext.CLIContext, rootChain string) (*hmtypes.Checkpoint, error) {
 	response, err := helper.FetchFromAPI(
 		cliCtx,
-		helper.GetHeimdallServerEndpoint(BufferedCheckpointURL),
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(BufferedCheckpointURL, rootChain)),
 	)
 
 	if err != nil {
@@ -353,10 +353,10 @@ func GetBufferedCheckpoint(cliCtx cliContext.CLIContext) (*hmtypes.Checkpoint, e
 }
 
 // GetlastestCheckpoint return last successful checkpoint
-func GetlastestCheckpoint(cliCtx cliContext.CLIContext) (*hmtypes.Checkpoint, error) {
+func GetlastestCheckpoint(cliCtx cliContext.CLIContext, rootChain string) (*hmtypes.Checkpoint, error) {
 	response, err := helper.FetchFromAPI(
 		cliCtx,
-		helper.GetHeimdallServerEndpoint(LatestCheckpointURL),
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(LatestCheckpointURL, rootChain)),
 	)
 
 	if err != nil {

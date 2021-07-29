@@ -141,7 +141,7 @@ func GetHeaderFromIndex(cdc *codec.Codec) *cobra.Command {
 			headerNumber := viper.GetUint64(FlagHeaderNumber)
 
 			// get query params
-			queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(headerNumber))
+			queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(headerNumber, ""))
 			if err != nil {
 				return err
 			}

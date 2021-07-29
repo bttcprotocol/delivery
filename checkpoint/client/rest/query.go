@@ -26,13 +26,13 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 
 	r.HandleFunc("/overview", overviewHandlerFn(cliCtx)).Methods("GET")
 
-	r.HandleFunc("/checkpoints/buffer", checkpointBufferHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/checkpoints/buffer/{root}", checkpointBufferHandlerFn(cliCtx)).Methods("GET")
 
 	r.HandleFunc("/checkpoints/count", checkpointCountHandlerFn(cliCtx)).Methods("GET")
 
 	r.HandleFunc("/checkpoints/prepare", prepareCheckpointHandlerFn(cliCtx)).Methods("GET")
 
-	r.HandleFunc("/checkpoints/latest", latestCheckpointHandlerFunc(cliCtx)).Methods("GET")
+	r.HandleFunc("/checkpoints/latest/{root}", latestCheckpointHandlerFunc(cliCtx)).Methods("GET")
 
 	r.HandleFunc("/checkpoints/last-no-ack", noackHandlerFn(cliCtx)).Methods("GET")
 
@@ -69,8 +69,23 @@ func checkpointBufferHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		// get checkpoint number
+		vars := mux.Vars(r)
+		rootChain, ok := vars["root"]
+		if !ok {
+			err := fmt.Errorf("'%s' is not a valid rootChain", vars["root"])
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// get query params
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(0, rootChain))
+		if err != nil {
+			return
+		}
+
 		// fetch checkpoint
-		result, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointBuffer), nil)
+		result, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointBuffer), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -361,11 +376,25 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		// get checkpoint number
+		vars := mux.Vars(r)
+		rootChain, ok := vars["root"]
+		if !ok {
+			err := fmt.Errorf("'%s' is not a valid rootChain", vars["root"])
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// get query params
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(0, rootChain))
+		if err != nil {
+			return
+		}
 		//
 		// Get ack count
 		//
 
-		ackcountBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), nil)
+		ackcountBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -391,7 +420,7 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		RestLogger.Debug("Last checkpoint key generated", "lastCheckpointKey", lastCheckpointKey)
 
 		// get query params
-		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(lastCheckpointKey))
+		queryParams, err = cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(lastCheckpointKey, rootChain))
 		if err != nil {
 			return
 		}
@@ -432,7 +461,7 @@ func checkpointByNumberHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		// get query params
-		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(number))
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(number, ""))
 		if err != nil {
 			return
 		}

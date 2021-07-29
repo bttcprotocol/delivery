@@ -13,6 +13,7 @@ var (
 	AttributeKeyNewProposer = "new-proposer"
 	AttributeKeyRootHash    = "root-hash"
 	AttributeKeyAccountHash = "account-hash"
+	AttributeKeyRootChain   = "root-chain"
 
 	AttributeValueCategory = ModuleName
 )

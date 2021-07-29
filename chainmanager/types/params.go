@@ -14,6 +14,7 @@ import (
 const (
 	DefaultMainchainTxConfirmations  uint64 = 6
 	DefaultMaticchainTxConfirmations uint64 = 10
+	DefaultTronChainTxConfirmations  uint64 = 18
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 var (
 	KeyMainchainTxConfirmations  = []byte("MainchainTxConfirmations")
 	KeyMaticchainTxConfirmations = []byte("MaticchainTxConfirmations")
+	KeyTronchainTxConfirmations  = []byte("TronchainTxConfirmations")
 	KeyChainParams               = []byte("ChainParams")
 )
 
@@ -39,6 +41,9 @@ type ChainParams struct {
 	RootChainAddress      hmTypes.HeimdallAddress `json:"root_chain_address" yaml:"root_chain_address"`
 	StakingInfoAddress    hmTypes.HeimdallAddress `json:"staking_info_address" yaml:"staking_info_address"`
 	StateSenderAddress    hmTypes.HeimdallAddress `json:"state_sender_address" yaml:"state_sender_address"`
+
+	TronChainAddress       string `json:"tron_chain_address" yaml:"tron_chain_address"`
+	TronStateSenderAddress string `json:"tron_state_sender_address" yaml:"tron_state_sender_address"`
 
 	// Bor Chain Contracts
 	StateReceiverAddress hmTypes.HeimdallAddress `json:"state_receiver_address" yaml:"state_receiver_address"`
@@ -63,14 +68,16 @@ func (cp ChainParams) String() string {
 type Params struct {
 	MainchainTxConfirmations  uint64      `json:"mainchain_tx_confirmations" yaml:"mainchain_tx_confirmations"`
 	MaticchainTxConfirmations uint64      `json:"maticchain_tx_confirmations" yaml:"maticchain_tx_confirmations"`
+	TronchainTxConfirmations  uint64      `json:"tronchain_tx_confirmations" yaml:"tronchain_tx_confirmations"`
 	ChainParams               ChainParams `json:"chain_params" yaml:"chain_params"`
 }
 
 // NewParams creates a new Params object
-func NewParams(mainchainTxConfirmations uint64, maticchainTxConfirmations uint64, chainParams ChainParams) Params {
+func NewParams(mainchainTxConfirmations, tronchainTxConfirmation, maticchainTxConfirmations uint64, chainParams ChainParams) Params {
 	return Params{
 		MainchainTxConfirmations:  mainchainTxConfirmations,
 		MaticchainTxConfirmations: maticchainTxConfirmations,
+		TronchainTxConfirmations:  tronchainTxConfirmation,
 		ChainParams:               chainParams,
 	}
 }
@@ -82,6 +89,7 @@ func (p *Params) ParamSetPairs() subspace.ParamSetPairs {
 	return subspace.ParamSetPairs{
 		{KeyMainchainTxConfirmations, &p.MainchainTxConfirmations},
 		{KeyMaticchainTxConfirmations, &p.MaticchainTxConfirmations},
+		{KeyTronchainTxConfirmations, &p.TronchainTxConfirmations},
 		{KeyChainParams, &p.ChainParams},
 	}
 }
@@ -162,6 +170,7 @@ func DefaultParams() Params {
 	return Params{
 		MainchainTxConfirmations:  DefaultMainchainTxConfirmations,
 		MaticchainTxConfirmations: DefaultMaticchainTxConfirmations,
+		TronchainTxConfirmations:  DefaultTronChainTxConfirmations,
 		ChainParams: ChainParams{
 			BorChainID:           helper.DefaultBorChainID,
 			StateReceiverAddress: DefaultStateReceiverAddress,

@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/maticnetwork/heimdall/tron"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/maticnetwork/bor/accounts/abi"
 	"github.com/maticnetwork/bor/common"
@@ -83,6 +85,7 @@ type IContractCaller interface {
 type ContractCaller struct {
 	MainChainClient  *ethclient.Client
 	MainChainRPC     *rpc.Client
+	TronChainRPC     *tron.Client
 	MaticChainClient *ethclient.Client
 	MaticChainRPC    *rpc.Client
 
@@ -114,6 +117,7 @@ type rpcTransaction struct {
 func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainClient = GetMainClient()
 	contractCallerObj.MaticChainClient = GetMaticClient()
+	contractCallerObj.TronChainRPC = GetTronChainRPCClient()
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
 	contractCallerObj.MaticChainRPC = GetMaticRPCClient()
 	contractCallerObj.ReceiptCache, _ = NewLru(1000)

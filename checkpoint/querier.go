@@ -47,7 +47,20 @@ func handleQueryParams(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 }
 
 func handleQueryAckCount(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	bz, err := json.Marshal(keeper.GetACKCount(ctx))
+	var params types.QueryCheckpointParams
+
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
+	}
+
+	var res uint64
+	if params.RootChain != hmTypes.RootChainTypeEth && params.RootChain != "" {
+		res = keeper.GetOtherACKCount(ctx, params.RootChain)
+	} else {
+		res = keeper.GetACKCount(ctx)
+	}
+
+	bz, err := json.Marshal(res)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
@@ -60,9 +73,17 @@ func handleQueryCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Keeper
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
-	res, err := keeper.GetCheckpointByNumber(ctx, params.Number)
+	var res hmTypes.Checkpoint
+	var err error
+	if params.RootChain != hmTypes.RootChainTypeEth && params.RootChain != "" {
+		res, err = keeper.GetOtherCheckpointByNumber(ctx, params.Number, params.RootChain)
+	} else {
+		res, err = keeper.GetCheckpointByNumber(ctx, params.Number)
+	}
+
 	if err != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(fmt.Sprintf("could not fetch checkpoint by index %v", params.Number), err.Error()))
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(
+			fmt.Sprintf("could not fetch checkpoint by index %v %v", params.Number, params.RootChain), err.Error()))
 	}
 
 	bz, err := json.Marshal(res)
@@ -73,7 +94,18 @@ func handleQueryCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Keeper
 }
 
 func handleQueryCheckpointBuffer(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	res, err := keeper.GetCheckpointFromBuffer(ctx)
+	var params types.QueryCheckpointParams
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
+	}
+
+	var res *hmTypes.Checkpoint
+	var err error
+	if params.RootChain != hmTypes.RootChainTypeEth && params.RootChain != "" {
+		res, err = keeper.GetOtherCheckpointFromBuffer(ctx, params.RootChain)
+	} else {
+		res, err = keeper.GetCheckpointFromBuffer(ctx)
+	}
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not fetch checkpoint buffer", err.Error()))
 	}

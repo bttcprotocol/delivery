@@ -40,27 +40,48 @@ func handleMsgCheckpoint(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper, con
 	//
 	// Check checkpoint buffer
 	//
-
-	checkpointBuffer, err := k.GetCheckpointFromBuffer(ctx)
-	if err == nil {
-		checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
-
-		if checkpointBuffer.TimeStamp == 0 || ((timeStamp > checkpointBuffer.TimeStamp) && timeStamp-checkpointBuffer.TimeStamp >= checkpointBufferTime) {
-			logger.Debug("Checkpoint has been timed out. Flushing buffer.", "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", checkpointBuffer.TimeStamp)
-			k.FlushCheckpointBuffer(ctx)
-		} else {
-			expiryTime := checkpointBuffer.TimeStamp + checkpointBufferTime
-			logger.Error("Checkpoint already exits in buffer", "Checkpoint", checkpointBuffer.String(), "Expires", expiryTime)
-			return common.ErrNoACK(k.Codespace(), expiryTime).Result()
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		checkpointBuffer, err := k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
+		if err == nil {
+			checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
+			if checkpointBuffer.TimeStamp == 0 || ((timeStamp > checkpointBuffer.TimeStamp) && timeStamp-checkpointBuffer.TimeStamp >= checkpointBufferTime) {
+				logger.Debug("Checkpoint has been timed out. Flushing buffer.", "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", checkpointBuffer.TimeStamp)
+				k.FlushOtherCheckpointBuffer(ctx, msg.RootChainType)
+			} else {
+				expiryTime := checkpointBuffer.TimeStamp + checkpointBufferTime
+				logger.Error("Checkpoint already exits in buffer", "root", msg.RootChainType, "Checkpoint", checkpointBuffer.String(), "Expires", expiryTime)
+				return common.ErrNoACK(k.Codespace(), expiryTime).Result()
+			}
 		}
+	} else {
+		checkpointBuffer, err := k.GetCheckpointFromBuffer(ctx)
+		if err == nil {
+			checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
+
+			if checkpointBuffer.TimeStamp == 0 || ((timeStamp > checkpointBuffer.TimeStamp) && timeStamp-checkpointBuffer.TimeStamp >= checkpointBufferTime) {
+				logger.Debug("Checkpoint has been timed out. Flushing buffer.", "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", checkpointBuffer.TimeStamp)
+				k.FlushCheckpointBuffer(ctx)
+			} else {
+				expiryTime := checkpointBuffer.TimeStamp + checkpointBufferTime
+				logger.Error("Checkpoint already exits in buffer", "Checkpoint", checkpointBuffer.String(), "Expires", expiryTime)
+				return common.ErrNoACK(k.Codespace(), expiryTime).Result()
+			}
+		}
+
 	}
 
 	//
 	// Validate last checkpoint
 	//
-
+	var lastCheckpoint hmTypes.Checkpoint
+	var err error
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		lastCheckpoint, err = k.GetLastOtherCheckpoint(ctx, msg.RootChainType)
+	} else {
+		lastCheckpoint, err = k.GetLastCheckpoint(ctx)
+	}
 	// fetch last checkpoint from store
-	if lastCheckpoint, err := k.GetLastCheckpoint(ctx); err == nil {
+	if err == nil {
 		// make sure new checkpoint is after tip
 		if lastCheckpoint.EndBlock > msg.StartBlock {
 			logger.Error("Checkpoint already exists",

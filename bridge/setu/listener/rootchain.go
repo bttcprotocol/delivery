@@ -12,11 +12,12 @@ import (
 	ethereum "github.com/maticnetwork/bor"
 	"github.com/maticnetwork/bor/accounts/abi"
 	ethCommon "github.com/maticnetwork/bor/common"
-	"github.com/maticnetwork/bor/core/types"
+	ethTypes "github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/contracts/stakinginfo"
 	"github.com/maticnetwork/heimdall/helper"
+	"github.com/maticnetwork/heimdall/types"
 )
 
 // RootChainListenerContext root chain listener context
@@ -88,7 +89,7 @@ func (rl *RootChainListener) Start() error {
 }
 
 // ProcessHeader - process headerblock from rootchain
-func (rl *RootChainListener) ProcessHeader(newHeader *types.Header) {
+func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	rl.Logger.Debug("New block detected", "blockNumber", newHeader.Number)
 
 	// fetch context
@@ -278,6 +279,10 @@ func (rl *RootChainListener) sendTaskWithDelay(taskName string, eventName string
 			{
 				Type:  "string",
 				Value: string(logBytes),
+			},
+			{
+				Type:  "string",
+				Value: types.RootChainTypeTron,
 			},
 		},
 	}

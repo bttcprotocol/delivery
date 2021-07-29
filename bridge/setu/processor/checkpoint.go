@@ -131,6 +131,9 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 			return errors.New("no of blocks on childchain is less than confirmations required")
 		}
 
+		// tron send tron checkpoint
+		go cp.sendTronCheckpointToHeimdall(checkpointContext, latestConfirmedChildBlock)
+
 		expectedCheckpointState, err := cp.nextExpectedCheckpoint(checkpointContext, latestConfirmedChildBlock)
 		if err != nil {
 			cp.Logger.Error("Error while calculate next expected checkpoint", "error", err)
@@ -145,7 +148,7 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 		timeStamp := uint64(time.Now().Unix())
 		checkpointBufferTime := uint64(checkpointContext.CheckpointParams.CheckpointBufferTime.Seconds())
 
-		bufferedCheckpoint, err := util.GetBufferedCheckpoint(cp.cliCtx)
+		bufferedCheckpoint, err := util.GetBufferedCheckpoint(cp.cliCtx, hmTypes.RootChainTypeEth)
 		if err != nil {
 			cp.Logger.Debug("No buffered checkpoint", "bufferedCheckpoint", bufferedCheckpoint)
 		}
@@ -196,6 +199,7 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 	var startBlock uint64
 	var endBlock uint64
 	var txHash string
+	var rootChain string
 
 	for _, attr := range event.Attributes {
 		if attr.Key == checkpointTypes.AttributeKeyStartBlock {
@@ -207,6 +211,9 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 		if attr.Key == hmTypes.AttributeKeyTxHash {
 			txHash = attr.Value
 		}
+		if attr.Key == checkpointTypes.AttributeKeyRootChain {
+			rootChain = attr.Value
+		}
 	}
 
 	checkpointContext, err := cp.getCheckpointContext()
@@ -214,6 +221,24 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 		return err
 	}
 
+	if rootChain == hmTypes.RootChainTypeTron {
+		shouldSend, err := cp.shouldSendTronCheckpoint(checkpointContext, startBlock, endBlock)
+		if err != nil {
+			return err
+		}
+
+		if shouldSend && isCurrentProposer {
+			txHash := common.FromHex(txHash)
+			if err := cp.createAndSendCheckpointToTron(checkpointContext, startBlock, endBlock, blockHeight, txHash); err != nil {
+				cp.Logger.Error("Error sending checkpoint to rootchain", "error", err)
+				return err
+			}
+		} else {
+			cp.Logger.Info("I am not the current proposer or checkpoint already sent. Ignoring", "eventType", event.Type)
+			return nil
+		}
+		return nil
+	}
 	shouldSend, err := cp.shouldSendCheckpoint(checkpointContext, startBlock, endBlock)
 	if err != nil {
 		return err
@@ -234,7 +259,7 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 
 // sendCheckpointAckToHeimdall - handles checkpointAck event from rootchain
 // 1. create and broadcast checkpointAck msg to heimdall.
-func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, checkpointAckStr string) error {
+func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, checkpointAckStr string, rootChain string) error {
 	// fetch checkpoint context
 	checkpointContext, err := cp.getCheckpointContext()
 	if err != nil {
@@ -264,10 +289,11 @@ func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, che
 			"checkpointNumber", checkpointNumber,
 			"txHash", hmTypes.BytesToHeimdallHash(log.TxHash.Bytes()),
 			"logIndex", uint64(log.Index),
+			"root", rootChain,
 		)
 
 		// fetch latest checkpoint
-		latestCheckpoint, err := util.GetlastestCheckpoint(cp.cliCtx)
+		latestCheckpoint, err := util.GetlastestCheckpoint(cp.cliCtx, rootChain)
 		// event checkpoint is older than or equal to latest checkpoint
 		if err == nil && latestCheckpoint != nil && latestCheckpoint.EndBlock >= event.End.Uint64() {
 			cp.Logger.Debug("Checkpoint ack is already submitted", "start", event.Start, "end", event.End)
@@ -275,7 +301,7 @@ func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, che
 		}
 
 		// create msg checkpoint ack message
-		msg := checkpointTypes.NewMsgCheckpointAck(
+		msg := checkpointTypes.NewMsgOtherCheckpointAck(
 			helper.GetFromAddress(cp.cliCtx),
 			checkpointNumber.Uint64(),
 			hmTypes.BytesToHeimdallAddress(event.Proposer.Bytes()),
@@ -284,6 +310,7 @@ func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, che
 			event.Root,
 			hmTypes.BytesToHeimdallHash(log.TxHash.Bytes()),
 			uint64(log.Index),
+			rootChain,
 		)
 
 		// return broadcast to heimdall

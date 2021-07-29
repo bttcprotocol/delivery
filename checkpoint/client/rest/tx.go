@@ -33,6 +33,7 @@ type (
 		StartBlock      uint64                  `json:"start_block"`
 		EndBlock        uint64                  `json:"end_block"`
 		BorChainID      string                  `json:"bor_chain_id"`
+		RootChain       string                  `json:"root_chain"`
 	}
 
 	// HeaderACKReq struct for sending ACK for a new headers
@@ -48,6 +49,7 @@ type (
 		RootHash    hmTypes.HeimdallHash    `json:"root_Hash"`
 		TxHash      hmTypes.HeimdallHash    `json:"tx_hash"`
 		LogIndex    uint64                  `json:"log_index"`
+		RootChain   string                  `json:"root_chain"`
 	}
 
 	// HeaderNoACKReq struct for sending no-ack for a new headers

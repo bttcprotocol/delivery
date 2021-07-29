@@ -136,9 +136,15 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 	//
 	// Validate last checkpoint
 	//
-
+	var lastCheckpoint hmTypes.Checkpoint
+	var err error
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		lastCheckpoint, err = k.GetLastOtherCheckpoint(ctx, msg.RootChainType)
+	} else {
+		lastCheckpoint, err = k.GetLastCheckpoint(ctx)
+	}
 	// fetch last checkpoint from store
-	if lastCheckpoint, err := k.GetLastCheckpoint(ctx); err == nil {
+	if err == nil {
 		// make sure new checkpoint is after tip
 		if lastCheckpoint.EndBlock > msg.StartBlock {
 			logger.Error("Checkpoint already exists",
@@ -163,8 +169,13 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 	//
 	// Save checkpoint to buffer store
 	//
+	var checkpointBuffer *hmTypes.Checkpoint
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		checkpointBuffer, err = k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
+	} else {
+		checkpointBuffer, err = k.GetCheckpointFromBuffer(ctx)
+	}
 
-	checkpointBuffer, err := k.GetCheckpointFromBuffer(ctx)
 	if err == nil && checkpointBuffer != nil {
 		logger.Debug("Checkpoint already exists in buffer")
 
@@ -179,19 +190,31 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 	timeStamp := uint64(ctx.BlockTime().Unix())
 
 	// Add checkpoint to buffer with root hash and account hash
-	k.SetCheckpointBuffer(ctx, hmTypes.Checkpoint{
-		StartBlock: msg.StartBlock,
-		EndBlock:   msg.EndBlock,
-		RootHash:   msg.RootHash,
-		Proposer:   msg.Proposer,
-		BorChainID: msg.BorChainID,
-		TimeStamp:  timeStamp,
-	})
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		k.SetOtherCheckpointBuffer(ctx, hmTypes.Checkpoint{
+			StartBlock: msg.StartBlock,
+			EndBlock:   msg.EndBlock,
+			RootHash:   msg.RootHash,
+			Proposer:   msg.Proposer,
+			BorChainID: msg.BorChainID,
+			TimeStamp:  timeStamp,
+		}, msg.RootChainType)
+	} else {
+		k.SetCheckpointBuffer(ctx, hmTypes.Checkpoint{
+			StartBlock: msg.StartBlock,
+			EndBlock:   msg.EndBlock,
+			RootHash:   msg.RootHash,
+			Proposer:   msg.Proposer,
+			BorChainID: msg.BorChainID,
+			TimeStamp:  timeStamp,
+		})
+	}
 
 	logger.Debug("New checkpoint into buffer stored",
 		"startBlock", msg.StartBlock,
 		"endBlock", msg.EndBlock,
 		"rootHash", msg.RootHash,
+		"rootChain", msg.RootChainType,
 	)
 
 	// TX bytes
@@ -211,6 +234,7 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 			sdk.NewAttribute(types.AttributeKeyEndBlock, strconv.FormatUint(msg.EndBlock, 10)),
 			sdk.NewAttribute(types.AttributeKeyRootHash, msg.RootHash.String()),
 			sdk.NewAttribute(types.AttributeKeyAccountHash, msg.AccountRootHash.String()),
+			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChainType),
 		),
 	})
 

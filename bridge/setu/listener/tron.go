@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/maticnetwork/heimdall/types"
+
 	"github.com/RichardKnop/machinery/v1/tasks"
-	"github.com/maticnetwork/bor/core/types"
+	ethTypes "github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/helper"
@@ -34,7 +36,7 @@ func NewTronListener() *TronListener {
 
 // Start starts new block subscription
 func (tl *TronListener) Start() error {
-	tl.Logger.Info("Starting the tron chain listener...")
+	tl.Logger.Info("Starting")
 
 	// create cancellable context
 	headerCtx, cancelHeaderProcess := context.WithCancel(context.Background())
@@ -48,7 +50,7 @@ func (tl *TronListener) Start() error {
 
 	tl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
 	// poll for new header using client object
-	tl.StartPolling(headerCtx, pollInterval)
+	go tl.StartPolling(headerCtx, pollInterval)
 	return nil
 }
 
@@ -68,7 +70,7 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 			headerNum, err := tl.tronClient.GetNowBlock(ctx)
 			if err == nil {
 				// send data to channel
-				tl.HeaderChannel <- &(types.Header{
+				tl.HeaderChannel <- &(ethTypes.Header{
 					Number: big.NewInt(headerNum),
 				})
 			}
@@ -81,7 +83,7 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 }
 
 // ProcessHeader - process headerblock from rootchain
-func (tl *TronListener) ProcessHeader(newHeader *types.Header) {
+func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 	tl.Logger.Debug("New block detected", "blockNumber", newHeader.Number)
 
 	// fetch context
@@ -152,6 +154,10 @@ func (tl *TronListener) sendTaskWithDelay(taskName string, eventName string, log
 			{
 				Type:  "string",
 				Value: string(logBytes),
+			},
+			{
+				Type:  "string",
+				Value: types.RootChainTypeTron,
 			},
 		},
 	}

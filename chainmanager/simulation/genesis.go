@@ -16,6 +16,7 @@ import (
 // Parameter keys
 const (
 	MainchainTxConfirmations  = "mainchain_tx_confirmations"
+	TronchainTxConfirmations  = "tronchain_tx_confirmations"
 	MaticchainTxConfirmations = "maticchain_tx_confirmations"
 
 	BorChainID            = "bor_chain_id"
@@ -32,6 +33,10 @@ const (
 )
 
 func GenMainchainTxConfirmations(r *rand.Rand) uint64 {
+	return uint64(simulation.RandIntBetween(r, 1, 100))
+}
+
+func GenTronchainTxConfirmations(r *rand.Rand) uint64 {
 	return uint64(simulation.RandIntBetween(r, 1, 100))
 }
 
@@ -52,6 +57,11 @@ func RandomizedGenState(simState *module.SimulationState) {
 	var mainchainTxConfirmations uint64
 	simState.AppParams.GetOrGenerate(simState.Cdc, MainchainTxConfirmations, &mainchainTxConfirmations, simState.Rand,
 		func(r *rand.Rand) { mainchainTxConfirmations = GenMainchainTxConfirmations(r) },
+	)
+
+	var tronchainTxConfirmations uint64
+	simState.AppParams.GetOrGenerate(simState.Cdc, TronchainTxConfirmations, &tronchainTxConfirmations, simState.Rand,
+		func(r *rand.Rand) { tronchainTxConfirmations = GenTronchainTxConfirmations(r) },
 	)
 
 	var maticchainTxConfirmations uint64
@@ -83,7 +93,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 		StateReceiverAddress:  stateReceiverAddress,
 		ValidatorSetAddress:   validatorSetAddress,
 	}
-	params := types.NewParams(mainchainTxConfirmations, maticchainTxConfirmations, chainParams)
+	params := types.NewParams(mainchainTxConfirmations, tronchainTxConfirmations, maticchainTxConfirmations, chainParams)
 	chainManagerGenesis := types.NewGenesisState(params)
 	fmt.Printf("Selected randomly generated chainmanager parameters:\n%s\n", codec.MustMarshalJSONIndent(simState.Cdc, chainManagerGenesis))
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(chainManagerGenesis)

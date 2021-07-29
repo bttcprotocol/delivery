@@ -23,6 +23,11 @@ var (
 	BufferCheckpointKey = []byte{0x12} // Key to store checkpoint in buffer
 	CheckpointKey       = []byte{0x13} // prefix key for when storing checkpoint after ACK
 	LastNoACKKey        = []byte{0x14} // key to store last no-ack
+
+	TronACKCountKey         = []byte{0x21} // key to store ACK count
+	TronBufferCheckpointKey = []byte{0x22} // Key to store checkpoint in buffer
+	TronCheckpointKey       = []byte{0x23} // prefix key for when storing checkpoint after ACK
+	TronLastNoACKKey        = []byte{0x24} // key to store last no-ack
 )
 
 // ModuleCommunicator manages different module interaction
@@ -99,6 +104,17 @@ func (k *Keeper) SetCheckpointBuffer(ctx sdk.Context, checkpoint hmTypes.Checkpo
 	return nil
 }
 
+// SetOtherCheckpointBuffer flushes Checkpoint Buffer
+func (k *Keeper) SetOtherCheckpointBuffer(ctx sdk.Context, checkpoint hmTypes.Checkpoint, rootChain string) error {
+	if rootChain == hmTypes.RootChainTypeTron {
+		err := k.addCheckpoint(ctx, TronBufferCheckpointKey, checkpoint)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // addCheckpoint adds checkpoint to store
 func (k *Keeper) addCheckpoint(ctx sdk.Context, key []byte, checkpoint hmTypes.Checkpoint) error {
 	store := ctx.KVStore(k.storeKey)
@@ -132,6 +148,24 @@ func (k *Keeper) GetCheckpointByNumber(ctx sdk.Context, number uint64) (hmTypes.
 	} else {
 		return _checkpoint, errors.New("Invalid checkpoint Index")
 	}
+}
+
+// GetOtherCheckpointByNumber to get checkpoint by checkpoint number
+func (k *Keeper) GetOtherCheckpointByNumber(ctx sdk.Context, number uint64, rootChain string) (hmTypes.Checkpoint, error) {
+	store := ctx.KVStore(k.storeKey)
+	var _checkpoint hmTypes.Checkpoint
+	var checkpointKey []byte
+	checkpointKey = GetOtherCheckpointKey(number, rootChain)
+
+	if store.Has(checkpointKey) {
+		err := k.cdc.UnmarshalBinaryBare(store.Get(checkpointKey), &_checkpoint)
+		if err != nil {
+			return _checkpoint, err
+		} else {
+			return _checkpoint, nil
+		}
+	}
+	return _checkpoint, errors.New("Invalid checkpoint Index")
 }
 
 // GetCheckpointList returns all checkpoints with params like page and limit
@@ -185,10 +219,44 @@ func (k *Keeper) GetLastCheckpoint(ctx sdk.Context) (hmTypes.Checkpoint, error) 
 	return _checkpoint, cmn.ErrNoCheckpointFound(k.Codespace())
 }
 
+// GetLastTronCheckpoint gets last checkpoint, checkpoint number = TotalACKs
+func (k *Keeper) GetLastOtherCheckpoint(ctx sdk.Context, rootChain string) (hmTypes.Checkpoint, error) {
+	store := ctx.KVStore(k.storeKey)
+	acksCount := k.GetOtherACKCount(ctx, rootChain)
+
+	lastCheckpointKey := acksCount
+
+	// fetch checkpoint and unmarshall
+	var _checkpoint hmTypes.Checkpoint
+
+	// no checkpoint received
+	// header key
+	headerKey := GetOtherCheckpointKey(lastCheckpointKey, rootChain)
+	if store.Has(headerKey) {
+		err := k.cdc.UnmarshalBinaryBare(store.Get(headerKey), &_checkpoint)
+		if err != nil {
+			k.Logger(ctx).Error("Unable to fetch last checkpoint from store", "key", lastCheckpointKey, "acksCount", acksCount)
+			return _checkpoint, err
+		} else {
+			return _checkpoint, nil
+		}
+	}
+	return _checkpoint, cmn.ErrNoCheckpointFound(k.Codespace())
+}
+
 // GetCheckpointKey appends prefix to checkpointNumber
 func GetCheckpointKey(checkpointNumber uint64) []byte {
 	checkpointNumberBytes := []byte(strconv.FormatUint(checkpointNumber, 10))
 	return append(CheckpointKey, checkpointNumberBytes...)
+}
+
+// GetOtherCheckpointKey appends prefix to checkpointNumber
+func GetOtherCheckpointKey(checkpointNumber uint64, rootChain string) []byte {
+	if rootChain == hmTypes.RootChainTypeTron {
+		checkpointNumberBytes := []byte(strconv.FormatUint(checkpointNumber, 10))
+		return append(TronCheckpointKey, checkpointNumberBytes...)
+	}
+	return nil
 }
 
 // HasStoreValue check if value exists in store or not
@@ -201,6 +269,14 @@ func (k *Keeper) HasStoreValue(ctx sdk.Context, key []byte) bool {
 func (k *Keeper) FlushCheckpointBuffer(ctx sdk.Context) {
 	store := ctx.KVStore(k.storeKey)
 	store.Delete(BufferCheckpointKey)
+}
+
+// FlushOtherCheckpointBuffer flushes Checkpoint Buffer
+func (k *Keeper) FlushOtherCheckpointBuffer(ctx sdk.Context, rootChain string) {
+	if rootChain == hmTypes.RootChainTypeTron {
+		store := ctx.KVStore(k.storeKey)
+		store.Delete(TronBufferCheckpointKey)
+	}
 }
 
 // GetCheckpointFromBuffer gets checkpoint in buffer
@@ -217,6 +293,23 @@ func (k *Keeper) GetCheckpointFromBuffer(ctx sdk.Context) (*hmTypes.Checkpoint, 
 	}
 
 	return nil, errors.New("No checkpoint found in buffer")
+}
+
+// GetOtherCheckpointFromBuffer gets checkpoint in buffer
+func (k *Keeper) GetOtherCheckpointFromBuffer(ctx sdk.Context, rootChain string) (*hmTypes.Checkpoint, error) {
+	store := ctx.KVStore(k.storeKey)
+
+	// checkpoint block header
+	if rootChain == hmTypes.RootChainTypeTron {
+		if store.Has(TronBufferCheckpointKey) {
+			var checkpoint hmTypes.Checkpoint
+			// Get checkpoint and unmarshall
+			err := k.cdc.UnmarshalBinaryBare(store.Get(TronBufferCheckpointKey), &checkpoint)
+			return &checkpoint, err
+		}
+	}
+
+	return nil, errors.New("no checkpoint found in buffer")
 }
 
 // SetLastNoAck set last no-ack object
@@ -277,6 +370,25 @@ func (k Keeper) GetACKCount(ctx sdk.Context) uint64 {
 			k.Logger(ctx).Error("Unable to convert key to int")
 		} else {
 			return ackCount
+		}
+	}
+
+	return 0
+}
+
+// GetACKCount returns current ACK count
+func (k Keeper) GetOtherACKCount(ctx sdk.Context, rootChain string) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	// checkpoint block header
+	if rootChain == hmTypes.RootChainTypeTron {
+		if store.Has(TronACKCountKey) {
+			// check if ack count is there
+			ackCount, err := strconv.ParseUint(string(store.Get(TronACKCountKey)), 10, 64)
+			if err != nil {
+				k.Logger(ctx).Error("Unable to convert key to int")
+			} else {
+				return ackCount
+			}
 		}
 	}
 

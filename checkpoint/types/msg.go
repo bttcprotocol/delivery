@@ -26,6 +26,7 @@ type MsgCheckpoint struct {
 	RootHash        types.HeimdallHash    `json:"root_hash"`
 	AccountRootHash types.HeimdallHash    `json:"account_root_hash"`
 	BorChainID      string                `json:"bor_chain_id"`
+	RootChainType   string                `json:"root_chain_type"`
 }
 
 // NewMsgCheckpointBlock creates new checkpoint message using mentioned arguments
@@ -44,6 +45,28 @@ func NewMsgCheckpointBlock(
 		RootHash:        roothash,
 		AccountRootHash: accountRootHash,
 		BorChainID:      borChainID,
+		RootChainType:   types.RootChainTypeEth,
+	}
+}
+
+// NewMsgOtherCheckpointBlock creates new checkpoint message using mentioned arguments
+func NewMsgOtherCheckpointBlock(
+	proposer types.HeimdallAddress,
+	startBlock uint64,
+	endBlock uint64,
+	roothash types.HeimdallHash,
+	accountRootHash types.HeimdallHash,
+	borChainID string,
+	rootChain string,
+) MsgCheckpoint {
+	return MsgCheckpoint{
+		Proposer:        proposer,
+		StartBlock:      startBlock,
+		EndBlock:        endBlock,
+		RootHash:        roothash,
+		AccountRootHash: accountRootHash,
+		BorChainID:      borChainID,
+		RootChainType:   rootChain,
 	}
 }
 
@@ -107,14 +130,15 @@ var _ sdk.Msg = &MsgCheckpointAck{}
 
 // MsgCheckpointAck Add mainchain commit transaction hash to MsgCheckpointAck
 type MsgCheckpointAck struct {
-	From       types.HeimdallAddress `json:"from"`
-	Number     uint64                `json:"number"`
-	Proposer   types.HeimdallAddress `json:"proposer"`
-	StartBlock uint64                `json:"start_block"`
-	EndBlock   uint64                `json:"end_block"`
-	RootHash   types.HeimdallHash    `json:"root_hash"`
-	TxHash     types.HeimdallHash    `json:"tx_hash"`
-	LogIndex   uint64                `json:"log_index"`
+	From          types.HeimdallAddress `json:"from"`
+	Number        uint64                `json:"number"`
+	Proposer      types.HeimdallAddress `json:"proposer"`
+	StartBlock    uint64                `json:"start_block"`
+	EndBlock      uint64                `json:"end_block"`
+	RootHash      types.HeimdallHash    `json:"root_hash"`
+	TxHash        types.HeimdallHash    `json:"tx_hash"`
+	LogIndex      uint64                `json:"log_index"`
+	RootChainType string                `json:"root_chain_type"`
 }
 
 func NewMsgCheckpointAck(
@@ -137,6 +161,31 @@ func NewMsgCheckpointAck(
 		RootHash:   rootHash,
 		TxHash:     txHash,
 		LogIndex:   logIndex,
+	}
+}
+
+func NewMsgOtherCheckpointAck(
+	from types.HeimdallAddress,
+	number uint64,
+	proposer types.HeimdallAddress,
+	startBlock uint64,
+	endBlock uint64,
+	rootHash types.HeimdallHash,
+	txHash types.HeimdallHash,
+	logIndex uint64,
+	rootChain string,
+) MsgCheckpointAck {
+
+	return MsgCheckpointAck{
+		From:          from,
+		Number:        number,
+		Proposer:      proposer,
+		StartBlock:    startBlock,
+		EndBlock:      endBlock,
+		RootHash:      rootHash,
+		TxHash:        txHash,
+		LogIndex:      logIndex,
+		RootChainType: rootChain,
 	}
 }
 
