@@ -282,7 +282,7 @@ func (rl *RootChainListener) sendTaskWithDelay(taskName string, eventName string
 			},
 			{
 				Type:  "string",
-				Value: types.RootChainTypeTron,
+				Value: types.RootChainTypeEth,
 			},
 		},
 	}

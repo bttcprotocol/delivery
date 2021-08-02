@@ -173,7 +173,14 @@ func handleMsgCheckpointAck(ctx sdk.Context, msg types.MsgCheckpointAck, k Keepe
 	logger := k.Logger(ctx)
 
 	// Get last checkpoint from buffer
-	headerBlock, err := k.GetCheckpointFromBuffer(ctx)
+
+	var headerBlock *hmTypes.Checkpoint
+	var err error
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		headerBlock, err = k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
+	} else {
+		headerBlock, err = k.GetCheckpointFromBuffer(ctx)
+	}
 	if err != nil {
 		logger.Error("Unable to get checkpoint", "error", err)
 		return common.ErrBadAck(k.Codespace()).Result()
@@ -193,6 +200,7 @@ func handleMsgCheckpointAck(ctx sdk.Context, msg types.MsgCheckpointAck, k Keepe
 			"endReceived", msg.StartBlock,
 			"rootExpected", headerBlock.RootHash.String(),
 			"rootRecieved", msg.RootHash.String(),
+			"rootChain", msg.RootChainType,
 		)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}

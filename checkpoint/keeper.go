@@ -95,6 +95,17 @@ func (k *Keeper) AddCheckpoint(ctx sdk.Context, checkpointNumber uint64, checkpo
 	return nil
 }
 
+// AddOtherCheckpoint adds checkpoint into final blocks
+func (k *Keeper) AddOtherCheckpoint(ctx sdk.Context, checkpointNumber uint64, checkpoint hmTypes.Checkpoint, rootChain string) error {
+	key := GetOtherCheckpointKey(checkpointNumber, rootChain)
+	err := k.addCheckpoint(ctx, key, checkpoint)
+	if err != nil {
+		return err
+	}
+	k.Logger(ctx).Info("Adding good checkpoint to state", "checkpoint", checkpoint, "checkpointNumber", checkpointNumber)
+	return nil
+}
+
 // SetCheckpointBuffer flushes Checkpoint Buffer
 func (k *Keeper) SetCheckpointBuffer(ctx sdk.Context, checkpoint hmTypes.Checkpoint) error {
 	err := k.addCheckpoint(ctx, BufferCheckpointKey, checkpoint)
@@ -418,6 +429,22 @@ func (k Keeper) UpdateACKCount(ctx sdk.Context) {
 
 	// update
 	store.Set(ACKCountKey, ACKs)
+}
+
+// UpdateOtherACKCount updates ACK count by 1
+func (k Keeper) UpdateOtherACKCount(ctx sdk.Context, rootChain string) {
+	store := ctx.KVStore(k.storeKey)
+
+	// get current ACK Count
+	ACKCount := k.GetOtherACKCount(ctx, rootChain)
+
+	// increment by 1
+	ACKs := []byte(strconv.FormatUint(ACKCount+1, 10))
+
+	// update
+	if rootChain == hmTypes.RootChainTypeTron {
+		store.Set(TronACKCountKey, ACKs)
+	}
 }
 
 // -----------------------------------------------------------------------------

@@ -66,6 +66,10 @@ func SideHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 
 // SideHandleMsgCheckpointAck handles MsgCheckpointAck message for external call
 func SideHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointAck, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		return SideHandleMsgOtherCheckpointAck(ctx, k, msg, contractCaller)
+	}
+
 	logger := k.Logger(ctx)
 
 	params := k.GetParams(ctx)
@@ -101,6 +105,40 @@ func SideHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	result.Result = abci.SideTxResultType_Yes
 
 	return
+}
+
+// SideHandleMsgOtherCheckpointAck handles MsgCheckpointAck message for external call
+func SideHandleMsgOtherCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointAck, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
+	logger := k.Logger(ctx)
+
+	params := k.GetParams(ctx)
+	chainParams := k.ck.GetParams(ctx).ChainParams
+
+	//
+	// Validate data from root chain
+	//
+	if msg.RootChainType == hmTypes.RootChainTypeTron {
+		root, start, end, _, proposer, err := helper.GetTronChainRPCClient().GetHeaderInfo(msg.Number, chainParams.TronChainAddress, params.ChildBlockInterval)
+		if err != nil {
+			logger.Error("Unable to fetch checkpoint from tron", "error", err, "checkpointNumber", msg.Number)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+
+		// check if message data matches with contract data
+		if msg.StartBlock != start ||
+			msg.EndBlock != end ||
+			!msg.Proposer.Equals(proposer) ||
+			!bytes.Equal(msg.RootHash.Bytes(), root.Bytes()) {
+
+			logger.Error("Invalid message. It doesn't match with contract state", "error", err, "checkpointNumber", msg.Number)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+		// say `yes`
+		result.Result = abci.SideTxResultType_Yes
+		return
+	}
+
+	return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
 }
 
 //
@@ -254,7 +292,13 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	}
 
 	// get last checkpoint from buffer
-	checkpointObj, err := k.GetCheckpointFromBuffer(ctx)
+	var checkpointObj *hmTypes.Checkpoint
+	var err error
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		checkpointObj, err = k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
+	} else {
+		checkpointObj, err = k.GetCheckpointFromBuffer(ctx)
+	}
 	if err != nil {
 		logger.Error("Unable to get checkpoint buffer", "error", err)
 		return common.ErrBadAck(k.Codespace()).Result()
@@ -275,6 +319,7 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 			"endReceived", msg.StartBlock,
 			"rootExpected", checkpointObj.RootHash.String(),
 			"rootRecieved", msg.RootHash.String(),
+			"rootChain", msg.RootChainType,
 		)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}
@@ -291,23 +336,39 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	// Update checkpoint state
 	//
 
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		err = k.AddOtherCheckpoint(ctx, msg.Number, *checkpointObj, msg.RootChainType)
+	} else {
+		err = k.AddCheckpoint(ctx, msg.Number, *checkpointObj)
+	}
 	// Add checkpoint to store
-	if err := k.AddCheckpoint(ctx, msg.Number, *checkpointObj); err != nil {
+	if err != nil {
 		logger.Error("Error while adding checkpoint into store", "checkpointNumber", msg.Number)
 		return sdk.ErrInternal("Failed to add checkpoint into store").Result()
 	}
 	logger.Debug("Checkpoint added to store", "checkpointNumber", msg.Number)
 
 	// Flush buffer
-	k.FlushCheckpointBuffer(ctx)
-	logger.Debug("Checkpoint buffer flushed after receiving checkpoint ack")
+	if msg.RootChainType != hmTypes.RootChainTypeEth {
+		k.FlushOtherCheckpointBuffer(ctx, msg.RootChainType)
+		k.UpdateOtherACKCount(ctx, msg.RootChainType)
+	} else {
+		k.FlushCheckpointBuffer(ctx)
+		k.UpdateACKCount(ctx)
+	}
+
+	logger.Debug("Checkpoint buffer flushed after receiving checkpoint ack", "root", msg.RootChainType)
 
 	// Update ack count in staking module
-	k.UpdateACKCount(ctx)
-	logger.Info("Valid ack received", "CurrentACKCount", k.GetACKCount(ctx)-1, "UpdatedACKCount", k.GetACKCount(ctx))
+	logger.Info("Valid ack received",
+		"CurrentACKCount", k.GetACKCount(ctx)-1,
+		"UpdatedACKCount", k.GetACKCount(ctx),
+		"root", msg.RootChainType)
 
-	// Increment accum (selects new proposer)
-	k.sk.IncrementAccum(ctx, 1)
+	if msg.RootChainType == hmTypes.RootChainTypeStake {
+		// Increment accum (selects new proposer)
+		k.sk.IncrementAccum(ctx, 1)
+	}
 
 	// TX bytes
 	txBytes := ctx.TxBytes()
@@ -322,6 +383,7 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
 			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),             // result
 			sdk.NewAttribute(types.AttributeKeyHeaderIndex, strconv.FormatUint(msg.Number, 10)),
+			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChainType),
 		),
 	})
 

@@ -289,7 +289,7 @@ func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, che
 			"checkpointNumber", checkpointNumber,
 			"txHash", hmTypes.BytesToHeimdallHash(log.TxHash.Bytes()),
 			"logIndex", uint64(log.Index),
-			"root", rootChain,
+			"rootChain", rootChain,
 		)
 
 		// fetch latest checkpoint
@@ -333,7 +333,12 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 		return
 	}
 
-	lastCreatedAt, err := cp.getLatestCheckpointTime(checkpointContext)
+	var lastCreatedAt int64
+	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeTron {
+		lastCreatedAt, err = cp.getLatestTronCheckpointTime(checkpointContext)
+	} else {
+		lastCreatedAt, err = cp.getLatestCheckpointTime(checkpointContext)
+	}
 	if err != nil {
 		cp.Logger.Error("Error fetching latest checkpoint time from rootchain", "error", err)
 		return

@@ -265,3 +265,25 @@ func (cp *CheckpointProcessor) createAndSendCheckpointToTron(checkpointContext *
 
 	return nil
 }
+
+// getLatestTronCheckpointTime - get latest checkpoint time from rootchain
+func (cp *CheckpointProcessor) getLatestTronCheckpointTime(checkpointContext *CheckpointContext) (int64, error) {
+	// get chain params
+	chainParams := checkpointContext.ChainmanagerParams.ChainParams
+	checkpointParams := checkpointContext.CheckpointParams
+
+	// fetch last header number
+	lastHeaderNumber, err := cp.contractConnector.TronChainRPC.CurrentHeaderBlock(chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching current header block number", "error", err)
+		return 0, err
+	}
+
+	// header block
+	_, _, _, createdAt, _, err := cp.contractConnector.TronChainRPC.GetHeaderInfo(lastHeaderNumber, chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching header block object", "error", err)
+		return 0, err
+	}
+	return int64(createdAt), nil
+}

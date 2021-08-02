@@ -153,14 +153,15 @@ func NewMsgCheckpointAck(
 ) MsgCheckpointAck {
 
 	return MsgCheckpointAck{
-		From:       from,
-		Number:     number,
-		Proposer:   proposer,
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		RootHash:   rootHash,
-		TxHash:     txHash,
-		LogIndex:   logIndex,
+		From:          from,
+		Number:        number,
+		Proposer:      proposer,
+		StartBlock:    startBlock,
+		EndBlock:      endBlock,
+		RootHash:      rootHash,
+		TxHash:        txHash,
+		LogIndex:      logIndex,
+		RootChainType: types.RootChainTypeEth,
 	}
 }
 
