@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
+
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/heimdall/helper"
@@ -189,6 +191,11 @@ func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight
 		hl.sendBlockTask("sendTickToHeimdall", eventBytes, blockHeight)
 	case slashingTypes.EventTypeTickConfirm:
 		hl.sendBlockTask("sendTickToRootchain", eventBytes, blockHeight)
+
+	case stakingTypes.EventTypeValidatorJoin:
+		hl.sendBlockTask("sendStakingSyncToHeimdall", eventBytes, blockHeight)
+	case stakingTypes.EventTypeStakingSync:
+		hl.sendBlockTask("sendStakingSyncToRootChain", eventBytes, blockHeight)
 	default:
 		hl.Logger.Debug("BlockEvent Type mismatch", "eventType", event.Type)
 	}

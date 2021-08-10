@@ -15,6 +15,9 @@ const (
 	QueryCurrentProposer      = "current-proposer"
 	QueryProposerBonusPercent = "proposer-bonus-percent"
 	QueryStakingSequence      = "staking-sequence"
+	QueryParams               = "params"
+	QueryStakingBuffer        = "staking-buffer"
+	QueryNextStaking          = "staking-next"
 )
 
 // QuerySignerParams defines the params for querying by address
@@ -71,4 +74,18 @@ func NewQueryValidatorStatusParams(signerAddress []byte) QueryValidatorStatusPar
 // NewQueryStakingSequenceParams creates a new instance of QueryStakingSequenceParams.
 func NewQueryStakingSequenceParams(txHash string, logIndex uint64) QueryStakingSequenceParams {
 	return QueryStakingSequenceParams{TxHash: txHash, LogIndex: logIndex}
+}
+
+// QueryStakingParams defines the params for querying accounts.
+type QueryStakingParams struct {
+	Number    uint64
+	RootChain string
+}
+
+// NewQueryStakingParams creates a new instance of NewQueryStakingParams.
+func NewQueryStakingParams(number uint64, rootChain string) QueryStakingParams {
+	return QueryStakingParams{
+		Number:    number,
+		RootChain: rootChain,
+	}
 }

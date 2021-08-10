@@ -372,3 +372,126 @@ func (msg MsgValidatorExit) GetSideSignBytes() []byte {
 func (msg MsgValidatorExit) GetNonce() uint64 {
 	return msg.Nonce
 }
+
+//
+// staking info Sync
+//
+var _ sdk.Msg = &MsgStakingSync{}
+
+type MsgStakingSync struct {
+	From        hmTypes.HeimdallAddress `json:"from"`
+	ValidatorID hmTypes.ValidatorID     `json:"id"`
+	Nonce       uint64                  `json:"nonce"`
+	RootChain   string                  `json:"root"`
+	TxHash      hmTypes.HeimdallHash    `json:"tx_hash"`
+}
+
+func NewMsgStakingSync(from hmTypes.HeimdallAddress, rootChain string, id hmTypes.ValidatorID, nonce uint64, txHash hmTypes.HeimdallHash) MsgStakingSync {
+	return MsgStakingSync{
+		From:        from,
+		ValidatorID: id,
+		Nonce:       nonce,
+		RootChain:   rootChain,
+		TxHash:      txHash,
+	}
+}
+
+func (msg MsgStakingSync) Type() string {
+	return "staking-sync"
+}
+
+func (msg MsgStakingSync) Route() string {
+	return RouterKey
+}
+
+func (msg MsgStakingSync) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{hmTypes.HeimdallAddressToAccAddress(msg.From)}
+}
+
+func (msg MsgStakingSync) GetSignBytes() []byte {
+	b, err := cdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+
+func (msg MsgStakingSync) ValidateBasic() sdk.Error {
+	if msg.ValidatorID == 0 {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid validator ID %v", msg.ValidatorID)
+	}
+
+	if msg.From.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid proposer %v", msg.From.String())
+	}
+
+	return nil
+}
+
+// GetTxHash Returns tx hash
+func (msg MsgStakingSync) GetTxHash() types.HeimdallHash {
+	return msg.TxHash
+}
+
+// GetSideSignBytes returns side sign bytes
+func (msg MsgStakingSync) GetSideSignBytes() []byte {
+	return nil
+}
+
+//
+// staking ack
+//
+var _ sdk.Msg = &MsgStakingSyncAck{}
+
+type MsgStakingSyncAck struct {
+	From        hmTypes.HeimdallAddress `json:"from"`
+	ValidatorID hmTypes.ValidatorID     `json:"id"`
+	Nonce       uint64                  `json:"nonce"`
+	RootChain   string                  `json:"root"`
+}
+
+func NewMsgStakingSyncAck(from hmTypes.HeimdallAddress, rootChain string, id hmTypes.ValidatorID, nonce uint64) MsgStakingSyncAck {
+	return MsgStakingSyncAck{
+		From:        from,
+		ValidatorID: id,
+		Nonce:       nonce,
+		RootChain:   rootChain,
+	}
+}
+
+func (msg MsgStakingSyncAck) Type() string {
+	return "staking-ack"
+}
+
+func (msg MsgStakingSyncAck) Route() string {
+	return RouterKey
+}
+
+func (msg MsgStakingSyncAck) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{hmTypes.HeimdallAddressToAccAddress(msg.From)}
+}
+
+func (msg MsgStakingSyncAck) GetSignBytes() []byte {
+	b, err := cdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+
+func (msg MsgStakingSyncAck) ValidateBasic() sdk.Error {
+	if msg.ValidatorID == 0 {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid validator ID %v", msg.ValidatorID)
+	}
+
+	if msg.From.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid proposer %v", msg.From.String())
+	}
+
+	return nil
+}
+
+// GetSideSignBytes returns side sign bytes
+func (msg MsgStakingSyncAck) GetSideSignBytes() []byte {
+	return nil
+}

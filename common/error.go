@@ -46,6 +46,7 @@ const (
 	CodeErrDecodeEvent      CodeType = 2512
 	CodeNoSignerChangeError CodeType = 2513
 	CodeNonce               CodeType = 2514
+	CodeNoStakingEvent      CodeType = 2515
 
 	CodeSpanNotCountinuous  CodeType = 3501
 	CodeUnableToFreezeSet   CodeType = 3502
@@ -197,6 +198,10 @@ func ErrValidatorNotDeactivated(codespace sdk.CodespaceType) sdk.Error {
 
 func ErrValidatorAlreadyJoined(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeValAlreadyJoined, "Validator already joined")
+}
+
+func ErrNoStakingFound(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeNoStakingEvent, "Staking not found")
 }
 
 // Bor Errors --------------------------------

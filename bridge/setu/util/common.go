@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
+
 	mLog "github.com/RichardKnop/machinery/v1/log"
 	cliContext "github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/pkg/errors"
@@ -29,27 +31,30 @@ import (
 )
 
 const (
-	AccountDetailsURL       = "/auth/accounts/%v"
-	LastNoAckURL            = "/checkpoints/last-no-ack"
-	CheckpointParamsURL     = "/checkpoints/params"
-	ChainManagerParamsURL   = "/chainmanager/params"
-	ProposersURL            = "/staking/proposer/%v"
-	BufferedCheckpointURL   = "/checkpoints/buffer/%v"
-	LatestCheckpointURL     = "/checkpoints/latest/%v"
-	CurrentProposerURL      = "/staking/current-proposer"
-	LatestSpanURL           = "/bor/latest-span"
-	NextSpanInfoURL         = "/bor/prepare-next-span"
-	NextSpanSeedURL         = "/bor/next-span-seed"
-	DividendAccountRootURL  = "/topup/dividend-account-root"
-	ValidatorURL            = "/staking/validator/%v"
-	CurrentValidatorSetURL  = "staking/validator-set"
-	StakingTxStatusURL      = "/staking/isoldtx"
-	TopupTxStatusURL        = "/topup/isoldtx"
-	ClerkTxStatusURL        = "/clerk/isoldtx"
-	LatestSlashInfoBytesURL = "/slashing/latest_slash_info_bytes"
-	TickSlashInfoListURL    = "/slashing/tick_slash_infos"
-	SlashingTxStatusURL     = "/slashing/isoldtx"
-	SlashingTickCountURL    = "/slashing/tick-count"
+	AccountDetailsURL        = "/auth/accounts/%v"
+	LastNoAckURL             = "/checkpoints/last-no-ack"
+	CheckpointParamsURL      = "/checkpoints/params"
+	ChainManagerParamsURL    = "/chainmanager/params"
+	ProposersURL             = "/staking/proposer/%v"
+	BufferedCheckpointURL    = "/checkpoints/buffer/%v"
+	LatestCheckpointURL      = "/checkpoints/latest/%v"
+	CurrentProposerURL       = "/staking/current-proposer"
+	LatestSpanURL            = "/bor/latest-span"
+	NextSpanInfoURL          = "/bor/prepare-next-span"
+	NextSpanSeedURL          = "/bor/next-span-seed"
+	DividendAccountRootURL   = "/topup/dividend-account-root"
+	ValidatorURL             = "/staking/validator/%v"
+	CurrentValidatorSetURL   = "staking/validator-set"
+	StakingTxStatusURL       = "/staking/isoldtx"
+	StakingParamsURL         = "/staking/params"
+	BufferedStakingRecordURL = "/staking/buffer/%v"
+	NextStakingRecordURL     = "/staking/next/%v"
+	TopupTxStatusURL         = "/topup/isoldtx"
+	ClerkTxStatusURL         = "/clerk/isoldtx"
+	LatestSlashInfoBytesURL  = "/slashing/latest_slash_info_bytes"
+	TickSlashInfoListURL     = "/slashing/tick_slash_infos"
+	SlashingTxStatusURL      = "/slashing/isoldtx"
+	SlashingTickCountURL     = "/slashing/tick-count"
 
 	TransactionTimeout      = 1 * time.Minute
 	CommitTimeout           = 2 * time.Minute
@@ -381,4 +386,69 @@ func AppendPrefix(signerPubKey []byte) []byte {
 	prefix[0] = byte(0x04)
 	signerPubKey = append(prefix[:], signerPubKey[:]...)
 	return signerPubKey
+}
+
+// GetStakingParams return params
+func GetStakingParams(cliCtx cliContext.CLIContext) (*stakingTypes.Params, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(StakingParamsURL),
+	)
+
+	if err != nil {
+		logger.Error("Error fetching Staking params", "err", err)
+		return nil, err
+	}
+
+	var params stakingTypes.Params
+	if err := json.Unmarshal(response.Result, &params); err != nil {
+		logger.Error("Error unmarshalling Staking params", "url", CheckpointParamsURL)
+		return nil, err
+	}
+
+	return &params, nil
+}
+
+// GetBufferedStakingRecord return staking info from buffer
+func GetBufferedStakingRecord(cliCtx cliContext.CLIContext, rootChain string) (*stakingTypes.StakingRecord, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(BufferedStakingRecordURL, rootChain)),
+	)
+
+	if err != nil {
+		logger.Debug("Error fetching buffered stake record", "err", err)
+		return nil, err
+	}
+
+	var stakingRecord stakingTypes.StakingRecord
+	if err := json.Unmarshal(response.Result, &stakingRecord); err != nil {
+		logger.Error("Error unmarshalling buffered record", "url", BufferedStakingRecordURL,
+			"root", rootChain, "err", err)
+		return nil, err
+	}
+
+	return &stakingRecord, nil
+}
+
+// GetNextStakingRecord return staking info from buffer
+func GetNextStakingRecord(cliCtx cliContext.CLIContext, rootChain string) (*stakingTypes.StakingRecord, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(NextStakingRecordURL, rootChain)),
+	)
+
+	if err != nil {
+		logger.Debug("Error fetching next stake record", "err", err)
+		return nil, err
+	}
+
+	var stakingRecord stakingTypes.StakingRecord
+	if err := json.Unmarshal(response.Result, &stakingRecord); err != nil {
+		logger.Error("Error unmarshalling next staking info", "url", NextStakingRecordURL,
+			"root", rootChain, "err", err)
+		return nil, err
+	}
+
+	return &stakingRecord, nil
 }

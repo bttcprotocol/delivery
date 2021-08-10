@@ -262,6 +262,11 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 					} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
 						rl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
+
+				case "StakingSynced":
+					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
+						rl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)
+					}
 				}
 			}
 		}
