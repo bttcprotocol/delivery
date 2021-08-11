@@ -1592,5 +1592,106 @@
 		],
 		"name": "OwnershipTransferred",
 		"type": "event"
-	}
+	},
+	{
+	    "constant": false,
+	    "inputs": [
+	        {
+	            "internalType": "bytes",
+    			"name": "data",
+    			"type": "bytes"
+    		},
+    		{
+    		    "internalType": "uint256[3][]",
+    			"name": "sigs",
+    			"type": "uint256[3][]"
+    		}
+    	],
+    	"name": "signerUpdate",
+    	"outputs": [],
+    	"payable": false,
+    	"stateMutability": "nonpayable",
+    	"type": "function"
+    },
+    {
+   		"constant": false,
+   		"inputs": [
+   			{
+   				"internalType": "bytes",
+   				"name": "data",
+   				"type": "bytes"
+   			},
+   			{
+   				"internalType": "uint256[3][]",
+   				"name": "sigs",
+   				"type": "uint256[3][]"
+   			}
+   		],
+   		"name": "stakeUpdate",
+   		"outputs": [],
+   		"payable": false,
+   		"stateMutability": "nonpayable",
+   		"type": "function"
+   	},
+   	{
+   		"constant": false,
+   		"inputs": [
+   			{
+   				"internalType": "bytes",
+   				"name": "data",
+   				"type": "bytes"
+   			},
+   			{
+   				"internalType": "uint256[3][]",
+   				"name": "sigs",
+   				"type": "uint256[3][]"
+   			}
+   		],
+   		"name": "validatorExit",
+   		"outputs": [],
+   		"payable": false,
+   		"stateMutability": "nonpayable",
+   		"type": "function"
+   	},
+   	{
+   		"constant": false,
+   		"inputs": [
+   			{
+   				"internalType": "bytes",
+   				"name": "data",
+   				"type": "bytes"
+   			},
+   			{
+   				"internalType": "uint256[3][]",
+   				"name": "sigs",
+   				"type": "uint256[3][]"
+   			}
+   		],
+   		"name": "validatorJoin",
+   		"outputs": [],
+   		"payable": false,
+   		"stateMutability": "nonpayable",
+   		"type": "function"
+   	},
+   	{
+   		"constant": true,
+   		"inputs": [
+   			{
+   				"internalType": "uint256",
+   				"name": "validatorId",
+   				"type": "uint256"
+   			}
+   		],
+   		"name": "validatorNonce",
+   		"outputs": [
+   			{
+   				"internalType": "uint256",
+   				"name": "",
+   				"type": "uint256"
+   			}
+   		],
+   		"payable": false,
+   		"stateMutability": "view",
+   		"type": "function"
+   	}
 ]
