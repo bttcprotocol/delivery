@@ -29,8 +29,6 @@ func NewHandler(k Keeper, contractCaller helper.IContractCaller) sdk.Handler {
 			return HandleMsgSignerUpdate(ctx, msg, k, contractCaller)
 		case types.MsgStakeUpdate:
 			return HandleMsgStakeUpdate(ctx, msg, k, contractCaller)
-		case types.MsgStakingSync:
-			return HandleMsgStakingSync(ctx, msg, k, contractCaller)
 		case types.MsgStakingSyncAck:
 			return handleMsgStakingSyncAck(ctx, msg, k, contractCaller)
 		default:
@@ -275,60 +273,6 @@ func HandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k Keepe
 	}
 }
 
-// HandleMsgStakingSync handle msg staking sync
-func HandleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keeper, contractCaller helper.IContractCaller) sdk.Result {
-	logger := k.Logger(ctx)
-	logger.Debug("✅ Validating staking sync msg",
-		"stakingID", msg.ValidatorID,
-		"nonce", msg.Nonce,
-		"root", msg.RootChain,
-		"txHash", msg.TxHash,
-	)
-
-	exist := k.findStakingRecordFromQueue(ctx, hmTypes.GetRootChainID(msg.RootChain), &types.StakingRecord{
-		ValidatorID: msg.ValidatorID,
-		TxHash:      msg.TxHash,
-		Nonce:       msg.Nonce,
-		TimeStamp:   0,
-	})
-	if !exist {
-		logger.Error("Fetching of staking record from store failed", "staking", msg.ValidatorID)
-		return hmCommon.ErrNoStakingFound(k.Codespace()).Result()
-	}
-
-	timeStamp := uint64(ctx.BlockTime().Unix())
-	params := k.GetParams(ctx)
-	// sequence id
-	stakingBuffer, err := k.GetStakingRecordFromBuffer(ctx, msg.RootChain)
-	if err == nil {
-		stakingBufferTime := uint64(params.StakingBufferTime.Seconds())
-		if stakingBuffer.TimeStamp == 0 || ((timeStamp > stakingBuffer.TimeStamp) && timeStamp-stakingBuffer.TimeStamp >= stakingBufferTime) {
-			logger.Debug("Checkpoint has been timed out. Flushing buffer.", "stakingTimestamp", timeStamp, "prevStakingTimestamp", stakingBuffer.TimeStamp)
-			k.FlushStakingBuffer(ctx, msg.RootChain)
-		} else {
-			expiryTime := stakingBuffer.TimeStamp + stakingBufferTime
-			logger.Error("Checkpoint already exits in buffer", "root", msg.RootChain, "staking", stakingBuffer.String(), "Expires", expiryTime)
-			return common.ErrNoACK(k.Codespace(), expiryTime).Result()
-		}
-	}
-
-	// Emit event join
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeStakingSync,
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute(types.AttributeKeyValidatorID, strconv.FormatUint(msg.ValidatorID.Uint64(), 10)),
-			sdk.NewAttribute(types.AttributeKeyValidatorNonce, strconv.FormatUint(msg.ValidatorID.Uint64(), 10)),
-			sdk.NewAttribute(types.AttributeKeyStakingHash, msg.TxHash.String()),
-			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChain),
-		),
-	})
-
-	return sdk.Result{
-		Events: ctx.EventManager().Events(),
-	}
-}
-
 // handleMsgStakingSyncAck Validates if checkpoint submitted on chain is valid
 func handleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k Keeper, contractCaller helper.IContractCaller) sdk.Result {
 	logger := k.Logger(ctx)
@@ -342,17 +286,17 @@ func handleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k Kee
 	}
 
 	// Get last staking sync from buffer
-	stakingBuffer, err := k.GetStakingRecordFromBuffer(ctx, msg.RootChain)
-	if err == nil || stakingBuffer == nil {
-		logger.Error("Unable to get staking buffer", "error", err)
+	stakingRecord, err := k.GetNextStakingRecordFromQueue(ctx, hmTypes.GetRootChainID(msg.RootChain))
+	if err == nil || stakingRecord == nil {
+		logger.Error("Unable to get staking record from queue", "error", err)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}
 
-	if msg.ValidatorID != stakingBuffer.ValidatorID || msg.Nonce != stakingBuffer.Nonce {
+	if msg.ValidatorID != stakingRecord.ValidatorID || msg.Nonce != stakingRecord.Nonce {
 		logger.Error("Invalid staking sync ack",
-			"buffer-stakingID", stakingBuffer.ValidatorID,
+			"queue-stakingID", stakingRecord.ValidatorID,
 			"stakingID", msg.ValidatorID,
-			"buffer-nonce", stakingBuffer.Nonce,
+			"queue-nonce", stakingRecord.Nonce,
 			"nonce", msg.Nonce)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}

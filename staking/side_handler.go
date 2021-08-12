@@ -32,8 +32,6 @@ func NewSideTxHandler(k Keeper, contractCaller helper.IContractCaller) hmTypes.S
 			return SideHandleMsgSignerUpdate(ctx, msg, k, contractCaller)
 		case types.MsgStakeUpdate:
 			return SideHandleMsgStakeUpdate(ctx, msg, k, contractCaller)
-		case types.MsgStakingSync:
-			return SideHandleMsgStakingSync(ctx, msg, k, contractCaller)
 		case types.MsgStakingSyncAck:
 			return SideHandleMsgStakingSyncAck(ctx, msg, k, contractCaller)
 		default:
@@ -58,8 +56,6 @@ func NewPostTxHandler(k Keeper, contractCaller helper.IContractCaller) hmTypes.P
 			return PostHandleMsgSignerUpdate(ctx, k, msg, sideTxResult)
 		case types.MsgStakeUpdate:
 			return PostHandleMsgStakeUpdate(ctx, k, msg, sideTxResult)
-		case types.MsgStakingSync:
-			return PostHandleMsgStakingSyncEvent(ctx, k, msg, sideTxResult)
 		case types.MsgStakingSyncAck:
 			return PostHandleMsgStakingSyncAck(ctx, k, msg, sideTxResult)
 		default:
@@ -313,33 +309,6 @@ func SideHandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k K
 	return
 }
 
-// SideHandleMsgStakingSync side msg staking sync
-func SideHandleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keeper, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
-	logger := k.Logger(ctx)
-	logger.Debug("✅ Validating External call for staking sync ack msg",
-		"stakingID", msg.ValidatorID,
-		"nonce", msg.Nonce,
-		"root", msg.RootChain,
-		"txHash", msg.TxHash,
-	)
-
-	// fetch currentID from root chain
-	var currentNonce uint64
-	switch msg.RootChain {
-	case hmTypes.RootChainTypeEth:
-		//TODO get latest staking id from rootChain1
-	case hmTypes.RootChainTypeTron:
-		//TODO get latest staking id from rootChain2
-	}
-	if msg.Nonce != currentNonce+1 {
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
-	}
-
-	logger.Debug("✅ Succesfully validated External call for staking sync msg")
-	result.Result = abci.SideTxResultType_Yes
-	return
-}
-
 // SideHandleMsgStakingSyncAck side msg staking sync ack
 func SideHandleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k Keeper, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
 	logger := k.Logger(ctx)
@@ -349,7 +318,24 @@ func SideHandleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k
 		"root", msg.RootChain,
 	)
 
-	//TODO add abi interface
+	// chainManager params
+	params := k.chainKeeper.GetParams(ctx)
+	chainParams := params.ChainParams
+
+	var nonce uint64
+	switch msg.RootChain {
+	case hmTypes.RootChainTypeEth:
+		stakingManagerAddress := chainParams.StakingManagerAddress.EthAddress()
+		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress)
+		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
+	case hmTypes.RootChainTypeTron:
+		stakingManagerAddress := chainParams.TronStakingManagerAddress
+		nonce = contractCaller.GetTronStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerAddress)
+	}
+	if nonce < msg.Nonce {
+		k.Logger(ctx).Error("Nonce in message is bigger than nonce in root", "msgNonce", msg.Nonce, "nonceFromRoot", nonce)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
 
 	logger.Debug("✅ Succesfully validated External call for staking sync ack msg")
 	result.Result = abci.SideTxResultType_Yes
@@ -447,13 +433,15 @@ func PostHandleMsgValidatorJoin(ctx sdk.Context, k Keeper, msg types.MsgValidato
 	})
 
 	// save staking record
-	for root, id := range hmTypes.GetRootChainIDMap() {
+	for root, rootID := range hmTypes.GetRootChainIDMap() {
 		if root != hmTypes.RootChainTypeStake {
-			k.AddStakingRecordToQueue(ctx, id, types.StakingRecord{
+			k.AddStakingRecordToQueue(ctx, rootID, types.StakingRecord{
+				Type:        "validatorJoin",
 				ValidatorID: msg.ID,
-				TxHash:      hmTypes.BytesToHeimdallHash(hash),
 				Nonce:       msg.Nonce,
-				TimeStamp:   0,
+				Height:      ctx.BlockHeight(),
+				TxHash:      hmTypes.BytesToHeimdallHash(hash),
+				TimeStamp:   uint64(ctx.BlockTime().Unix()),
 			})
 		}
 	}
@@ -529,6 +517,20 @@ func PostHandleMsgStakeUpdate(ctx sdk.Context, k Keeper, msg types.MsgStakeUpdat
 			sdk.NewAttribute(types.AttributeKeyValidatorNonce, strconv.FormatUint(msg.Nonce, 10)),
 		),
 	})
+
+	// save staking record
+	for root, rootID := range hmTypes.GetRootChainIDMap() {
+		if root != hmTypes.RootChainTypeStake {
+			k.AddStakingRecordToQueue(ctx, rootID, types.StakingRecord{
+				Type:        "stakeUpdate",
+				ValidatorID: msg.ID,
+				Nonce:       msg.Nonce,
+				Height:      ctx.BlockHeight(),
+				TxHash:      hmTypes.BytesToHeimdallHash(hash),
+				TimeStamp:   uint64(ctx.BlockTime().Unix()),
+			})
+		}
+	}
 
 	return sdk.Result{
 		Events: ctx.EventManager().Events(),
@@ -647,6 +649,20 @@ func PostHandleMsgSignerUpdate(ctx sdk.Context, k Keeper, msg types.MsgSignerUpd
 		),
 	})
 
+	// save staking record
+	for root, rootID := range hmTypes.GetRootChainIDMap() {
+		if root != hmTypes.RootChainTypeStake {
+			k.AddStakingRecordToQueue(ctx, rootID, types.StakingRecord{
+				Type:        "signerUpdate",
+				ValidatorID: msg.ID,
+				Nonce:       msg.Nonce,
+				Height:      ctx.BlockHeight(),
+				TxHash:      hmTypes.BytesToHeimdallHash(hash),
+				TimeStamp:   uint64(ctx.BlockTime().Unix()),
+			})
+		}
+	}
+
 	return sdk.Result{
 		Events: ctx.EventManager().Events(),
 	}
@@ -713,47 +729,20 @@ func PostHandleMsgValidatorExit(ctx sdk.Context, k Keeper, msg types.MsgValidato
 		),
 	})
 
-	return sdk.Result{
-		Events: ctx.EventManager().Events(),
+	// save staking record
+	for root, rootID := range hmTypes.GetRootChainIDMap() {
+		if root != hmTypes.RootChainTypeStake {
+			k.AddStakingRecordToQueue(ctx, rootID, types.StakingRecord{
+				Type:        "validatorExit",
+				ValidatorID: msg.ID,
+				Nonce:       msg.Nonce,
+				Height:      ctx.BlockHeight(),
+				TxHash:      hmTypes.BytesToHeimdallHash(hash),
+				TimeStamp:   uint64(ctx.BlockTime().Unix()),
+			})
+		}
 	}
-}
 
-// PostHandleMsgStakingSyncEvent handle msg staking sync
-func PostHandleMsgStakingSyncEvent(ctx sdk.Context, k Keeper, msg types.MsgStakingSync, sideTxResult abci.SideTxResultType) sdk.Result {
-	logger := k.Logger(ctx)
-	// Skip handler if validator exit is not approved
-	if sideTxResult != abci.SideTxResultType_Yes {
-		logger.Debug("Skipping validator exit since side-tx didn't get yes votes")
-		return common.ErrSideTxValidation(k.Codespace()).Result()
-	}
-
-	// add staking event to buffer
-	k.SetStakingRecordBuffer(ctx, types.StakingRecord{
-		ValidatorID: msg.ValidatorID,
-		TxHash:      msg.TxHash,
-		Nonce:       msg.Nonce,
-		TimeStamp:   uint64(ctx.BlockTime().Unix()),
-	}, msg.RootChain)
-
-	logger.Debug("Adding staking sync to buffer", "stakingID", msg.ValidatorID, "nonce", msg.Nonce,
-		"root", msg.RootChain, "txHash", msg.TxHash)
-
-	// TX bytes
-	txBytes := ctx.TxBytes()
-	hash := tmTypes.Tx(txBytes).Hash()
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeStakingSync,
-			sdk.NewAttribute(sdk.AttributeKeyAction, msg.Type()),                                  // action
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),                // module name
-			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
-			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),             // result
-			sdk.NewAttribute(types.AttributeKeyValidatorID, strconv.FormatUint(msg.ValidatorID.Uint64(), 10)),
-			sdk.NewAttribute(types.AttributeKeyValidatorNonce, strconv.FormatUint(msg.Nonce, 10)),
-			sdk.NewAttribute(types.AttributeKeyStakingHash, msg.TxHash.String()),
-			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChain),
-		),
-	})
 	return sdk.Result{
 		Events: ctx.EventManager().Events(),
 	}
@@ -771,18 +760,19 @@ func PostHandleMsgStakingSyncAck(ctx sdk.Context, k Keeper, msg types.MsgStaking
 		return common.ErrBadBlockDetails(k.Codespace()).Result()
 	}
 
+	rootChainID := hmTypes.GetRootChainID(msg.RootChain)
 	// get last staking from buffer
-	stakingBuffer, err := k.GetStakingRecordFromBuffer(ctx, msg.RootChain)
-	if err == nil || stakingBuffer == nil {
-		logger.Error("Unable to get staking buffer", "error", err)
+	stakingRecord, err := k.GetNextStakingRecordFromQueue(ctx, rootChainID)
+	if err == nil || stakingRecord == nil {
+		logger.Error("Unable to get staking record from queue", "error", err)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}
 
-	if msg.ValidatorID != stakingBuffer.ValidatorID || msg.Nonce != stakingBuffer.Nonce {
+	if msg.ValidatorID != stakingRecord.ValidatorID || msg.Nonce != stakingRecord.Nonce {
 		logger.Error("Invalid staking sync ack",
-			"buffer-stakingID", stakingBuffer.ValidatorID,
+			"buffer-stakingID", stakingRecord.ValidatorID,
 			"stakingID", msg.ValidatorID,
-			"buffer-nonce", stakingBuffer.Nonce,
+			"buffer-nonce", stakingRecord.Nonce,
 			"nonce", msg.Nonce)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}
@@ -790,11 +780,8 @@ func PostHandleMsgStakingSyncAck(ctx sdk.Context, k Keeper, msg types.MsgStaking
 	//
 	// Update staking state
 	//
-	k.removeStakingRecordFromQueue(ctx, hmTypes.GetRootChainID(msg.RootChain), msg.ValidatorID, msg.Nonce)
-	logger.Debug("staking queue clear", "id", msg.ValidatorID)
-	// Flush buffer
-	k.FlushStakingBuffer(ctx, msg.RootChain)
-	logger.Debug("Staking buffer flushed after receiving staking ack", "root", msg.RootChain)
+	k.removeStakingRecordFromQueue(ctx, rootChainID, msg.ValidatorID, msg.Nonce)
+	logger.Debug("staking queue clear", "id", msg.ValidatorID, "nonce", msg.Nonce)
 
 	// TX bytes
 	txBytes := ctx.TxBytes()

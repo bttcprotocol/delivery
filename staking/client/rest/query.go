@@ -57,10 +57,6 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 		paramsHandlerFn(cliCtx),
 	).Methods("GET")
 
-	r.HandleFunc("/staking/buffer/{root}",
-		stakingBufferHandlerFn(cliCtx),
-	).Methods("GET")
-
 	r.HandleFunc("/staking/next/{root}",
 		stakingNextHandlerFn(cliCtx),
 	).Methods("GET")
@@ -428,41 +424,6 @@ func paramsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, res)
-	}
-}
-
-// Returns  staking sync buffer information
-func stakingBufferHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-		if !ok {
-			return
-		}
-
-		// get checkpoint number
-		vars := mux.Vars(r)
-		rootChain, ok := vars["root"]
-		if !ok {
-			err := fmt.Errorf("'%s' is not a valid rootChain", vars["root"])
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		// get query params
-		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryStakingParams(0, rootChain))
-		if err != nil {
-			return
-		}
-
-		// fetch checkpoint
-		result, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryStakingBuffer), queryParams)
-		if err != nil {
-			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		cliCtx = cliCtx.WithHeight(height)
-		rest.PostProcessResponse(w, cliCtx, result)
 	}
 }
 

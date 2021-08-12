@@ -42,8 +42,9 @@ type ChainParams struct {
 	StakingInfoAddress    hmTypes.HeimdallAddress `json:"staking_info_address" yaml:"staking_info_address"`
 	StateSenderAddress    hmTypes.HeimdallAddress `json:"state_sender_address" yaml:"state_sender_address"`
 
-	TronChainAddress       string `json:"tron_chain_address" yaml:"tron_chain_address"`
-	TronStateSenderAddress string `json:"tron_state_sender_address" yaml:"tron_state_sender_address"`
+	TronChainAddress          string `json:"tron_chain_address" yaml:"tron_chain_address"`
+	TronStateSenderAddress    string `json:"tron_state_sender_address" yaml:"tron_state_sender_address"`
+	TronStakingManagerAddress string `json:"tron_staking_manager_address" yaml:"tron_staking_manager_address"`
 
 	// Bor Chain Contracts
 	StateReceiverAddress hmTypes.HeimdallAddress `json:"state_receiver_address" yaml:"state_receiver_address"`

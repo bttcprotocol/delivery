@@ -2,9 +2,7 @@ package processor
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
-	"strconv"
 	"time"
 
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
@@ -16,7 +14,6 @@ import (
 	"github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
-	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/contracts/stakinginfo"
 	"github.com/maticnetwork/heimdall/helper"
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
@@ -77,9 +74,6 @@ func (sp *StakingProcessor) RegisterTasks() {
 	}
 	if err := sp.queueConnector.Server.RegisterTask("sendSignerChangeToHeimdall", sp.sendSignerChangeToHeimdall); err != nil {
 		sp.Logger.Error("RegisterTasks | sendSignerChangeToHeimdall", "error", err)
-	}
-	if err := sp.queueConnector.Server.RegisterTask("sendStakingSyncToHeimdall", sp.sendStakingSyncToHeimdall); err != nil {
-		sp.Logger.Error("RegisterTasks | sendStakingSyncToHeimdall", "error", err)
 	}
 	if err := sp.queueConnector.Server.RegisterTask("sendStakingSyncToRootChain", sp.sendStakingSyncToRootchain); err != nil {
 		sp.Logger.Error("RegisterTasks | sendStakingSyncToRootChain", "error", err)
@@ -378,7 +372,7 @@ func (sp *StakingProcessor) startPolling(ctx context.Context, interval time.Dura
 	for {
 		select {
 		case <-ticker.C:
-			go sp.checkAndSendStakingSync()
+			go sp.checkStakingSyncAck()
 		case <-ctx.Done():
 			sp.Logger.Info("No-ack Polling stopped")
 			ticker.Stop()
@@ -387,16 +381,12 @@ func (sp *StakingProcessor) startPolling(ctx context.Context, interval time.Dura
 	}
 }
 
-// checkAndSendStakingSync - Staking No-Ack handler
-// 1. Fetch latest stake sync seq from rootchain
-// 2. check if elapsed time is more than NoAck Wait time.
-// 3. Send NoAck to heimdall if required.
-func (sp *StakingProcessor) checkAndSendStakingSync() {
-	// fetch fresh staking context
-	stakingContext, err := sp.getStakingContext()
-	if err != nil {
-		return
-	}
+// checkStakingSyncAck - Staking Ack handler
+// 1. Fetch latest validator nonce from rootchain
+// 2. check if nonce == queue_nonce.
+// 3. Send Ack to heimdall if required.
+// 4. start next staking sync task.
+func (sp *StakingProcessor) checkStakingSyncAck() {
 	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
 	if err != nil {
 		sp.Logger.Error("Error checking isCurrentProposer in staking no ack handler", "error", err)
@@ -406,139 +396,112 @@ func (sp *StakingProcessor) checkAndSendStakingSync() {
 		sp.Logger.Info("I am not the current proposer. Ignoring")
 		return
 	}
-
-	for rootChain, _ := range hmTypes.GetRootChainIDMap() {
-		if rootChain == hmTypes.RootChainTypeStake {
-			continue
-		}
-
-		stakingRecord, shouldSend := sp.shouldSendStakingSync(stakingContext, rootChain)
-		if shouldSend {
-			_ = sp.createAndSendStakingSyncToHeimdall(rootChain, stakingRecord)
-		}
-	}
-}
-
-// sendStakingSyncToHeimdall - - handles stake confirmation event from heimdall.
-// 1. check if i am the current proposer.
-// 2. check if this stake has to be submitted to rootchain
-// 3. if so, create and broadcast stake transaction to rootchain
-func (sp *StakingProcessor) sendStakingSyncToHeimdall(eventBytes string, blockHeight int64) error {
-	sp.Logger.Info("Received triggerValidatorJoin request", "eventBytes", eventBytes, "blockHeight", blockHeight)
-	var event = sdk.StringEvent{}
-	if err := json.Unmarshal([]byte(eventBytes), &event); err != nil {
-		sp.Logger.Error("Error unmarshalling event from heimdall", "error", err)
-		return err
-	}
-
-	sp.Logger.Info("processing stake confirmation event", "event_type", event.Type)
-	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
-	if err != nil {
-		sp.Logger.Error("Error checking isCurrentProposer in StakeConfirmation handler", "error", err)
-		return err
-	}
-	if !isCurrentProposer {
-		sp.Logger.Info("I am not the current proposer. Ignoring", "eventType", event.Type)
-		return nil
-	}
+	// fetch fresh staking context
 	stakingContext, err := sp.getStakingContext()
 	if err != nil {
-		return nil
+		return
 	}
-	for _, rootChain := range hmTypes.GetRootChainMap() {
+
+	for rootChain := range hmTypes.GetRootChainIDMap() {
+		if rootChain == hmTypes.RootChainTypeStake {
+			continue
+		}
+
+		// fetch next staking record from queue
+		res, err := util.GetNextStakingRecord(sp.cliCtx, rootChain)
+		if err != nil {
+			return
+		}
+		currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, res.ValidatorID.Uint64())
+		if currentNonce == 0 {
+			continue
+		}
+		if res.Nonce == currentNonce {
+			// create msg staking ack message
+			msg := stakingTypes.NewMsgStakingSyncAck(
+				helper.GetFromAddress(sp.cliCtx),
+				rootChain,
+				res.ValidatorID,
+				res.Nonce,
+			)
+
+			// return broadcast to heimdall
+			if err := sp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+				sp.Logger.Error("Error while broadcasting staking-ack to heimdall", "error", err)
+			}
+		}
+	}
+
+	sp.checkAndSendStakingSync()
+}
+
+// checkAndSendStakingSync
+// 1. Fetch latest validator nonce from rootchain
+// 2. check if should send.
+// 3. Send staking sync to root if required.
+func (sp *StakingProcessor) checkAndSendStakingSync() {
+	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
+	if err != nil {
+		sp.Logger.Error("Error checking isCurrentProposer in staking send handler", "error", err)
+		return
+	}
+	if !isCurrentProposer {
+		sp.Logger.Info("I am not the current proposer. Ignoring")
+		return
+	}
+	// fetch fresh staking context
+	stakingContext, err := sp.getStakingContext()
+	if err != nil {
+		return
+	}
+	for rootChain := range hmTypes.GetRootChainIDMap() {
 		if rootChain == hmTypes.RootChainTypeStake {
 			continue
 		}
 
 		stakingRecord, shouldSend := sp.shouldSendStakingSync(stakingContext, rootChain)
 		if shouldSend {
-			return sp.createAndSendStakingSyncToHeimdall(rootChain, stakingRecord)
+			sp.createAndSendStakingSyncToRootChain(stakingContext, rootChain, stakingRecord)
 		}
 	}
-	return nil
 }
 
 func (sp *StakingProcessor) getNonceFromRootChain(stakingContext *StakingContext, rootChain string, validatorID uint64) uint64 {
-	var currentStakingID uint64
 	switch rootChain {
 	case hmTypes.RootChainTypeEth:
-		//TODO get latest staking id from rootChain1
+		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.StakingManagerAddress.EthAddress()
+		stakingManagerInstance, _ := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress)
+		return sp.contractConnector.GetMainStakingSyncNonce(validatorID, stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:
-		//TODO get latest staking id from rootChain2
-	default:
-
+		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.TronStakingManagerAddress
+		return sp.contractConnector.GetTronStakingSyncNonce(validatorID, stakingManagerAddress)
 	}
-	return currentStakingID
+	return 0
 }
 
 func (sp *StakingProcessor) shouldSendStakingSync(stakingContext *StakingContext, rootChain string) (*stakingTypes.StakingRecord, bool) {
-	//
-	// Check staking buffer
-	//
-	bufferedStakingRecord, err := util.GetBufferedStakingRecord(sp.cliCtx, rootChain)
-	if err == nil {
-		timeStamp := uint64(time.Now().Unix())
-		stakingBufferTime := uint64(stakingContext.StakingParams.StakingBufferTime.Seconds())
-
-		currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, bufferedStakingRecord.ValidatorID.Uint64())
-		bufferedRecordTime := bufferedStakingRecord.TimeStamp
-		if bufferedStakingRecord != nil && bufferedStakingRecord.Nonce > currentNonce &&
-			!(bufferedRecordTime == 0 || ((timeStamp > bufferedRecordTime) && timeStamp-bufferedRecordTime >= stakingBufferTime)) {
-			sp.Logger.Info("Staking already exits in buffer", "Staking", bufferedStakingRecord.String())
-			return nil, false
-		}
-	}
-
+	// fetch next staking record from queue
 	res, err := util.GetNextStakingRecord(sp.cliCtx, rootChain)
 	if err != nil {
 		return nil, false
 	}
 	currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, res.ValidatorID.Uint64())
-	if res.Nonce > currentNonce {
+	if res.Nonce == currentNonce+1 {
 		return res, true
 	}
 	return nil, false
 }
 
-func (sp *StakingProcessor) createAndSendStakingSyncToHeimdall(rootChain string, stakingRecord *stakingTypes.StakingRecord) error {
-	if stakingRecord == nil {
-		sp.Logger.Error("Invalid stakingRecord", "root", rootChain)
-		return nil
-	}
+func (sp *StakingProcessor) createAndSendStakingSyncToRootChain(stakingContext *StakingContext, rootChain string, stakingInfo *stakingTypes.StakingRecord) {
 
-	sp.Logger.Info("✅ Creating and broadcasting new staking sync",
-		"root", rootChain,
-		"ValidatorID", stakingRecord.ValidatorID,
-		"nonce", stakingRecord.Nonce,
-	)
-
-	// create and send staking sync message
-	msg := stakingTypes.NewMsgStakingSync(
-		hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
-		rootChain,
-		stakingRecord.ValidatorID,
-		stakingRecord.Nonce,
-		stakingRecord.TxHash,
-	)
-
-	// return broadcast to heimdall
-	if err := sp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
-		sp.Logger.Error("Error while broadcasting staking sync to heimdall", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-func (sp *StakingProcessor) createAndSendStakingToRootChain(stakingContext *StakingContext, rootChain string, height int64, stakingInfo *stakingTypes.StakingRecord) error {
-
-	sp.Logger.Info("Preparing staking info to be pushed on chain",
-		"root", rootChain, "txHash", stakingInfo.TxHash)
+	sp.Logger.Info("Preparing staking sync to be pushed on chain",
+		"root", rootChain, "type", stakingInfo.Type,
+		"id", stakingInfo.ValidatorID, "nonce", stakingInfo.Nonce)
 	// proof
 	tx, err := helper.QueryTxWithProof(sp.cliCtx, stakingInfo.TxHash.Bytes())
 	if err != nil {
-		sp.Logger.Error("Error querying staking info tx proof", "txHash", stakingInfo.TxHash)
-		return err
+		sp.Logger.Error("Error querying staking info tx proof", "txHash", stakingInfo.TxHash, "error", err)
+		return
 	}
 
 	// fetch side txs sigs
@@ -546,45 +509,48 @@ func (sp *StakingProcessor) createAndSendStakingToRootChain(stakingContext *Stak
 	stdTx, err := decoder(tx.Tx)
 	if err != nil {
 		sp.Logger.Error("Error while decoding staking info tx", "txHash", tx.Tx.Hash(), "error", err)
-		return err
+		return
 	}
 
 	cmsg := stdTx.GetMsgs()[0]
 	sideMsg, ok := cmsg.(hmTypes.SideTxMsg)
 	if !ok {
 		sp.Logger.Error("Invalid side-tx msg", "txHash", tx.Tx.Hash())
-		return err
+		return
 	}
 
 	// side-tx data
 	sideTxData := sideMsg.GetSideSignBytes()
 
 	// get sigs
-	sigs, err := helper.FetchSideTxSigs(sp.httpClient, height, tx.Tx.Hash(), sideTxData)
+	sigs, err := helper.FetchSideTxSigs(sp.httpClient, stakingInfo.Height, tx.Tx.Hash(), sideTxData)
 	if err != nil {
-		sp.Logger.Error("Error fetching votes for staking info tx", "height", height)
-		return err
+		sp.Logger.Error("Error fetching votes for staking record tx", "height", stakingInfo.Height, "error", err)
+		return
 	}
-
-	//TODO add state sync abi
-	{
-		// chain manager params
-		chainParams := stakingContext.ChainmanagerParams.ChainParams
-		// root chain address
-		rootChainAddress := chainParams.RootChainAddress.EthAddress()
-		// root chain instance
-		rootChainInstance, err := sp.contractConnector.GetRootChainInstance(rootChainAddress)
+	// chain manager params
+	chainParams := stakingContext.ChainmanagerParams.ChainParams
+	if rootChain == hmTypes.RootChainTypeTron {
+		// staking manager address
+		stakingManagerAddress := chainParams.TronStakingManagerAddress
+		if err := sp.contractConnector.SendTronStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress); err != nil {
+			sp.Logger.Error("Error submitting staking sync to tron", "error", err)
+			return
+		}
+	} else if rootChain == hmTypes.RootChainTypeEth {
+		// staking manager address
+		stakingManagerAddress := chainParams.StakingManagerAddress.EthAddress()
+		// staking manager instance
+		stakingManagerInstance, err := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress)
 		if err != nil {
-			sp.Logger.Info("Error while creating rootchain instance", "error", err)
-			return err
+			sp.Logger.Error("Error while creating staking instance", "error", err)
+			return
 		}
-
-		if err := sp.contractConnector.SendCheckpoint(sideTxData, sigs, rootChainAddress, rootChainInstance); err != nil {
-			sp.Logger.Info("Error submitting checkpoint to rootchain", "error", err)
-			return err
+		if err := sp.contractConnector.SendMainStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress, stakingManagerInstance); err != nil {
+			sp.Logger.Error("Error submitting staking sync to rootchain", "error", err)
+			return
 		}
 	}
-	return nil
 }
 
 // sendStakingSyncToRootchain - handles staking confirmation event from heimdall.
@@ -593,70 +559,7 @@ func (sp *StakingProcessor) createAndSendStakingToRootChain(stakingContext *Stak
 // 3. if so, create and broadcast staking sync transaction to rootchain
 func (sp *StakingProcessor) sendStakingSyncToRootchain(eventBytes string, blockHeight int64) error {
 	sp.Logger.Info("Received sendStakingSyncToRootchain request", "eventBytes", eventBytes, "blockHeight", blockHeight)
-	var event = sdk.StringEvent{}
-	if err := json.Unmarshal([]byte(eventBytes), &event); err != nil {
-		sp.Logger.Error("Error unmarshalling event from heimdall", "error", err)
-		return err
-	}
-
-	// var tx = sdk.TxResponse{}
-	// if err := json.Unmarshal([]byte(txBytes), &tx); err != nil {
-	// 	sp.Logger.Error("Error unmarshalling txResponse", "error", err)
-	// 	return err
-	// }
-
-	sp.Logger.Info("processing staking sync confirmation event", "eventType", event.Type)
-	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
-	if err != nil {
-		sp.Logger.Error("Error checking isCurrentProposer in StakingSyncConfirmation handler", "error", err)
-		return err
-	}
-
-	var (
-		validatorID uint64
-		nonce       uint64
-		stakingHash string
-		rootChain   string
-	)
-
-	for _, attr := range event.Attributes {
-		if attr.Key == stakingTypes.AttributeKeyValidatorID {
-			validatorID, _ = strconv.ParseUint(attr.Value, 10, 64)
-		}
-		if attr.Key == stakingTypes.AttributeKeyValidatorNonce {
-			nonce, _ = strconv.ParseUint(attr.Value, 10, 64)
-		}
-		if attr.Key == stakingTypes.AttributeKeyStakingHash {
-			stakingHash = attr.Value
-		}
-		if attr.Key == stakingTypes.AttributeKeyRootChain {
-			rootChain = attr.Value
-		}
-	}
-
-	stakingContext, err := sp.getStakingContext()
-	if err != nil {
-		return err
-	}
-
-	currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, validatorID)
-	if err != nil {
-		return err
-	}
-
-	if nonce == currentNonce+1 && isCurrentProposer {
-		if err := sp.createAndSendStakingToRootChain(stakingContext, rootChain, blockHeight, &stakingTypes.StakingRecord{
-			ValidatorID: hmTypes.NewValidatorID(validatorID),
-			TxHash:      hmTypes.HexToHeimdallHash(stakingHash),
-			Nonce:       nonce,
-			TimeStamp:   0,
-		}); err != nil {
-			sp.Logger.Error("Error sending staking sync to rootchain", "error", err)
-			return err
-		}
-	} else {
-		sp.Logger.Info("I am not the current proposer or staking sync already sent. Ignoring", "eventType", event.Type)
-	}
+	sp.checkAndSendStakingSync()
 	return nil
 }
 
@@ -669,30 +572,23 @@ func (sp *StakingProcessor) sendStakingAckToHeimdall(eventName string, StakingAc
 		return err
 	}
 
-	//TODO abi
-	event := new(rootchain.RootchainNewHeaderBlock)
+	event := new(stakinginfo.StakinginfoStakeAck)
 	if err := helper.UnpackLog(sp.stakingInfoAbi, event, eventName, &log); err != nil {
 		sp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
 	} else {
 		sp.Logger.Info(
 			"✅ Received task to send staking-ack to heimdall",
 			"event", eventName,
-			"start", event.Start,
-			"end", event.End,
-			"reward", event.Reward,
-			"root", "0x"+hex.EncodeToString(event.Root[:]),
-			"proposer", event.Proposer.Hex(),
-			"txHash", hmTypes.BytesToHeimdallHash(log.TxHash.Bytes()),
-			"logIndex", uint64(log.Index),
-			"rootChain", rootChain,
+			"validatorID", event.ValidatorId.Uint64(),
+			"nonce", event.Nonce.Uint64(),
 		)
 
 		// create msg staking ack message
 		msg := stakingTypes.NewMsgStakingSyncAck(
 			helper.GetFromAddress(sp.cliCtx),
 			rootChain,
-			1,
-			1,
+			hmTypes.NewValidatorID(event.ValidatorId.Uint64()),
+			event.Nonce.Uint64(),
 		)
 
 		// return broadcast to heimdall

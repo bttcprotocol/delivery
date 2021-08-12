@@ -24,9 +24,7 @@ var (
 	CurrentValidatorSetKey = []byte{0x23} // Key to store current validator set
 	StakingSequenceKey     = []byte{0x24} // prefix for each key for staking sequence map
 
-	stakingRecordKey       = []byte{0x31} // prefix key for when storing staking record
-	stakingSendingQueueKey = []byte{0x32} // prefix key for when storing staking sending queue
-	bufferStakeEventKey    = []byte{0x33} // Key to store staking info in buffer
+	stakingSendingQueueKey = []byte{0x31} // prefix key for when storing staking sending queue
 
 	//ACKCountKey         = []byte{0x11} // key to store ACK count
 	//BufferCheckpointKey = []byte{0x12} // Key to store checkpoint in buffer

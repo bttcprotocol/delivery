@@ -7,6 +7,9 @@ import (
 	"math/big"
 	"strings"
 
+	ethCrypto "github.com/maticnetwork/bor/crypto/secp256k1"
+	"google.golang.org/protobuf/proto"
+
 	ethereum "github.com/maticnetwork/bor"
 	"github.com/maticnetwork/bor/accounts/abi/bind"
 	"github.com/maticnetwork/bor/common"
@@ -182,5 +185,113 @@ func (c *ContractCaller) ApproveTokens(amount *big.Int, stakeManager common.Addr
 	}
 
 	Logger.Info("Sent approve tx sucessfully", "txHash", tx.Hash().String())
+	return nil
+}
+
+// SendMainStakingSync sends staking sync to rootchain contract
+func (c *ContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) (string, error) {
+	data, err := c.RootChainABI.Pack("submitCheckpoint", signedData, sigs)
+	if err != nil {
+		return "", err
+	}
+	privateKey := GetPrivKey()
+	// trigger
+	trx, err := c.TronChainRPC.TriggerContract(privateKey.PubKey().Address().String(), rootChainAddress, data)
+	if err != nil {
+		return "", err
+	}
+	rawData, _ := proto.Marshal(trx.GetRawData())
+	hash, err := Hash(rawData)
+	if err != nil {
+		return "", err
+	}
+
+	signature, err := ethCrypto.Sign(hash, privateKey[:])
+	if err != nil {
+		return "", err
+	}
+
+	trx.Signature = append(trx.GetSignature(), signature)
+
+	result, err := c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
+	if err != nil {
+		return "", err
+	}
+	return result, nil
+}
+
+// SendMainStakingSync sends staking sync to rootchain contract
+func (c *ContractCaller) SendMainStakingSync(syncMethod string, signedData []byte, sigs [][3]*big.Int, stakingManager common.Address, stakingManagerInstance *stakemanager.Stakemanager) (er error) {
+	data, err := c.RootChainABI.Pack(syncMethod, signedData, sigs)
+	if err != nil {
+		Logger.Error("Unable to pack tx for submitStakingSync", "error", err, "syncMethod", syncMethod)
+		return err
+	}
+	auth, err := GenerateAuthObj(GetMainClient(), stakingManager, data)
+	if err != nil {
+		Logger.Error("Unable to create auth object", "error", err)
+		Logger.Info("Setting custom gaslimit", "gaslimit", GetConfig().MainchainGasLimit)
+		auth.GasLimit = GetConfig().MainchainGasLimit
+	}
+
+	s := make([]string, 0)
+	for i := 0; i < len(sigs); i++ {
+		s = append(s, fmt.Sprintf("[%s,%s,%s]", sigs[i][0].String(), sigs[i][1].String(), sigs[i][2].String()))
+	}
+
+	Logger.Debug("Sending new staking sync",
+		"sigs", strings.Join(s, ","),
+		"data", hex.EncodeToString(signedData),
+	)
+
+	tx, err := stakingManagerInstance.ValidatorJoin(auth, signedData, sigs)
+	if err != nil {
+		Logger.Error("Error while submitting staking sync", "error", err)
+		return err
+	}
+	Logger.Info("Submitted new staking sync to rootchain successfully", "txHash", tx.Hash().String())
+	return
+}
+
+// SendTronStakingSync sends staking sync to tron contract
+func (c *ContractCaller) SendTronStakingSync(syncMethod string, signedData []byte, sigs [][3]*big.Int, stakingManagerAddress string) (er error) {
+	data, err := c.StakeManagerABI.Pack(syncMethod, signedData, sigs)
+	if err != nil {
+		return err
+	}
+	privateKey := GetPrivKey()
+
+	// trigger
+	trx, err := c.TronChainRPC.TriggerContract(privateKey.PubKey().Address().String(), stakingManagerAddress, data)
+	if err != nil {
+		return err
+	}
+	rawData, _ := proto.Marshal(trx.GetRawData())
+	hash, err := Hash(rawData)
+	if err != nil {
+		return err
+	}
+
+	signature, err := ethCrypto.Sign(hash, privateKey[:])
+	if err != nil {
+		return err
+	}
+
+	trx.Signature = append(trx.GetSignature(), signature)
+
+	s := make([]string, 0)
+	for i := 0; i < len(sigs); i++ {
+		s = append(s, fmt.Sprintf("[%s,%s,%s]", sigs[i][0].String(), sigs[i][1].String(), sigs[i][2].String()))
+	}
+	Logger.Debug("Sending new staking sync",
+		"sigs", strings.Join(s, ","),
+		"data", hex.EncodeToString(signedData),
+	)
+
+	result, err := c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
+	if err != nil {
+		return err
+	}
+	Logger.Info("Submitted new staking to tron successfully", "txHash", result)
 	return nil
 }

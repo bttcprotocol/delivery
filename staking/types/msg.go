@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -106,7 +107,15 @@ func (msg MsgValidatorJoin) GetLogIndex() uint64 {
 
 // GetSideSignBytes returns side sign bytes
 func (msg MsgValidatorJoin) GetSideSignBytes() []byte {
-	return nil
+	// validatorJoin:(uint256 validatorId, uint256 nonce, uint256 amount, uint256 activationEpoch, uint256 delegatedAmount, address signer)
+	return helper.AppendBytes32(
+		new(big.Int).SetUint64(msg.ID.Uint64()).Bytes(),
+		new(big.Int).SetUint64(msg.Nonce).Bytes(),
+		msg.Amount.BigInt().Bytes(),
+		new(big.Int).SetUint64(msg.ActivationEpoch).Bytes(),
+		big.NewInt(0).Bytes(),
+		msg.SignerPubKey.Address().Bytes(),
+	)
 }
 
 // GetNonce Returns nonce
@@ -192,7 +201,12 @@ func (msg MsgStakeUpdate) GetLogIndex() uint64 {
 
 // GetSideSignBytes returns side sign bytes
 func (msg MsgStakeUpdate) GetSideSignBytes() []byte {
-	return nil
+	// stakeUpdate:(uint256 validatorId, uint256 nonce, uint256 newAmount)
+	return helper.AppendBytes32(
+		new(big.Int).SetUint64(msg.ID.Uint64()).Bytes(),
+		new(big.Int).SetUint64(msg.Nonce).Bytes(),
+		msg.NewAmount.BigInt().Bytes(),
+	)
 }
 
 // GetNonce Returns nonce
@@ -285,7 +299,12 @@ func (msg MsgSignerUpdate) GetLogIndex() uint64 {
 
 // GetSideSignBytes returns side sign bytes
 func (msg MsgSignerUpdate) GetSideSignBytes() []byte {
-	return nil
+	// signerUpdate:(uint256 validatorId, uint256 nonce, address signer)
+	return helper.AppendBytes32(
+		new(big.Int).SetUint64(msg.ID.Uint64()).Bytes(),
+		new(big.Int).SetUint64(msg.Nonce).Bytes(),
+		msg.NewSignerPubKey.Address().Bytes(),
+	)
 }
 
 // GetNonce Returns nonce
@@ -365,77 +384,17 @@ func (msg MsgValidatorExit) GetLogIndex() uint64 {
 
 // GetSideSignBytes returns side sign bytes
 func (msg MsgValidatorExit) GetSideSignBytes() []byte {
-	return nil
+	// validatorExit:(uint256 validatorId, uint256 nonce, uint256 deactivationEpoch)
+	return helper.AppendBytes32(
+		new(big.Int).SetUint64(msg.ID.Uint64()).Bytes(),
+		new(big.Int).SetUint64(msg.Nonce).Bytes(),
+		new(big.Int).SetUint64(msg.DeactivationEpoch).Bytes(),
+	)
 }
 
 // GetNonce Returns nonce
 func (msg MsgValidatorExit) GetNonce() uint64 {
 	return msg.Nonce
-}
-
-//
-// staking info Sync
-//
-var _ sdk.Msg = &MsgStakingSync{}
-
-type MsgStakingSync struct {
-	From        hmTypes.HeimdallAddress `json:"from"`
-	ValidatorID hmTypes.ValidatorID     `json:"id"`
-	Nonce       uint64                  `json:"nonce"`
-	RootChain   string                  `json:"root"`
-	TxHash      hmTypes.HeimdallHash    `json:"tx_hash"`
-}
-
-func NewMsgStakingSync(from hmTypes.HeimdallAddress, rootChain string, id hmTypes.ValidatorID, nonce uint64, txHash hmTypes.HeimdallHash) MsgStakingSync {
-	return MsgStakingSync{
-		From:        from,
-		ValidatorID: id,
-		Nonce:       nonce,
-		RootChain:   rootChain,
-		TxHash:      txHash,
-	}
-}
-
-func (msg MsgStakingSync) Type() string {
-	return "staking-sync"
-}
-
-func (msg MsgStakingSync) Route() string {
-	return RouterKey
-}
-
-func (msg MsgStakingSync) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{hmTypes.HeimdallAddressToAccAddress(msg.From)}
-}
-
-func (msg MsgStakingSync) GetSignBytes() []byte {
-	b, err := cdc.MarshalJSON(msg)
-	if err != nil {
-		panic(err)
-	}
-	return sdk.MustSortJSON(b)
-}
-
-func (msg MsgStakingSync) ValidateBasic() sdk.Error {
-	if msg.ValidatorID == 0 {
-		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid validator ID %v", msg.ValidatorID)
-	}
-
-	if msg.From.Empty() {
-		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid proposer %v", msg.From.String())
-	}
-
-	return nil
-}
-
-// GetTxHash Returns tx hash
-func (msg MsgStakingSync) GetTxHash() types.HeimdallHash {
-	return msg.TxHash
-}
-
-// GetSideSignBytes returns side sign bytes
-func (msg MsgStakingSync) GetSideSignBytes() []byte {
-	return nil
 }
 
 //

@@ -36,6 +36,7 @@ type IContractCaller interface {
 	CurrentHeaderBlock(rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (uint64, error)
 	GetBalance(address common.Address) (*big.Int, error)
 	SendCheckpoint(sigedData []byte, sigs [][3]*big.Int, rootchainAddress common.Address, rootChainInstance *rootchain.Rootchain) (err error)
+	SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) (string, error)
 	SendTick(sigedData []byte, sigs []byte, slashManagerAddress common.Address, slashManagerInstance *slashmanager.Slashmanager) (err error)
 	GetCheckpointSign(txHash common.Hash) ([]byte, []byte, []byte, error)
 	GetMainChainBlock(*big.Int) (*ethTypes.Header, error)
@@ -70,6 +71,12 @@ type IContractCaller interface {
 	GetSpanDetails(id *big.Int, validatorset *validatorset.Validatorset) (*big.Int, *big.Int, *big.Int, error)
 	CurrentStateCounter(stateSenderInstance *statesender.Statesender) (Number *big.Int)
 	CheckIfBlocksExist(end uint64) bool
+
+	// staking sync
+	GetMainStakingSyncNonce(validatorID uint64, stakingManagerInstance *stakemanager.Stakemanager) (nonce uint64)
+	GetTronStakingSyncNonce(validatorID uint64, stakingManagerAddress string) (nonce uint64)
+	SendMainStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress common.Address, stakingManagerInstance *stakemanager.Stakemanager) (err error)
+	SendTronStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress string) (err error)
 
 	GetRootChainInstance(rootchainAddress common.Address) (*rootchain.Rootchain, error)
 	GetStakingInfoInstance(stakingInfoAddress common.Address) (*stakinginfo.Stakinginfo, error)
@@ -766,4 +773,45 @@ func (c *ContractCaller) GetCheckpointSign(txHash common.Hash) ([]byte, []byte, 
 	payload := transaction.Data()
 	abi := c.RootChainABI
 	return UnpackSigAndVotes(payload, abi)
+}
+
+//
+// Staking sync methods
+//
+
+// GetMainStakingSyncNonce return validator nonce
+func (c *ContractCaller) GetMainStakingSyncNonce(validatorID uint64, stakingManagerInstance *stakemanager.Stakemanager) (nonce uint64) {
+	validatorNonce, err := stakingManagerInstance.ValidatorNonce(nil, big.NewInt(int64(validatorID)))
+	if err != nil {
+		Logger.Error("Error fetching validator nonce from stake manager",
+			"error", err, "validatorId", validatorID)
+		return 0
+	}
+	return validatorNonce.Uint64()
+}
+
+// GetMainStakingSyncNonce return validator nonce
+func (c *ContractCaller) GetTronStakingSyncNonce(validatorID uint64, stakingManagerAddress string) (nonce uint64) {
+	// Pack the input
+	data, err := c.StakeManagerABI.Pack("validatorNonce", big.NewInt(0).SetUint64(validatorID))
+	if err != nil {
+		Logger.Error("Error pack validator nonce", "error", err, "validatorId", validatorID)
+
+		return 0
+	}
+	result, err := c.TronChainRPC.TriggerConstantContract(stakingManagerAddress, data)
+	if err != nil {
+		Logger.Error("Error fetching validator nonce from stake manager",
+			"error", err, "validatorId", validatorID)
+		return 0
+	}
+	// Unpack the results
+	var (
+		ret0 = new(*big.Int)
+	)
+	if err = c.StakeManagerABI.Unpack(ret0, "validatorNonce", result); err != nil {
+		Logger.Error("Error unpack validator nonce", "error", err, "validatorId", validatorID)
+		return 0
+	}
+	return (*ret0).Uint64()
 }

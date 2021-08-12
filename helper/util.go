@@ -3,6 +3,7 @@ package helper
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -592,6 +593,27 @@ func AppendBytes(data ...[]byte) []byte {
 	return result
 }
 
+func convertTo32(input []byte) (output [32]byte, err error) {
+	l := len(input)
+	if l > 32 || l == 0 {
+		return
+	}
+	copy(output[32-l:], input[:])
+	return
+}
+
+// AppendBytes32 appends bytes
+func AppendBytes32(data ...[]byte) []byte {
+	var result []byte
+	for _, v := range data {
+		paddedV, err := convertTo32(v)
+		if err == nil {
+			result = append(result, paddedV[:]...)
+		}
+	}
+	return result
+}
+
 // Use the leafHash and innerHashes to get the root merkle hash.
 // If the length of the innerHashes slice isn't exactly correct, the result is nil.
 // Recursive impl.
@@ -804,4 +826,15 @@ func FetchFromAPI(cliCtx cliContext.CLIContext, URL string) (result rest.Respons
 
 	Logger.Debug("Error while fetching data from URL", "status", resp.StatusCode, "URL", URL)
 	return result, fmt.Errorf("Error while fetching data from url: %v, status: %v", URL, resp.StatusCode)
+}
+
+//Package goLang sha256 hash algorithm.
+func Hash(s []byte) ([]byte, error) {
+	h := sha256.New()
+	_, err := h.Write(s)
+	if err != nil {
+		return nil, err
+	}
+	bs := h.Sum(nil)
+	return bs, nil
 }

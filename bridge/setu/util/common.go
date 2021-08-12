@@ -31,30 +31,29 @@ import (
 )
 
 const (
-	AccountDetailsURL        = "/auth/accounts/%v"
-	LastNoAckURL             = "/checkpoints/last-no-ack"
-	CheckpointParamsURL      = "/checkpoints/params"
-	ChainManagerParamsURL    = "/chainmanager/params"
-	ProposersURL             = "/staking/proposer/%v"
-	BufferedCheckpointURL    = "/checkpoints/buffer/%v"
-	LatestCheckpointURL      = "/checkpoints/latest/%v"
-	CurrentProposerURL       = "/staking/current-proposer"
-	LatestSpanURL            = "/bor/latest-span"
-	NextSpanInfoURL          = "/bor/prepare-next-span"
-	NextSpanSeedURL          = "/bor/next-span-seed"
-	DividendAccountRootURL   = "/topup/dividend-account-root"
-	ValidatorURL             = "/staking/validator/%v"
-	CurrentValidatorSetURL   = "staking/validator-set"
-	StakingTxStatusURL       = "/staking/isoldtx"
-	StakingParamsURL         = "/staking/params"
-	BufferedStakingRecordURL = "/staking/buffer/%v"
-	NextStakingRecordURL     = "/staking/next/%v"
-	TopupTxStatusURL         = "/topup/isoldtx"
-	ClerkTxStatusURL         = "/clerk/isoldtx"
-	LatestSlashInfoBytesURL  = "/slashing/latest_slash_info_bytes"
-	TickSlashInfoListURL     = "/slashing/tick_slash_infos"
-	SlashingTxStatusURL      = "/slashing/isoldtx"
-	SlashingTickCountURL     = "/slashing/tick-count"
+	AccountDetailsURL       = "/auth/accounts/%v"
+	LastNoAckURL            = "/checkpoints/last-no-ack"
+	CheckpointParamsURL     = "/checkpoints/params"
+	ChainManagerParamsURL   = "/chainmanager/params"
+	ProposersURL            = "/staking/proposer/%v"
+	BufferedCheckpointURL   = "/checkpoints/buffer/%v"
+	LatestCheckpointURL     = "/checkpoints/latest/%v"
+	CurrentProposerURL      = "/staking/current-proposer"
+	LatestSpanURL           = "/bor/latest-span"
+	NextSpanInfoURL         = "/bor/prepare-next-span"
+	NextSpanSeedURL         = "/bor/next-span-seed"
+	DividendAccountRootURL  = "/topup/dividend-account-root"
+	ValidatorURL            = "/staking/validator/%v"
+	CurrentValidatorSetURL  = "staking/validator-set"
+	StakingTxStatusURL      = "/staking/isoldtx"
+	StakingParamsURL        = "/staking/params"
+	NextStakingRecordURL    = "/staking/next/%v"
+	TopupTxStatusURL        = "/topup/isoldtx"
+	ClerkTxStatusURL        = "/clerk/isoldtx"
+	LatestSlashInfoBytesURL = "/slashing/latest_slash_info_bytes"
+	TickSlashInfoListURL    = "/slashing/tick_slash_infos"
+	SlashingTxStatusURL     = "/slashing/isoldtx"
+	SlashingTickCountURL    = "/slashing/tick-count"
 
 	TransactionTimeout      = 1 * time.Minute
 	CommitTimeout           = 2 * time.Minute
@@ -407,28 +406,6 @@ func GetStakingParams(cliCtx cliContext.CLIContext) (*stakingTypes.Params, error
 	}
 
 	return &params, nil
-}
-
-// GetBufferedStakingRecord return staking info from buffer
-func GetBufferedStakingRecord(cliCtx cliContext.CLIContext, rootChain string) (*stakingTypes.StakingRecord, error) {
-	response, err := helper.FetchFromAPI(
-		cliCtx,
-		helper.GetHeimdallServerEndpoint(fmt.Sprintf(BufferedStakingRecordURL, rootChain)),
-	)
-
-	if err != nil {
-		logger.Debug("Error fetching buffered stake record", "err", err)
-		return nil, err
-	}
-
-	var stakingRecord stakingTypes.StakingRecord
-	if err := json.Unmarshal(response.Result, &stakingRecord); err != nil {
-		logger.Error("Error unmarshalling buffered record", "url", BufferedStakingRecordURL,
-			"root", rootChain, "err", err)
-		return nil, err
-	}
-
-	return &stakingRecord, nil
 }
 
 // GetNextStakingRecord return staking info from buffer

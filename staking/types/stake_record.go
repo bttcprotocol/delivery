@@ -9,18 +9,22 @@ import (
 
 // StakingRecord struct
 type StakingRecord struct {
+	Type        string               `json:"type"`
 	ValidatorID hmTypes.ValidatorID  `json:"id"`
-	TxHash      hmtypes.HeimdallHash `json:"tx_hash"`
 	Nonce       uint64               `json:"nonce"`
+	Height      int64                `json:"height"`
+	TxHash      hmtypes.HeimdallHash `json:"tx_hash"`
 	TimeStamp   uint64               `json:"timestamp"`
 }
 
 // String returns human readable string
 func (s StakingRecord) String() string {
 	return fmt.Sprintf(
-		"StakingRecord {%v %v %v %v}",
+		"StakingRecord {%v %v %v %v %v %v}",
+		s.Type,
 		s.ValidatorID,
 		s.Nonce,
+		s.Height,
 		s.TxHash.Hex(),
 		s.TimeStamp,
 	)

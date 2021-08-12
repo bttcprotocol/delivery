@@ -2,16 +2,11 @@ package tron
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
 	"strings"
-
-	ethCrypto "github.com/maticnetwork/bor/crypto/secp256k1"
-
-	"github.com/tendermint/tendermint/crypto/secp256k1"
 
 	"github.com/maticnetwork/bor/accounts/abi"
 	"github.com/maticnetwork/bor/common"
@@ -19,7 +14,6 @@ import (
 	"github.com/maticnetwork/heimdall/tron/pb"
 	"github.com/maticnetwork/heimdall/types"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 )
 
 // Client defines typed wrappers for the Tron RPC API.
@@ -51,18 +45,7 @@ func getABI(data string) (abi.ABI, error) {
 	return abi.JSON(strings.NewReader(data))
 }
 
-//Package goLang sha256 hash algorithm.
-func hash(s []byte) ([]byte, error) {
-	h := sha256.New()
-	_, err := h.Write(s)
-	if err != nil {
-		return nil, err
-	}
-	bs := h.Sum(nil)
-	return bs, nil
-}
-
-func (tc *Client) triggerContract(ownerAddress, contractAddress string, data []byte) (*pb.Transaction, error) {
+func (tc *Client) TriggerContract(ownerAddress, contractAddress string, data []byte) (*pb.Transaction, error) {
 	response, err := tc.client.TriggerContract(context.Background(),
 		&pb.TriggerSmartContract{
 			OwnerAddress:    common.FromHex("41" + ownerAddress),
@@ -81,7 +64,7 @@ func (tc *Client) triggerContract(ownerAddress, contractAddress string, data []b
 	return response.Transaction, nil
 }
 
-func (tc *Client) triggerConstantContract(contractAddress string, data []byte) ([]byte, error) {
+func (tc *Client) TriggerConstantContract(contractAddress string, data []byte) ([]byte, error) {
 	response, err := tc.client.TriggerConstantContract(context.Background(),
 		&pb.TriggerSmartContract{
 			OwnerAddress:    nil,
@@ -119,7 +102,7 @@ func (tc *Client) CurrentHeaderBlock(contractAddress string, childBlockInterval 
 	}
 
 	// Call
-	data, err := tc.triggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}
@@ -153,7 +136,7 @@ func (tc *Client) GetHeaderInfo(number uint64, contractAddress string, childBloc
 	}
 
 	// Call
-	data, err := tc.triggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
 	if err != nil {
 		return root, 0, 0, 0, types.HeimdallAddress{}, err
 	}
@@ -183,7 +166,7 @@ func (tc *Client) GetLastChildBlock(contractAddress string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	data, err := tc.triggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}
@@ -197,31 +180,11 @@ func (tc *Client) GetLastChildBlock(contractAddress string) (uint64, error) {
 	return (*ret0).Uint64(), nil
 }
 
-func (tc *Client) SendCheckpoint(privateKey secp256k1.PrivKeySecp256k1, signedData []byte, sigs [][3]*big.Int, rootChainAddress string) (string, error) {
-	data, err := tc.rootchainABI.Pack("submitCheckpoint", signedData, sigs)
+func (tc *Client) BroadcastTransaction(ctx context.Context, trx *pb.Transaction) (string, error) {
+	result, err := tc.client.BroadcastTransaction(ctx, trx)
 	if err != nil {
 		return "", err
 	}
-	privateKey.PubKey()
-	// trigger
-	trx, err := tc.triggerContract(privateKey.PubKey().Address().String(), rootChainAddress, data)
-	if err != nil {
-		return "", err
-	}
-	rawData, _ := proto.Marshal(trx.GetRawData())
-	hash, err := hash(rawData)
-	if err != nil {
-		return "", err
-	}
-
-	signature, err := ethCrypto.Sign(hash, privateKey[:])
-	if err != nil {
-		return "", err
-	}
-
-	trx.Signature = append(trx.GetSignature(), signature)
-
-	result, err := tc.client.BroadcastTransaction(context.Background(), trx)
 	if err != nil {
 		return "", err
 	}
