@@ -29,11 +29,12 @@ func registerTxRoutes(cliCtx context.CLIContext, r *mux.Router) {
 type TopupReq struct {
 	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
 
-	TxHash      string `json:"tx_hash" yaml:"tx_hash"`
-	LogIndex    uint64 `json:"log_index" yaml:"log_index"`
-	User        string `json:"user" yaml:"user"`
-	Fee         string `json:"fee" yaml:"fee"`
-	BlockNumber uint64 `json:"block_number" yaml:"block_number"`
+	TxHash        string `json:"tx_hash" yaml:"tx_hash"`
+	LogIndex      uint64 `json:"log_index" yaml:"log_index"`
+	User          string `json:"user" yaml:"user"`
+	Fee           string `json:"fee" yaml:"fee"`
+	BlockNumber   uint64 `json:"block_number" yaml:"block_number"`
+	RootChainType string `json:"root_chain_type" yaml:"root_chain_type"`
 }
 
 // TopupHandlerFn - http request handler to topup coins to a address.

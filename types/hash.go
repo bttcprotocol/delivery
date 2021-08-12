@@ -24,6 +24,11 @@ func (aa HeimdallHash) EthHash() common.Hash {
 	return common.Hash(aa)
 }
 
+// TronHash get tron hash note: tron hash is compatible with eth tron
+func (aa HeimdallHash) TronHash() common.Hash {
+	return common.Hash(aa)
+}
+
 // Equals returns boolean for whether two HeimdallHash are Equal
 func (aa HeimdallHash) Equals(aa2 HeimdallHash) bool {
 	if aa.Empty() && aa2.Empty() {

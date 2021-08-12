@@ -77,7 +77,12 @@ func (fp *FeeProcessor) sendTopUpFeeToHeimdall(eventName string, logBytes string
 		)
 
 		// create msg checkpoint ack message
-		msg := topupTypes.NewMsgTopup(helper.GetFromAddress(fp.cliCtx), hmTypes.BytesToHeimdallAddress(event.User.Bytes()), sdk.NewIntFromBigInt(event.Fee), hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()), uint64(vLog.Index), vLog.BlockNumber)
+		msg := topupTypes.NewMsgTopup(helper.GetFromAddress(fp.cliCtx),
+			hmTypes.BytesToHeimdallAddress(event.User.Bytes()),
+			sdk.NewIntFromBigInt(event.Fee),
+			hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
+			uint64(vLog.Index),
+			vLog.BlockNumber)
 
 		// return broadcast to heimdall
 		if err := fp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
@@ -89,10 +94,12 @@ func (fp *FeeProcessor) sendTopUpFeeToHeimdall(eventName string, logBytes string
 }
 
 // isOldTx  checks if tx is already processed or not
+//todo: add root chain type
 func (fp *FeeProcessor) isOldTx(cliCtx cliContext.CLIContext, txHash string, logIndex uint64) (bool, error) {
 	queryParam := map[string]interface{}{
-		"txhash":   txHash,
-		"logindex": logIndex,
+		"txhash":        txHash,
+		"logindex":      logIndex,
+		"rootchaintype": hmTypes.DefaultRootChainType,
 	}
 
 	endpoint := helper.GetHeimdallServerEndpoint(util.TopupTxStatusURL)

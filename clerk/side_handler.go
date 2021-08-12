@@ -2,6 +2,8 @@ package clerk
 
 import (
 	"bytes"
+	ethTypes "github.com/maticnetwork/bor/core/types"
+	"github.com/maticnetwork/heimdall/contracts/statesender"
 	"math/big"
 	"strconv"
 
@@ -50,6 +52,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		"txHash", hmTypes.BytesToHeimdallHash(msg.TxHash.Bytes()),
 		"logIndex", uint64(msg.LogIndex),
 		"blockNumber", msg.BlockNumber,
+		"rootChainType", msg.RootChainType,
 	)
 
 	// chainManager params
@@ -57,20 +60,39 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	chainParams := params.ChainParams
 
 	// get confirmed tx receipt
-	receipt, err := contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
-	if receipt == nil || err != nil {
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-	}
-
-	// get event log for topup
-	eventLog, err := contractCaller.DecodeStateSyncedEvent(chainParams.StateSenderAddress.EthAddress(), receipt, msg.LogIndex)
-	if err != nil || eventLog == nil {
-		k.Logger(ctx).Error("Error fetching log from txhash")
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
+	var receipt *ethTypes.Receipt
+	var err error
+	var eventLog *statesender.StatesenderStateSynced
+	// get main tx receipt
+	if msg.RootChainType == hmTypes.RootChainTypeEth {
+		// get event log for topup on eth
+		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
+		if err != nil || receipt == nil {
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+		}
+		eventLog, err = contractCaller.DecodeStateSyncedEvent(chainParams.StateSenderAddress.EthAddress(), receipt, msg.LogIndex)
+		if err != nil || eventLog == nil {
+			k.Logger(ctx).Error("Error fetching log from txhash")
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
+		}
+	} else if msg.RootChainType == hmTypes.RootChainTypeTron {
+		// get event log for topup on  tron
+		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+		if err != nil || receipt == nil {
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+		}
+		eventLog, err = contractCaller.DecodeStateSyncedEvent(hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress), receipt, msg.LogIndex)
+		if err != nil || eventLog == nil {
+			k.Logger(ctx).Error("Error fetching log from txhash")
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
+		}
+	} else {
+		k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, "does not  match ETH or TRON ")
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
 	}
 
 	if receipt.BlockNumber.Uint64() != msg.BlockNumber {
-		k.Logger(ctx).Error("BlockNumber in message doesn't match blocknumber in receipt", "MsgBlockNumber", msg.BlockNumber, "ReceiptBlockNumber", receipt.BlockNumber.Uint64())
+		k.Logger(ctx).Error("BlockNumber in message doesn't match block umber in receipt", "MsgBlockNumber", msg.BlockNumber, "ReceiptBlockNumber", receipt.BlockNumber.Uint64())
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 
@@ -109,20 +131,22 @@ func PostHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		k.Logger(ctx).Debug("Skipping new clerk since side-tx didn't get yes votes")
 		return common.ErrSideTxValidation(k.Codespace()).Result()
 	}
-
 	// check for replay
-	if k.HasEventRecord(ctx, msg.ID) {
+	if k.HasRootChainEventRecord(ctx, msg.RootChainType, msg.ID) {
 		k.Logger(ctx).Debug("Skipping new clerk record as it's already processed")
 		return hmCommon.ErrOldTx(k.Codespace()).Result()
 	}
-
+	// heimdall latestID
+	latestMsgID := k.GetLatestID(ctx)
+	if latestMsgID < msg.ID {
+		k.Logger(ctx).Debug("Heimdall msg latest ID ", latestMsgID, " less than rootChain", msg.RootChainType, " ID: ", msg.ID)
+		return hmCommon.ErrOldTx(k.Codespace()).Result()
+	}
 	k.Logger(ctx).Debug("Persisting clerk state", "sideTxResult", sideTxResult)
 
 	// sequence id
 	blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
-	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-	sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
-
+	sequence := helper.CalculateSequence(blockNumber, msg.LogIndex, msg.RootChainType)
 	// create event record
 	record := types.NewEventRecord(
 		msg.TxHash,
@@ -132,6 +156,7 @@ func PostHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		msg.Data,
 		msg.ChainID,
 		ctx.BlockTime(),
+		msg.RootChainType,
 	)
 
 	// save event into state
@@ -139,14 +164,17 @@ func PostHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		k.Logger(ctx).Error("Unable to update event record", "error", err, "id", msg.ID)
 		return types.ErrEventUpdate(k.Codespace()).Result()
 	}
-
+	processedLatestID := k.GetLatestID(ctx)
+	if latestMsgID+1 != processedLatestID {
+		k.Logger(ctx).Debug("Difference between Heimdall msg previous latest ID ", latestMsgID, " and current processed ID  ", processedLatestID, " is bigger than 1")
+		return hmCommon.ErrValidatorSave(k.Codespace()).Result()
+	}
 	// save record sequence
 	k.SetRecordSequence(ctx, sequence.String())
 
 	// TX bytes
 	txBytes := ctx.TxBytes()
 	hash := tmTypes.Tx(txBytes).Hash()
-
 	// add events
 	ctx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
@@ -156,7 +184,7 @@ func PostHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
 			sdk.NewAttribute(types.AttributeKeyRecordTxLogIndex, strconv.FormatUint(msg.LogIndex, 10)),
 			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()), // result
-			sdk.NewAttribute(types.AttributeKeyRecordID, strconv.FormatUint(msg.ID, 10)),
+			sdk.NewAttribute(types.AttributeKeyRecordID, strconv.FormatUint(processedLatestID, 10)),
 			sdk.NewAttribute(types.AttributeKeyRecordContract, msg.ContractAddress.String()),
 		),
 	})

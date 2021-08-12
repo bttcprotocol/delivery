@@ -16,6 +16,7 @@ type MsgEventRecord struct {
 	Data            types.HexBytes        `json:"data"`
 	ID              uint64                `json:"id"`
 	ChainID         string                `json:"bor_chain_id"`
+	RootChainType   string                `json:"root_chain_type"`
 }
 
 var _ sdk.Msg = MsgEventRecord{}
@@ -30,6 +31,7 @@ func NewMsgEventRecord(
 	contractAddress types.HeimdallAddress,
 	data types.HexBytes,
 	chainID string,
+	rootChainType string,
 
 ) MsgEventRecord {
 	return MsgEventRecord{
@@ -41,6 +43,7 @@ func NewMsgEventRecord(
 		ContractAddress: contractAddress,
 		Data:            data,
 		ChainID:         chainID,
+		RootChainType:   rootChainType,
 	}
 }
 
@@ -80,6 +83,12 @@ func (msg MsgEventRecord) GetTxHash() types.HeimdallHash {
 // GetLogIndex Returns log index
 func (msg MsgEventRecord) GetLogIndex() uint64 {
 	return msg.LogIndex
+}
+
+// getChainType  return tron type
+
+func (msg MsgEventRecord) GetRootChainType() string {
+	return msg.RootChainType
 }
 
 // GetSideSignBytes returns side sign bytes

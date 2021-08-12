@@ -30,7 +30,7 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	).Methods("GET")
 }
 
-// recordHandlerFn returns record by record id
+// rootchain only: recordHandlerFn returns record by record id
 func recordHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -62,6 +62,7 @@ func recordHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
+// bor chain use only
 func recordListHandlerFn(
 	cliCtx context.CLIContext,
 ) http.HandlerFunc {
@@ -150,6 +151,7 @@ func recordListHandlerFn(
 	}
 }
 
+// root chain use only
 // DepositTxStatusHandlerFn returns deposit tx status information
 func DepositTxStatusHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -170,8 +172,13 @@ func DepositTxStatusHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		rootChainType := vars.Get("rootchaintype")
+		if rootChainType == "" {
+			return
+		}
+
 		// get query params
-		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryRecordSequenceParams(txHash, logindex))
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryRecordSequenceParams(txHash, logindex, rootChainType))
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

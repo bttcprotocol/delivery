@@ -788,20 +788,6 @@ func EventByID(abiObject *abi.ABI, sigdata []byte) *abi.Event {
 	return nil
 }
 
-// GetHeimdallServerEndpoint returns heimdall server endpoint
-func GetHeimdallServerEndpoint(endpoint string) string {
-	u, _ := url.Parse(GetConfig().HeimdallServerURL)
-	u.Path = path.Join(u.Path, endpoint)
-	return u.String()
-}
-
-// GetTronGridEndpoint returns tron server endpoint
-func GetTronGridEndpoint(endpoint string) string {
-	u, _ := url.Parse(GetConfig().TronGridURL)
-	u.Path = path.Join(u.Path, endpoint)
-	return u.String()
-}
-
 // FetchFromAPI fetches data from any URL
 func FetchFromAPI(cliCtx cliContext.CLIContext, URL string) (result rest.ResponseWithHeight, err error) {
 	resp, err := http.Get(URL)
@@ -811,7 +797,7 @@ func FetchFromAPI(cliCtx cliContext.CLIContext, URL string) (result rest.Respons
 	defer resp.Body.Close()
 
 	// response
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return result, err
@@ -826,6 +812,51 @@ func FetchFromAPI(cliCtx cliContext.CLIContext, URL string) (result rest.Respons
 
 	Logger.Debug("Error while fetching data from URL", "status", resp.StatusCode, "URL", URL)
 	return result, fmt.Errorf("Error while fetching data from url: %v, status: %v", URL, resp.StatusCode)
+}
+
+func MakeRequest(req *http.Request) ([]byte, error) {
+	client := http.Client{}
+	req.Header.Add("TRON-PRO-API-KEY", GetConfig().TronGridApiKey)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	// response
+	if resp.StatusCode == http.StatusOK {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		return body, err
+	}
+	Logger.Debug("Error do http request from URL", "status", resp.StatusCode, "URL", req.URL.String())
+	return nil, fmt.Errorf("error while make tron requset  from url: %v, status: %v", req.URL.String(), resp.StatusCode)
+}
+
+// GetHeimdallServerEndpoint returns heimdall server endpoint
+func GetHeimdallServerEndpoint(endpoint string) string {
+	u, _ := url.Parse(GetConfig().HeimdallServerURL)
+	u.Path = path.Join(u.Path, endpoint)
+	return u.String()
+}
+
+// GetTronGridEndpoint returns tron server endpoint
+func GetTronGridEndpoint(endpoint string) string {
+	u, _ := url.Parse(GetConfig().TronGridURL)
+	u.Path = path.Join(u.Path, endpoint)
+	return u.String()
+}
+
+// sequence number:
+// sequence = (blockNumber * DefaultLogIndexUnit + logIndex) * DefaultBlockChainUnit + blockChainID
+func CalculateSequence(blockNumber *big.Int, logIndex uint64, rootChainType string) *big.Int {
+	chainTypeID := hmTypes.ConvertChainTypeToInt(rootChainType)
+	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
+	sequence.Add(sequence, new(big.Int).SetUint64(logIndex))
+	sequence.Mul(sequence, big.NewInt(hmTypes.DefaultChainIdUnit))
+	sequence.Add(sequence, big.NewInt(chainTypeID))
+	return sequence
 }
 
 //Package goLang sha256 hash algorithm.

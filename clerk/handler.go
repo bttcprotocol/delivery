@@ -36,10 +36,11 @@ func handleMsgEventRecord(ctx sdk.Context, msg types.MsgEventRecord, k Keeper, c
 		"txHash", hmTypes.BytesToHeimdallHash(msg.TxHash.Bytes()),
 		"logIndex", uint64(msg.LogIndex),
 		"blockNumber", msg.BlockNumber,
+		"rootChainType", msg.RootChainType,
 	)
 
 	// check if event record exists
-	if exists := k.HasEventRecord(ctx, msg.ID); exists {
+	if exists := k.HasRootChainEventRecord(ctx, msg.RootChainType, msg.ID); exists {
 		return types.ErrEventRecordAlreadySynced(k.Codespace()).Result()
 	}
 
@@ -55,8 +56,7 @@ func handleMsgEventRecord(ctx sdk.Context, msg types.MsgEventRecord, k Keeper, c
 
 	// sequence id
 	blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
-	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-	sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
+	sequence := helper.CalculateSequence(blockNumber, msg.LogIndex, msg.RootChainType)
 
 	// check if incoming tx is older
 	if k.HasRecordSequence(ctx, sequence.String()) {
@@ -73,6 +73,7 @@ func handleMsgEventRecord(ctx sdk.Context, msg types.MsgEventRecord, k Keeper, c
 			sdk.NewAttribute(types.AttributeKeyRecordContract, msg.ContractAddress.String()),
 			sdk.NewAttribute(types.AttributeKeyRecordTxHash, msg.TxHash.String()),
 			sdk.NewAttribute(types.AttributeKeyRecordTxLogIndex, strconv.FormatUint(msg.LogIndex, 10)),
+			sdk.NewAttribute(types.AttributeRootChainType, msg.RootChainType),
 		),
 	})
 

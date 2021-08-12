@@ -173,6 +173,7 @@ func (sp *SlashingProcessor) sendTickToRootchain(eventBytes string, blockHeight 
 /*
 sendTickAckToHeimdall - sends tick ack msg to heimdall
 */
+//todo: add rootChainType param
 func (sp *SlashingProcessor) sendTickAckToHeimdall(eventName string, logBytes string) error {
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {

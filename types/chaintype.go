@@ -4,7 +4,8 @@ const (
 	RootChainTypeEth  = "eth"
 	RootChainTypeTron = "tron"
 
-	RootChainTypeStake = RootChainTypeEth
+	RootChainTypeStake   = RootChainTypeEth
+	DefaultRootChainType = RootChainTypeEth
 )
 
 var chainMap = []string{RootChainTypeEth, RootChainTypeTron}
@@ -20,4 +21,15 @@ func GetRootChainMap() []string {
 
 func GetRootChainIDMap() map[string]byte {
 	return chainIDMap
+}
+
+func ConvertChainTypeToInt(chainType string) int64 {
+	switch chainType {
+	case RootChainTypeEth:
+		return 1
+	case RootChainTypeTron:
+		return 2
+	default:
+		return 0
+	}
 }

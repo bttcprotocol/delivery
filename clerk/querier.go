@@ -3,10 +3,9 @@ package clerk
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	ethTypes "github.com/maticnetwork/bor/core/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/maticnetwork/heimdall/clerk/types"
@@ -32,14 +31,17 @@ func NewQuerier(keeper Keeper, contractCaller helper.IContractCaller) sdk.Querie
 	}
 }
 
+// root chain: query root chain record with root chain record id
 func handleQueryRecord(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryRecordParams
+	var params types.QueryRootChainRecordParams
 	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
-
+	if params.RootChainType != hmTypes.RootChainTypeTron && params.RootChainType != hmTypes.RootChainTypeEth {
+		return nil, sdk.ErrInternal(fmt.Sprintf("wrong root chain type : %s", params.RootChainType))
+	}
 	// get state record by record id
-	record, err := keeper.GetEventRecord(ctx, params.RecordID)
+	record, err := keeper.GetRootChainEventRecord(ctx, params.RecordID, params.RootChainType)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not get state record", err.Error()))
 	}
@@ -52,6 +54,7 @@ func handleQueryRecord(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 	return bz, nil
 }
 
+// bor chain use only with rearrange id
 func handleQueryRecordList(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	var params hmTypes.QueryPaginationParams
 	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil {
@@ -70,6 +73,7 @@ func handleQueryRecordList(ctx sdk.Context, req abci.RequestQuery, keeper Keeper
 	return bz, nil
 }
 
+// bor only with rearrange id
 func handleQueryRecordListWithTime(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	var params types.QueryRecordTimePaginationParams
 	if err := types.ModuleCdc.UnmarshalJSON(req.Data, &params); err != nil {
@@ -87,6 +91,7 @@ func handleQueryRecordListWithTime(ctx sdk.Context, req abci.RequestQuery, keepe
 	return bz, nil
 }
 
+// root chain
 func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Keeper, contractCallerObj helper.IContractCaller) ([]byte, sdk.Error) {
 	var params types.QueryRecordSequenceParams
 
@@ -96,17 +101,22 @@ func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 
 	chainParams := keeper.chainKeeper.GetParams(ctx)
 
+	var receipt *ethTypes.Receipt
+	var err error
 	// get main tx receipt
-	receipt, err := contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(), chainParams.MainchainTxConfirmations)
+	if params.RootChainType == hmTypes.RootChainTypeEth {
+		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(), chainParams.MainchainTxConfirmations)
+	} else if params.RootChainType == hmTypes.RootChainTypeTron {
+		receipt, err = contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
+	} else {
+		return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "please pass correct chainType like ETH or TRON"))
+	}
 	if err != nil || receipt == nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("Transaction is not confirmed yet. Please wait for sometime and try again"))
 	}
 
 	// sequence id
-
-	sequence := new(big.Int).Mul(receipt.BlockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-	sequence.Add(sequence, new(big.Int).SetUint64(params.LogIndex))
-
+	sequence := helper.CalculateSequence(receipt.BlockNumber, params.LogIndex, params.RootChainType)
 	// check if incoming tx already exists
 	if !keeper.HasRecordSequence(ctx, sequence.String()) {
 		return nil, nil

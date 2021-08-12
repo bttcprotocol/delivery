@@ -455,6 +455,29 @@ func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64) (*
 	return r0, r1
 }
 
+// GetTronEventsByContractAddress provides a mock function with given fields: address, from, to
+func (_m *IContractCaller) GetTronEventsByContractAddress(address []string, from int64, to int64) ([]types.Log, error) {
+	ret := _m.Called(address, from, to)
+
+	var r0 []types.Log
+	if rf, ok := ret.Get(0).(func([]string, int64, int64) []types.Log); ok {
+		r0 = rf(address, from, to)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Log)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]string, int64, int64) error); ok {
+		r1 = rf(address, from, to)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetHeaderInfo provides a mock function with given fields: headerID, rootChainInstance, childBlockInterval
 func (_m *IContractCaller) GetHeaderInfo(headerID uint64, rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (common.Hash, uint64, uint64, uint64, heimdalltypes.HeimdallAddress, error) {
 	ret := _m.Called(headerID, rootChainInstance, childBlockInterval)
@@ -853,6 +876,29 @@ func (_m *IContractCaller) GetStateSenderInstance(stateSenderAddress common.Addr
 	var r1 error
 	if rf, ok := ret.Get(1).(func(common.Address) error); ok {
 		r1 = rf(stateSenderAddress)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTronTransactionReceipt provides a mock function with given fields: txID
+func (_m *IContractCaller) GetTronTransactionReceipt(txID string) (*types.Receipt, error) {
+	ret := _m.Called(txID)
+
+	var r0 *types.Receipt
+	if rf, ok := ret.Get(0).(func(string) *types.Receipt); ok {
+		r0 = rf(txID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Receipt)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(txID)
 	} else {
 		r1 = ret.Error(1)
 	}
