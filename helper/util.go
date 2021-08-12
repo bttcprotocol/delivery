@@ -851,11 +851,11 @@ func GetTronGridEndpoint(endpoint string) string {
 // sequence number:
 // sequence = (blockNumber * DefaultLogIndexUnit + logIndex) * DefaultBlockChainUnit + blockChainID
 func CalculateSequence(blockNumber *big.Int, logIndex uint64, rootChainType string) *big.Int {
-	chainTypeID := hmTypes.ConvertChainTypeToInt(rootChainType)
+	chainTypeID := hmTypes.GetRootChainID(rootChainType)
 	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
 	sequence.Add(sequence, new(big.Int).SetUint64(logIndex))
 	sequence.Mul(sequence, big.NewInt(hmTypes.DefaultChainIdUnit))
-	sequence.Add(sequence, big.NewInt(chainTypeID))
+	sequence.Add(sequence, big.NewInt(int64(chainTypeID)))
 	return sequence
 }
 
