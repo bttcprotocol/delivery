@@ -809,9 +809,16 @@ func FetchFromAPI(cliCtx cliContext.CLIContext, URL string) (result rest.Respons
 		}
 		return response, nil
 	}
-
-	Logger.Debug("Error while fetching data from URL", "status", resp.StatusCode, "URL", URL)
-	return result, fmt.Errorf("Error while fetching data from url: %v, status: %v", URL, resp.StatusCode)
+	var response rest.ErrorResponse
+	body, err := ioutil.ReadAll(resp.Body)
+	if err == nil {
+		if err := cliCtx.Codec.UnmarshalJSON(body, &response); err != nil {
+			return result, err
+		}
+	}
+	Logger.Debug("Error while fetching data from URL", "status", resp.StatusCode, "URL", URL,
+		"code", response.Code, "error", response.Error)
+	return result, fmt.Errorf("error while fetching data from url: %v, status: %v", URL, resp.StatusCode)
 }
 
 func MakeRequest(req *http.Request) ([]byte, error) {

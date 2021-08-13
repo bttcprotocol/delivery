@@ -46,7 +46,6 @@ const (
 	ValidatorURL            = "/staking/validator/%v"
 	CurrentValidatorSetURL  = "staking/validator-set"
 	StakingTxStatusURL      = "/staking/isoldtx"
-	StakingParamsURL        = "/staking/params"
 	NextStakingRecordURL    = "/staking/next/%v"
 	TopupTxStatusURL        = "/topup/isoldtx"
 	ClerkTxStatusURL        = "/clerk/isoldtx"
@@ -385,27 +384,6 @@ func AppendPrefix(signerPubKey []byte) []byte {
 	prefix[0] = byte(0x04)
 	signerPubKey = append(prefix[:], signerPubKey[:]...)
 	return signerPubKey
-}
-
-// GetStakingParams return params
-func GetStakingParams(cliCtx cliContext.CLIContext) (*stakingTypes.Params, error) {
-	response, err := helper.FetchFromAPI(
-		cliCtx,
-		helper.GetHeimdallServerEndpoint(StakingParamsURL),
-	)
-
-	if err != nil {
-		logger.Error("Error fetching Staking params", "err", err)
-		return nil, err
-	}
-
-	var params stakingTypes.Params
-	if err := json.Unmarshal(response.Result, &params); err != nil {
-		logger.Error("Error unmarshalling Staking params", "url", CheckpointParamsURL)
-		return nil, err
-	}
-
-	return &params, nil
 }
 
 // GetNextStakingRecord return staking info from buffer

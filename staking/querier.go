@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/maticnetwork/heimdall/common"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -36,22 +34,12 @@ func NewQuerier(keeper Keeper, contractCaller helper.IContractCaller) sdk.Querie
 			return handleQueryStakingSequence(ctx, req, keeper, contractCaller)
 		case types.QueryTotalValidatorPower:
 			return handleQueryTotalValidatorPower(ctx, req, keeper)
-		case types.QueryParams:
-			return handleQueryParams(ctx, req, keeper)
 		case types.QueryNextStaking:
 			return handleQueryNextStaking(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown staking query endpoint")
 		}
 	}
-}
-
-func handleQueryParams(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	bz, err := json.Marshal(keeper.GetParams(ctx))
-	if err != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
-	}
-	return bz, nil
 }
 
 func handleQueryTotalValidatorPower(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
@@ -220,7 +208,7 @@ func handleQueryNextStaking(ctx sdk.Context, req abci.RequestQuery, keeper Keepe
 	}
 
 	if res == nil {
-		return nil, common.ErrNoStakingFound(keeper.Codespace())
+		res = &types.StakingRecord{}
 	}
 
 	bz, err := json.Marshal(res)

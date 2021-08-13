@@ -53,10 +53,6 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 		StakingTxStatusHandlerFn(cliCtx),
 	).Methods("GET")
 
-	r.HandleFunc("/staking/params",
-		paramsHandlerFn(cliCtx),
-	).Methods("GET")
-
 	r.HandleFunc("/staking/next/{root}",
 		stakingNextHandlerFn(cliCtx),
 	).Methods("GET")
@@ -402,26 +398,6 @@ func StakingTxStatusHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		res := true
 
 		// return result
-		cliCtx = cliCtx.WithHeight(height)
-		rest.PostProcessResponse(w, cliCtx, res)
-	}
-}
-
-// HTTP request handler to query the auth params values
-func paramsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-		if !ok {
-			return
-		}
-
-		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryParams)
-		res, height, err := cliCtx.QueryWithData(route, nil)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
 		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, res)
 	}

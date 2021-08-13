@@ -33,7 +33,6 @@ type StakingProcessor struct {
 // StakingContext represents checkpoint context
 type StakingContext struct {
 	ChainmanagerParams *chainmanagerTypes.Params
-	StakingParams      *stakingTypes.Params
 }
 
 // NewStakingProcessor - add  abi to staking processor
@@ -410,8 +409,8 @@ func (sp *StakingProcessor) checkStakingSyncAck() {
 
 		// fetch next staking record from queue
 		res, err := util.GetNextStakingRecord(sp.cliCtx, rootChain)
-		if err != nil {
-			return
+		if err != nil || res.Nonce == 0 {
+			continue
 		}
 		currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, res.ValidatorID.Uint64())
 		if currentNonce == 0 {
@@ -483,7 +482,7 @@ func (sp *StakingProcessor) getNonceFromRootChain(stakingContext *StakingContext
 func (sp *StakingProcessor) shouldSendStakingSync(stakingContext *StakingContext, rootChain string) (*stakingTypes.StakingRecord, bool) {
 	// fetch next staking record from queue
 	res, err := util.GetNextStakingRecord(sp.cliCtx, rootChain)
-	if err != nil {
+	if err != nil || res.Nonce == 0 {
 		return nil, false
 	}
 	currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, res.ValidatorID.Uint64())
@@ -612,14 +611,7 @@ func (sp *StakingProcessor) getStakingContext() (*StakingContext, error) {
 		return nil, err
 	}
 
-	stakingParams, err := util.GetStakingParams(sp.cliCtx)
-	if err != nil {
-		sp.Logger.Error("Error while fetching checkpoint params", "error", err)
-		return nil, err
-	}
-
 	return &StakingContext{
 		ChainmanagerParams: chainmanagerParams,
-		StakingParams:      stakingParams,
 	}, nil
 }

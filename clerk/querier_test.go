@@ -123,7 +123,7 @@ func (suite *QuerierTestSuite) TestHandleQueryRecord() {
 
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordRootChainParams(1, hmTypes.RootChainTypeTron)),
+		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordParams(2)),
 	}
 	// SetEventRecord
 	record, err = querier(ctx, path, req)
@@ -133,7 +133,7 @@ func (suite *QuerierTestSuite) TestHandleQueryRecord() {
 	var recordTron types.EventRecord
 	errs := json.Unmarshal(record, &recordTron)
 	require.NoError(t, errs)
-	require.Equal(t, recordTron.ID, uint64(1), "msg id should one")
+	require.Equal(t, recordTron.ID, uint64(2), "msg id should one")
 	require.Equal(t, recordTron.RootChainType, hmTypes.RootChainTypeTron, "root chain type should be tron")
 }
 

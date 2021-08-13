@@ -3,6 +3,7 @@ package clerk
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethTypes "github.com/maticnetwork/bor/core/types"
@@ -33,15 +34,12 @@ func NewQuerier(keeper Keeper, contractCaller helper.IContractCaller) sdk.Querie
 
 // root chain: query root chain record with root chain record id
 func handleQueryRecord(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryRootChainRecordParams
+	var params types.QueryRecordParams
 	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
-	if params.RootChainType != hmTypes.RootChainTypeTron && params.RootChainType != hmTypes.RootChainTypeEth {
-		return nil, sdk.ErrInternal(fmt.Sprintf("wrong root chain type : %s", params.RootChainType))
-	}
 	// get state record by record id
-	record, err := keeper.GetRootChainEventRecord(ctx, params.RecordID, params.RootChainType)
+	record, err := keeper.GetEventRecord(ctx, params.RecordID)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not get state record", err.Error()))
 	}

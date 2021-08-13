@@ -15,7 +15,6 @@ const (
 	QueryCurrentProposer      = "current-proposer"
 	QueryProposerBonusPercent = "proposer-bonus-percent"
 	QueryStakingSequence      = "staking-sequence"
-	QueryParams               = "params"
 	QueryNextStaking          = "staking-next"
 )
 

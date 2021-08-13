@@ -196,11 +196,13 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 		if lastCheckpoint.EndBlock+1 != msg.StartBlock {
 			logger.Error("Checkpoint not in countinuity",
 				"currentTip", lastCheckpoint.EndBlock,
-				"startBlock", msg.StartBlock)
+				"startBlock", msg.StartBlock,
+				"root", msg.RootChainType)
 			return common.ErrDisCountinuousCheckpoint(k.Codespace()).Result()
 		}
 	} else if err.Error() == common.ErrNoCheckpointFound(k.Codespace()).Error() && msg.StartBlock != 0 {
-		logger.Error("First checkpoint to start from block 0", "Error", err)
+		logger.Error("First checkpoint to start from block 0",
+			"Error", err, "root", msg.RootChainType)
 		return common.ErrBadBlockDetails(k.Codespace()).Result()
 	}
 
@@ -287,7 +289,8 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 
 	// Skip handler if checkpoint-ack is not approved
 	if sideTxResult != abci.SideTxResultType_Yes {
-		logger.Debug("Skipping new checkpoint-ack since side-tx didn't get yes votes", "checkpointNumber", msg.Number)
+		logger.Debug("Skipping new checkpoint-ack since side-tx didn't get yes votes",
+			"checkpointNumber", msg.Number, "root", msg.RootChainType)
 		return common.ErrBadBlockDetails(k.Codespace()).Result()
 	}
 
@@ -300,13 +303,16 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 		checkpointObj, err = k.GetCheckpointFromBuffer(ctx)
 	}
 	if err != nil {
-		logger.Error("Unable to get checkpoint buffer", "error", err)
+		logger.Error("Unable to get checkpoint buffer", "error", err, "root", msg.RootChainType)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}
 
 	// invalid start block
 	if msg.StartBlock != checkpointObj.StartBlock {
-		logger.Error("Invalid start block", "startExpected", checkpointObj.StartBlock, "startReceived", msg.StartBlock)
+		logger.Error("Invalid start block",
+			"startExpected", checkpointObj.StartBlock,
+			"startReceived", msg.StartBlock,
+			"root", msg.RootChainType)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}
 
@@ -326,7 +332,8 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 
 	// adjust checkpoint data if latest checkpoint is already submitted
 	if checkpointObj.EndBlock > msg.EndBlock {
-		logger.Info("Adjusting endBlock to one already submitted on chain", "endBlock", checkpointObj.EndBlock, "adjustedEndBlock", msg.EndBlock)
+		logger.Info("Adjusting endBlock to one already submitted on chain",
+			"endBlock", checkpointObj.EndBlock, "adjustedEndBlock", msg.EndBlock, "root", msg.RootChainType)
 		checkpointObj.EndBlock = msg.EndBlock
 		checkpointObj.RootHash = msg.RootHash
 		checkpointObj.Proposer = msg.Proposer
@@ -346,7 +353,7 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 		logger.Error("Error while adding checkpoint into store", "checkpointNumber", msg.Number)
 		return sdk.ErrInternal("Failed to add checkpoint into store").Result()
 	}
-	logger.Debug("Checkpoint added to store", "checkpointNumber", msg.Number)
+	logger.Debug("Checkpoint added to store", "checkpointNumber", msg.Number, "root", msg.RootChainType)
 
 	// Flush buffer
 	if msg.RootChainType != hmTypes.RootChainTypeEth {
