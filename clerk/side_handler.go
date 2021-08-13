@@ -138,10 +138,10 @@ func PostHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	}
 	// heimdall latestID
 	latestMsgID := k.GetLatestID(ctx)
-	if latestMsgID < msg.ID {
-		k.Logger(ctx).Debug("Heimdall msg latest ID ", latestMsgID, " less than rootChain", msg.RootChainType, " ID: ", msg.ID)
-		return hmCommon.ErrOldTx(k.Codespace()).Result()
-	}
+	//if latestMsgID < msg.ID {
+	//	k.Logger(ctx).Debug("Heimdall msg latest ID ", latestMsgID, " less than rootChain", msg.RootChainType, " ID: ", msg.ID)
+	//	return hmCommon.ErrOldTx(k.Codespace()).Result()
+	//}
 	k.Logger(ctx).Debug("Persisting clerk state", "sideTxResult", sideTxResult)
 
 	// sequence id
