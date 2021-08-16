@@ -171,7 +171,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 		tl.Logger.Error("Error while query tron logs", "error", err)
 		return
 	} else if len(logs) > 0 {
-		tl.Logger.Debug("New  tron logs found", "numberOfLogs", len(logs))
+		tl.Logger.Debug("New tron logs found", "numberOfLogs", len(logs))
 	}
 	// process filtered log
 	for _, vLog := range logs {

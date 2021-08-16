@@ -59,6 +59,23 @@ func (k *Keeper) GetNextStakingRecordFromQueue(ctx sdk.Context, rootID byte) (*s
 	return nil, nil
 }
 
+// GetStakingQueue
+func (k *Keeper) GetStakingQueue(ctx sdk.Context, rootID byte) ([]stakingTypes.StakingRecord, error) {
+	key := getStakingQueueKey(rootID)
+	store := ctx.KVStore(k.storeKey)
+
+	var records []stakingTypes.StakingRecord
+	if store.Has(key) {
+		err := k.cdc.UnmarshalBinaryBare(store.Get(key), &records)
+		if err != nil {
+			k.Logger(ctx).Error("Error unmarshalling staking queue record", "root", rootID, "error", err)
+			return nil, err
+		}
+		return records, nil
+	}
+	return nil, nil
+}
+
 // findStakingRecordFromQueue
 func (k *Keeper) findStakingRecordFromQueue(ctx sdk.Context, rootID byte, stakingRecord *stakingTypes.StakingRecord) bool {
 	key := getStakingQueueKey(rootID)

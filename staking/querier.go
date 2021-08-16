@@ -36,6 +36,8 @@ func NewQuerier(keeper Keeper, contractCaller helper.IContractCaller) sdk.Querie
 			return handleQueryTotalValidatorPower(ctx, req, keeper)
 		case types.QueryNextStaking:
 			return handleQueryNextStaking(ctx, req, keeper)
+		case types.QueryStakingQueue:
+			return handleQueryStakingQueue(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown staking query endpoint")
 		}
@@ -209,6 +211,29 @@ func handleQueryNextStaking(ctx sdk.Context, req abci.RequestQuery, keeper Keepe
 
 	if res == nil {
 		res = &types.StakingRecord{}
+	}
+
+	bz, err := json.Marshal(res)
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+	return bz, nil
+}
+
+func handleQueryStakingQueue(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryStakingParams
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
+	}
+
+	res, err := keeper.GetStakingQueue(ctx, hmTypes.GetRootChainID(params.RootChain))
+
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not fetch next staking record", err.Error()))
+	}
+
+	if res == nil {
+		res = []types.StakingRecord{}
 	}
 
 	bz, err := json.Marshal(res)

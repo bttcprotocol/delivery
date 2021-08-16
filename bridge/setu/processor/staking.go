@@ -82,7 +82,12 @@ func (sp *StakingProcessor) RegisterTasks() {
 	}
 }
 
-func (sp *StakingProcessor) sendValidatorJoinToHeimdall(eventName string, logBytes string) error {
+func (sp *StakingProcessor) sendValidatorJoinToHeimdall(eventName string, logBytes string, rootChain string) error {
+	if rootChain != hmTypes.RootChainTypeStake {
+		sp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
+		return nil
+	}
+
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
 		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
@@ -159,7 +164,12 @@ func (sp *StakingProcessor) sendValidatorJoinToHeimdall(eventName string, logByt
 	return nil
 }
 
-func (sp *StakingProcessor) sendUnstakeInitToHeimdall(eventName string, logBytes string) error {
+func (sp *StakingProcessor) sendUnstakeInitToHeimdall(eventName string, logBytes string, rootChain string) error {
+	if rootChain != hmTypes.RootChainTypeStake {
+		sp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
+		return nil
+	}
+
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
 		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
@@ -218,8 +228,12 @@ func (sp *StakingProcessor) sendUnstakeInitToHeimdall(eventName string, logBytes
 	return nil
 }
 
-//todo: add rootChainType in param
-func (sp *StakingProcessor) sendStakeUpdateToHeimdall(eventName string, logBytes string) error {
+func (sp *StakingProcessor) sendStakeUpdateToHeimdall(eventName string, logBytes string, rootChain string) error {
+	if rootChain != hmTypes.RootChainTypeStake {
+		sp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
+		return nil
+	}
+
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
 		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
@@ -273,7 +287,12 @@ func (sp *StakingProcessor) sendStakeUpdateToHeimdall(eventName string, logBytes
 	return nil
 }
 
-func (sp *StakingProcessor) sendSignerChangeToHeimdall(eventName string, logBytes string) error {
+func (sp *StakingProcessor) sendSignerChangeToHeimdall(eventName string, logBytes string, rootChain string) error {
+	if rootChain != hmTypes.RootChainTypeStake {
+		sp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
+		return nil
+	}
+
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
 		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
@@ -566,6 +585,11 @@ func (sp *StakingProcessor) sendStakingSyncToRootchain(eventBytes string, blockH
 // sendStakingAckToHeimdall - handles checkpointAck event from rootchain
 // 1. create and broadcast checkpointAck msg to heimdall.
 func (sp *StakingProcessor) sendStakingAckToHeimdall(eventName string, StakingAckStr string, rootChain string) error {
+	if rootChain == hmTypes.RootChainTypeStake {
+		sp.Logger.Error("There should be no messages from stake chain.", "root", rootChain)
+		return nil
+	}
+
 	var log = types.Log{}
 	if err := json.Unmarshal([]byte(StakingAckStr), &log); err != nil {
 		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
