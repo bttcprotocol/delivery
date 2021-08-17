@@ -92,6 +92,7 @@ type IContractCaller interface {
 
 	GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error)
 	GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error)
+	GetTronLatestBlockNumber()(int64, error)
 }
 
 // ContractCaller contract caller
@@ -877,4 +878,20 @@ func (c *ContractCaller) GetTronEventsByContractAddress(address []string, from, 
 		return nil, err
 	}
 	return filterChangeResult.Result, nil
+}
+
+func (c *ContractCaller)  GetTronLatestBlockNumber()(int64, error) {
+	req, err := http.NewRequest("GET",GetTronGridEndpoint("/wallet/getnowblock"), nil)
+	if err != nil {
+		return 0, err
+	}
+	result, err := MakeRequest(req)
+	if err != nil {
+		return 0, err
+	}
+	var Block tron.Block
+	if err := json.Unmarshal(result, &Block); err != nil {
+		return 0, err
+	}
+	return *Block.BlockHeader.RawData.Number,nil
 }
