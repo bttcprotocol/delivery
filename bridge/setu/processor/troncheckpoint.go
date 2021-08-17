@@ -255,12 +255,12 @@ func (cp *CheckpointProcessor) createAndSendCheckpointToTron(checkpointContext *
 	if shouldSend {
 		// chain manager params
 		chainParams := checkpointContext.ChainmanagerParams.ChainParams
-		txID, err := cp.contractConnector.SendTronCheckpoint(sideTxData, sigs, chainParams.TronChainAddress)
+		err := cp.contractConnector.SendTronCheckpoint(sideTxData, sigs, chainParams.TronChainAddress)
 		if err != nil {
-			cp.Logger.Info("Error submitting checkpoint[tron] to rootchain", "error", err)
+			cp.Logger.Error("Error submitting checkpoint[tron] to rootchain", "error", err)
 			return err
 		}
-		cp.Logger.Info("Submitted new checkpoint[tron] to rootchain successfully", "txHash", txID)
+		cp.Logger.Info("Submitted new checkpoint[tron] to rootchain successfully")
 	}
 
 	return nil

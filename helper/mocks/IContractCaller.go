@@ -455,29 +455,6 @@ func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64) (*
 	return r0, r1
 }
 
-// GetTronEventsByContractAddress provides a mock function with given fields: address, from, to
-func (_m *IContractCaller) GetTronEventsByContractAddress(address []string, from int64, to int64) ([]types.Log, error) {
-	ret := _m.Called(address, from, to)
-
-	var r0 []types.Log
-	if rf, ok := ret.Get(0).(func([]string, int64, int64) []types.Log); ok {
-		r0 = rf(address, from, to)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.Log)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func([]string, int64, int64) error); ok {
-		r1 = rf(address, from, to)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetHeaderInfo provides a mock function with given fields: headerID, rootChainInstance, childBlockInterval
 func (_m *IContractCaller) GetHeaderInfo(headerID uint64, rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (common.Hash, uint64, uint64, uint64, heimdalltypes.HeimdallAddress, error) {
 	ret := _m.Called(headerID, rootChainInstance, childBlockInterval)
@@ -883,6 +860,43 @@ func (_m *IContractCaller) GetStateSenderInstance(stateSenderAddress common.Addr
 	return r0, r1
 }
 
+// GetTronEventsByContractAddress provides a mock function with given fields: address, from, to
+func (_m *IContractCaller) GetTronEventsByContractAddress(address []string, from int64, to int64) ([]types.Log, error) {
+	ret := _m.Called(address, from, to)
+
+	var r0 []types.Log
+	if rf, ok := ret.Get(0).(func([]string, int64, int64) []types.Log); ok {
+		r0 = rf(address, from, to)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Log)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]string, int64, int64) error); ok {
+		r1 = rf(address, from, to)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTronStakingSyncNonce provides a mock function with given fields: validatorID, stakingManagerAddress
+func (_m *IContractCaller) GetTronStakingSyncNonce(validatorID uint64, stakingManagerAddress string) uint64 {
+	ret := _m.Called(validatorID, stakingManagerAddress)
+
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func(uint64, string) uint64); ok {
+		r0 = rf(validatorID, stakingManagerAddress)
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	return r0
+}
+
 // GetTronTransactionReceipt provides a mock function with given fields: txID
 func (_m *IContractCaller) GetTronTransactionReceipt(txID string) (*types.Receipt, error) {
 	ret := _m.Called(txID)
@@ -904,20 +918,6 @@ func (_m *IContractCaller) GetTronTransactionReceipt(txID string) (*types.Receip
 	}
 
 	return r0, r1
-}
-
-// GetTronStakingSyncNonce provides a mock function with given fields: validatorID, stakingManagerAddress
-func (_m *IContractCaller) GetTronStakingSyncNonce(validatorID uint64, stakingManagerAddress string) uint64 {
-	ret := _m.Called(validatorID, stakingManagerAddress)
-
-	var r0 uint64
-	if rf, ok := ret.Get(0).(func(uint64, string) uint64); ok {
-		r0 = rf(validatorID, stakingManagerAddress)
-	} else {
-		r0 = ret.Get(0).(uint64)
-	}
-
-	return r0
 }
 
 // GetValidatorInfo provides a mock function with given fields: valID, stakingInfoInstance
@@ -1021,24 +1021,17 @@ func (_m *IContractCaller) SendTick(sigedData []byte, sigs []byte, slashManagerA
 }
 
 // SendTronCheckpoint provides a mock function with given fields: signedData, sigs, rootChainAddress
-func (_m *IContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) (string, error) {
+func (_m *IContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) error {
 	ret := _m.Called(signedData, sigs, rootChainAddress)
 
-	var r0 string
-	if rf, ok := ret.Get(0).(func([]byte, [][3]*big.Int, string) string); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func([]byte, [][3]*big.Int, string) error); ok {
 		r0 = rf(signedData, sigs, rootChainAddress)
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func([]byte, [][3]*big.Int, string) error); ok {
-		r1 = rf(signedData, sigs, rootChainAddress)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // SendTronStakingSync provides a mock function with given fields: stakingType, sigedData, sigs, stakingManagerAddress

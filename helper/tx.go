@@ -189,35 +189,35 @@ func (c *ContractCaller) ApproveTokens(amount *big.Int, stakeManager common.Addr
 }
 
 // SendMainStakingSync sends staking sync to rootchain contract
-func (c *ContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) (string, error) {
+func (c *ContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) error {
 	data, err := c.RootChainABI.Pack("submitCheckpoint", signedData, sigs)
 	if err != nil {
-		return "", err
+		return err
 	}
 	privateKey := GetPrivKey()
 	// trigger
 	trx, err := c.TronChainRPC.TriggerContract(privateKey.PubKey().Address().String(), rootChainAddress, data)
 	if err != nil {
-		return "", err
+		return err
 	}
 	rawData, _ := proto.Marshal(trx.GetRawData())
 	hash, err := Hash(rawData)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	signature, err := ethCrypto.Sign(hash, privateKey[:])
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	trx.Signature = append(trx.GetSignature(), signature)
 
-	result, err := c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
+	err = c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return result, nil
+	return nil
 }
 
 // SendMainStakingSync sends staking sync to rootchain contract
@@ -288,10 +288,10 @@ func (c *ContractCaller) SendTronStakingSync(syncMethod string, signedData []byt
 		"data", hex.EncodeToString(signedData),
 	)
 
-	result, err := c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
+	err = c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
 	if err != nil {
 		return err
 	}
-	Logger.Info("Submitted new staking to tron successfully", "txHash", result)
+	Logger.Info("Submitted new staking to tron successfully")
 	return nil
 }

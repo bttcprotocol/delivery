@@ -2,7 +2,6 @@ package tron
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
@@ -77,7 +76,7 @@ func (tc *Client) TriggerConstantContract(contractAddress string, data []byte) (
 	if err != nil {
 		return nil, err
 	}
-	if response.Result.Code != pb.Return_SUCCESS {
+	if response.Result.Code != pb.Return_SUCCESS || response.Transaction.GetRet()[0].Ret == pb.Transaction_Result_FAILED {
 		return nil, fmt.Errorf("code:%v message:%v", response.Result.Code, string(response.Result.Message))
 	}
 	return response.ConstantResult[0], nil
@@ -180,16 +179,13 @@ func (tc *Client) GetLastChildBlock(contractAddress string) (uint64, error) {
 	return (*ret0).Uint64(), nil
 }
 
-func (tc *Client) BroadcastTransaction(ctx context.Context, trx *pb.Transaction) (string, error) {
+func (tc *Client) BroadcastTransaction(ctx context.Context, trx *pb.Transaction) error {
 	result, err := tc.client.BroadcastTransaction(ctx, trx)
 	if err != nil {
-		return "", err
-	}
-	if err != nil {
-		return "", err
+		return err
 	}
 	if result.Code != pb.Return_SUCCESS {
-		return "", fmt.Errorf("code:%v message:%v", result.Code, string(result.Message))
+		return fmt.Errorf("code:%v message:%v", result.Code, string(result.Message))
 	}
-	return hex.EncodeToString(result.Message), nil
+	return nil
 }
