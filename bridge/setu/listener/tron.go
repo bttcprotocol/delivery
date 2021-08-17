@@ -15,7 +15,6 @@ import (
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/contracts/stakinginfo"
 	"github.com/maticnetwork/heimdall/helper"
-	"github.com/maticnetwork/heimdall/tron"
 	"github.com/maticnetwork/heimdall/types"
 )
 
@@ -26,7 +25,6 @@ const (
 // TronListener - Listens to and process events from Tron
 type TronListener struct {
 	BaseListener
-	tronClient    *tron.Client
 	rootChainType string
 	// ABIs
 	abis           []*abi.ABI
@@ -40,7 +38,6 @@ func NewTronListener() *TronListener {
 		panic(err)
 	}
 	TronListener := &TronListener{
-		tronClient:    helper.GetTronChainRPCClient(),
 		rootChainType: types.RootChainTypeTron,
 		abis: []*abi.ABI{
 			&contractCaller.RootChainABI,
@@ -86,7 +83,7 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 	for {
 		select {
 		case <-ticker.C:
-			headerNum, err := tl.tronClient.GetNowBlock(ctx)
+			headerNum, err := tl.contractConnector.GetTronLatestBlockNumber()
 			if err == nil {
 				// send data to channel
 				tl.HeaderChannel <- &(ethTypes.Header{

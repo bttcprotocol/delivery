@@ -115,28 +115,10 @@ func (k *Keeper) SetEventRecordWithTime(ctx sdk.Context, record types.EventRecor
 // SetEventRecordWithID adds record to store with ID
 func (k *Keeper) SetEventRecordWithID(ctx sdk.Context, record types.EventRecord) (uint64, error) {
 
-	// root chain ID
-	rootChainKey := GetRootChainEventRecordKey(record.RootChainType, record.ID)
-	value, err := k.cdc.MarshalBinaryBare(record)
-	if err != nil {
-		k.Logger(ctx).Error("Error marshalling rootChain record", "error", err)
-		return 0, err
-	}
-	if rootChainKey == nil {
-		return 0, errors.New(" unknown root chain type: " + record.RootChainType)
-	}
-	if err := k.setEventRecordStore(ctx, rootChainKey, value); err != nil {
-		return 0, err
-	}
-
 	// set rootchainID and heimdall id pair
 	latestID := k.GetLatestID(ctx)
 	rootToHeimdallKey := GetRootToHeimdallIdKey(record.RootChainType, record.ID)
-	value, err = k.cdc.MarshalBinaryBare(latestID + 1)
-	if err != nil {
-		k.Logger(ctx).Error("Error marshalling record", "error", err)
-		return 0, err
-	}
+	value := []byte(strconv.FormatUint(latestID+1, 10))
 	if err := k.setEventRecordStore(ctx, rootToHeimdallKey, value); err != nil {
 		return 0, err
 	}
@@ -144,7 +126,7 @@ func (k *Keeper) SetEventRecordWithID(ctx sdk.Context, record types.EventRecord)
 	// hemidall  ID
 	record.ID = latestID + 1
 	key := GetEventRecordKey(record.ID)
-	value, err = k.cdc.MarshalBinaryBare(record)
+	value, err := k.cdc.MarshalBinaryBare(record)
 	if err != nil {
 		k.Logger(ctx).Error("Error marshalling hemidall record", "error", err)
 		return 0, err
@@ -211,13 +193,11 @@ func (k *Keeper) GetHeimdallIDByRootID(ctx sdk.Context, rootChainType string, id
 	key := GetRootToHeimdallIdKey(rootChainType, id)
 	// check store has data
 	if store.Has(key) {
-		var heimdallID uint64
-		err := k.cdc.UnmarshalBinaryBare(store.Get(key), &heimdallID)
+		result, err := strconv.ParseUint(string(store.Get(key)), 10, 64)
 		if err != nil {
 			return nil, err
 		}
-
-		return &heimdallID, nil
+		return &result, nil
 	}
 
 	// return no error error
@@ -247,8 +227,12 @@ func (k *Keeper) GetEventRecord(ctx sdk.Context, stateID uint64) (*types.EventRe
 // GetRootChainEventRecord returns record from store
 func (k *Keeper) GetRootChainEventRecord(ctx sdk.Context, stateID uint64, rootChainType string) (*types.EventRecord, error) {
 	store := ctx.KVStore(k.storeKey)
-	rootChainKey := GetRootChainEventRecordKey(rootChainType, stateID)
 
+	heimdallId, err := k.GetHeimdallIDByRootID(ctx,rootChainType,stateID)
+	if err != nil{
+		return nil,err
+	}
+	rootChainKey := GetEventRecordKey(*heimdallId)
 	// check store has data
 	if store.Has(rootChainKey) {
 		var _record types.EventRecord
@@ -256,7 +240,7 @@ func (k *Keeper) GetRootChainEventRecord(ctx sdk.Context, stateID uint64, rootCh
 		if err != nil {
 			return nil, err
 		}
-
+		_record.ID = stateID   // reset root msg id
 		return &_record, nil
 	}
 
@@ -274,7 +258,11 @@ func (k *Keeper) HasEventRecord(ctx sdk.Context, stateID uint64) bool {
 // root chain msg id   check if msg have been processed
 func (k *Keeper) HasRootChainEventRecord(ctx sdk.Context, rootChainType string, stateID uint64) bool {
 	store := ctx.KVStore(k.storeKey)
-	key := GetRootChainEventRecordKey(rootChainType, stateID)
+	heimdallId, err := k.GetHeimdallIDByRootID(ctx,rootChainType,stateID)
+	if err != nil{
+		return false
+	}
+	key := GetEventRecordKey(*heimdallId)
 	return store.Has(key)
 }
 

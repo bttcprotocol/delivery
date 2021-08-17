@@ -101,7 +101,7 @@ func CreateNewStateRecord(cdc *codec.Codec) *cobra.Command {
 			}
 
 			// blockchainType  eth or tron
-			rootChainType := viper.GetString(RootChainType)
+			rootChainType := viper.GetString(FlagRootChainType)
 			if rootChainType == "" {
 				return fmt.Errorf("-block-chain_type cannot be empty")
 			}
@@ -130,7 +130,7 @@ func CreateNewStateRecord(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Uint64(FlagBlockNumber, 0, "--block-number=<block-number>")
 	cmd.Flags().String(FlagContractAddress, "", "--contract-addr=<contract-addr>")
 	cmd.Flags().String(FlagData, "", "--data=<data>")
-	cmd.Flags().String(RootChainType, types.RootChainTypeEth, "--root-chain_type=<root-chain-type>")
+	cmd.Flags().String(FlagRootChainType, types.RootChainTypeEth, "--root-chain_type=<root-chain-type>")
 
 	if err := cmd.MarkFlagRequired(FlagRecordID); err != nil {
 		logger.Error("CreateNewStateRecord | MarkFlagRequired | FlagRecordID", "Error", err)
@@ -154,7 +154,7 @@ func CreateNewStateRecord(cdc *codec.Codec) *cobra.Command {
 		logger.Error("CreateNewStateRecord | MarkFlagRequired | FlagData", "Error", err)
 	}
 
-	if err := cmd.MarkFlagRequired(RootChainType); err != nil {
+	if err := cmd.MarkFlagRequired(FlagRootChainType); err != nil {
 		logger.Error("CreateNewStateRecord | MarkFlagRequired | FlagData", "Error", err)
 	}
 

@@ -10,6 +10,7 @@ const (
 	JsonRpcVersion       = "2.0"
 	GetLogsMethod        = "eth_getLogs"
 	GetTransactionByHash = "eth_getTransactionReceipt"
+	GetBlockByNumber     = "eth_getBlockByNumber"
 	MAXQueryAddress      = 3
 )
 
@@ -49,4 +50,14 @@ func  GetDefaultBaseParm() BaseQueryParam {
 		Id:      strconv.FormatInt(int64(rand.Int()%100), 10),
 	}
 	return param
+}
+
+type Block struct {
+	BlockHeader *BlockHeader  `json:"block_header"`
+}
+type BlockHeader struct {
+	RawData *RawData `json:"raw_data"`
+}
+type RawData struct {
+	Number *int64  `json:"number"`
 }

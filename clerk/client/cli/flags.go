@@ -9,5 +9,5 @@ const (
 	FlagRecordID        = "id"
 	FlagData            = "data"
 	FlagBorChainId      = "bor-chain-id"
-	RootChainType       = "root-chain-type"
+	FlagRootChainType   = "root-chain-type"
 )
