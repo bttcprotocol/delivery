@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
+
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
@@ -73,6 +75,9 @@ func (sp *StakingProcessor) RegisterTasks() {
 	}
 	if err := sp.queueConnector.Server.RegisterTask("sendSignerChangeToHeimdall", sp.sendSignerChangeToHeimdall); err != nil {
 		sp.Logger.Error("RegisterTasks | sendSignerChangeToHeimdall", "error", err)
+	}
+	if err := sp.queueConnector.Server.RegisterTask("sendStakingSyncToHeimdall", sp.sendStakingSyncToHeimdall); err != nil {
+		sp.Logger.Error("RegisterTasks | sendStakingSyncToRootChain", "error", err)
 	}
 	if err := sp.queueConnector.Server.RegisterTask("sendStakingSyncToRootChain", sp.sendStakingSyncToRootchain); err != nil {
 		sp.Logger.Error("RegisterTasks | sendStakingSyncToRootChain", "error", err)
@@ -449,38 +454,39 @@ func (sp *StakingProcessor) checkStakingSyncAck() {
 				sp.Logger.Error("Error while broadcasting staking-ack to heimdall", "error", err)
 			}
 		}
+		sp.checkAndSendStakingSync(rootChain, false)
 	}
 
-	sp.checkAndSendStakingSync()
 }
 
 // checkAndSendStakingSync
 // 1. Fetch latest validator nonce from rootchain
 // 2. check if should send.
 // 3. Send staking sync to root if required.
-func (sp *StakingProcessor) checkAndSendStakingSync() {
-	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
-	if err != nil {
-		sp.Logger.Error("Error checking isCurrentProposer in staking send handler", "error", err)
-		return
-	}
-	if !isCurrentProposer {
-		sp.Logger.Info("I am not the current proposer. Ignoring")
-		return
-	}
+func (sp *StakingProcessor) checkAndSendStakingSync(rootChain string, toRootChain bool) {
 	// fetch fresh staking context
 	stakingContext, err := sp.getStakingContext()
 	if err != nil {
 		return
 	}
-	for rootChain := range hmTypes.GetRootChainIDMap() {
-		if rootChain == hmTypes.RootChainTypeStake {
-			continue
-		}
 
-		stakingRecord, shouldSend := sp.shouldSendStakingSync(stakingContext, rootChain)
-		if shouldSend {
+	stakingRecord, shouldSend := sp.shouldSendStakingSync(stakingContext, rootChain)
+	if shouldSend {
+		if toRootChain {
 			sp.createAndSendStakingSyncToRootChain(stakingContext, rootChain, stakingRecord)
+		} else {
+			// create msg staking ack message
+			msg := stakingTypes.NewMsgStakingSync(
+				helper.GetFromAddress(sp.cliCtx),
+				rootChain,
+				stakingRecord.ValidatorID,
+				stakingRecord.Nonce,
+			)
+
+			// return broadcast to heimdall
+			if err := sp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+				sp.Logger.Error("Error while broadcasting staking-sync to heimdall", "error", err)
+			}
 		}
 	}
 }
@@ -575,10 +581,60 @@ func (sp *StakingProcessor) createAndSendStakingSyncToRootChain(stakingContext *
 // sendStakingSyncToRootchain - handles staking confirmation event from heimdall.
 // 1. check if i am the current proposer.
 // 2. check if this staking sync has to be submitted to rootchain
+// 3. if so, create and broadcast staking sync transaction to heimdall
+func (sp *StakingProcessor) sendStakingSyncToHeimdall(eventBytes string, blockHeight int64) error {
+	sp.Logger.Info("Received sendStakingSyncToHeimdall request", "eventBytes", eventBytes, "blockHeight", blockHeight)
+
+	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
+	if err != nil {
+		sp.Logger.Error("Error checking isCurrentProposer in staking send heimdall handler", "error", err)
+		return nil
+	}
+	if !isCurrentProposer {
+		sp.Logger.Info("I am not the current proposer. Ignoring")
+		return nil
+	}
+
+	for rootChain := range hmTypes.GetRootChainIDMap() {
+		if rootChain == hmTypes.RootChainTypeStake {
+			continue
+		}
+		sp.checkAndSendStakingSync(rootChain, false)
+	}
+	return nil
+}
+
+// sendStakingSyncToRootchain - handles staking confirmation event from heimdall.
+// 1. check if i am the current proposer.
+// 2. check if this staking sync has to be submitted to rootchain
 // 3. if so, create and broadcast staking sync transaction to rootchain
 func (sp *StakingProcessor) sendStakingSyncToRootchain(eventBytes string, blockHeight int64) error {
 	sp.Logger.Info("Received sendStakingSyncToRootchain request", "eventBytes", eventBytes, "blockHeight", blockHeight)
-	sp.checkAndSendStakingSync()
+	isCurrentProposer, err := util.IsCurrentProposer(sp.cliCtx)
+	if err != nil {
+		sp.Logger.Error("Error checking isCurrentProposer in staking send rootchain handler", "error", err)
+		return nil
+	}
+	if !isCurrentProposer {
+		sp.Logger.Info("I am not the current proposer. Ignoring")
+		return nil
+	}
+
+	var event = sdk.StringEvent{}
+	if err := json.Unmarshal([]byte(eventBytes), &event); err != nil {
+		sp.Logger.Error("Error unmarshalling event from heimdall", "error", err)
+		return err
+	}
+	sp.Logger.Info("processing staking sync confirmation event", "eventtype", event.Type)
+	var rootChain string
+	for _, attr := range event.Attributes {
+		if attr.Key == checkpointTypes.AttributeKeyRootChain {
+			rootChain = attr.Value
+		}
+	}
+
+	sp.Logger.Info("Received sendStakingSyncToRootchain request", "rootChain", rootChain)
+	sp.checkAndSendStakingSync(rootChain, true)
 	return nil
 }
 

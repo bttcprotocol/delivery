@@ -29,6 +29,8 @@ func NewHandler(k Keeper, contractCaller helper.IContractCaller) sdk.Handler {
 			return HandleMsgSignerUpdate(ctx, msg, k, contractCaller)
 		case types.MsgStakeUpdate:
 			return HandleMsgStakeUpdate(ctx, msg, k, contractCaller)
+		case types.MsgStakingSync:
+			return handleMsgStakingSync(ctx, msg, k, contractCaller)
 		case types.MsgStakingSyncAck:
 			return handleMsgStakingSyncAck(ctx, msg, k, contractCaller)
 		default:
@@ -273,7 +275,63 @@ func HandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k Keepe
 	}
 }
 
-// handleMsgStakingSyncAck Validates if checkpoint submitted on chain is valid
+// handleMsgStakingSync
+func handleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keeper, contractCaller helper.IContractCaller) sdk.Result {
+	logger := k.Logger(ctx)
+	logger.Debug("✅ Validating staking sync",
+		"stakingID", msg.ValidatorID,
+		"nonce", msg.Nonce,
+		"root", msg.RootChain,
+	)
+	if msg.RootChain == hmTypes.RootChainTypeStake {
+		return common.ErrBadAck(k.Codespace()).Result()
+	}
+
+	// Get last staking sync from buffer
+	stakingRecord, err := k.GetNextStakingRecordFromQueue(ctx, hmTypes.GetRootChainID(msg.RootChain))
+	if err != nil || stakingRecord == nil {
+		logger.Error("Unable to get staking record from queue", "error", err)
+		return common.ErrBadAck(k.Codespace()).Result()
+	}
+
+	if msg.ValidatorID != stakingRecord.ValidatorID || msg.Nonce != stakingRecord.Nonce {
+		logger.Error("Invalid staking sync ack",
+			"queue-stakingID", stakingRecord.ValidatorID,
+			"stakingID", msg.ValidatorID,
+			"queue-nonce", stakingRecord.Nonce,
+			"nonce", msg.Nonce)
+		return common.ErrBadAck(k.Codespace()).Result()
+	}
+
+	// check buffer time
+	timeStamp := uint64(ctx.BlockTime().Unix())
+	stakingBufferTime := uint64(k.GetParams(ctx).StakingBufferTime.Seconds())
+
+	if stakingRecord.TimeStamp > timeStamp && stakingRecord.TimeStamp-timeStamp < stakingBufferTime {
+		logger.Error("Staking sync is in buffer time",
+			"stakingID", msg.ValidatorID,
+			"nonce", msg.Nonce,
+			"bufferTime", stakingBufferTime,
+			"now", timeStamp,
+		)
+		return common.ErrBadAck(k.Codespace()).Result()
+	}
+
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeStakingSync,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(types.AttributeKeyValidatorID, strconv.FormatUint(msg.ValidatorID.Uint64(), 10)),
+			sdk.NewAttribute(types.AttributeKeyValidatorNonce, strconv.FormatUint(msg.Nonce, 10)),
+		),
+	})
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+// handleMsgStakingSyncAck Validates if staking submitted on chain is valid
 func handleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k Keeper, contractCaller helper.IContractCaller) sdk.Result {
 	logger := k.Logger(ctx)
 	logger.Debug("✅ Validating staking sync ack",

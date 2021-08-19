@@ -34,6 +34,7 @@ func (v *GenesisValidator) HeimdallValidator() hmTypes.Validator {
 
 // GenesisState is the checkpoint state that must be provided at genesis.
 type GenesisState struct {
+	Params           Params               `json:"params" yaml:"params"`
 	Validators       []*hmTypes.Validator `json:"validators" yaml:"validators"`
 	CurrentValSet    hmTypes.ValidatorSet `json:"current_val_set" yaml:"current_val_set"`
 	StakingSequences []string             `json:"staking_sequences" yaml:"staking_sequences"`

@@ -197,6 +197,8 @@ func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight
 		stakingTypes.EventTypeSignerUpdate,
 		stakingTypes.EventTypeValidatorExit,
 		stakingTypes.EventTypeStakingSyncAck:
+		hl.sendBlockTask("sendStakingSyncToHeimdall", eventBytes, blockHeight)
+	case stakingTypes.EventTypeStakingSync:
 		hl.sendBlockTask("sendStakingSyncToRootChain", eventBytes, blockHeight)
 	default:
 		hl.Logger.Debug("BlockEvent Type mismatch", "eventType", event.Type)

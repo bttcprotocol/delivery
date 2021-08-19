@@ -117,8 +117,41 @@ func (k *Keeper) removeStakingRecordFromQueue(ctx sdk.Context, rootID byte, vali
 
 	for index, record := range records {
 		if record.ValidatorID == validatorID && record.Nonce == nonce {
+			if index+1 == len(records) {
+				store.Delete(key)
+				return
+			}
 			results := records[index+1:]
 			out, err := k.cdc.MarshalBinaryBare(results)
+			if err != nil {
+				k.Logger(ctx).Error("Error marshalling staking queue record", "error", err)
+				return
+			}
+			store.Set(key, out)
+			return
+		}
+	}
+}
+
+// UpdateStakingRecordTimestamp update staking record timestamp
+func (k *Keeper) UpdateStakingRecordTimestamp(ctx sdk.Context, rootID byte, validatorID hmTypes.ValidatorID, nonce uint64, timestamp uint64) {
+	key := getStakingQueueKey(rootID)
+	store := ctx.KVStore(k.storeKey)
+
+	var records []stakingTypes.StakingRecord
+	if !store.Has(key) {
+		return
+	}
+	err := k.cdc.UnmarshalBinaryBare(store.Get(key), &records)
+	if err != nil {
+		k.Logger(ctx).Error("Error unmarshalling staking queue record", "root", rootID, "error", err)
+		return
+	}
+
+	for index, record := range records {
+		if record.ValidatorID == validatorID && record.Nonce == nonce {
+			records[index].TimeStamp = timestamp
+			out, err := k.cdc.MarshalBinaryBare(records)
 			if err != nil {
 				k.Logger(ctx).Error("Error marshalling staking queue record", "error", err)
 				return

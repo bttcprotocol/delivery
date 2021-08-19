@@ -7,6 +7,7 @@ var (
 	EventTypeSignerUpdate   = "signer-update"
 	EventTypeStakeUpdate    = "stake-update"
 	EventTypeValidatorExit  = "validator-exit"
+	EventTypeStakingSync    = "staking-sync"
 	EventTypeStakingSyncAck = "staking-ack"
 
 	AttributeKeySigner            = "signer"
@@ -15,5 +16,7 @@ var (
 	AttributeKeyValidatorID       = "validator-id"
 	AttributeKeyValidatorNonce    = "validator-nonce"
 	AttributeKeyUpdatedAt         = "updated-at"
-	AttributeValueCategory        = ModuleName
+	AttributeKeyRootChain         = "root-chain"
+
+	AttributeValueCategory = ModuleName
 )
