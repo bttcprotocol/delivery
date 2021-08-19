@@ -491,6 +491,7 @@ func (cp *CheckpointProcessor) createAndSendCheckpointToHeimdall(checkpointConte
 		hmTypes.BytesToHeimdallHash(root),
 		accountRootHash,
 		chainParams.BorChainID,
+		cp.getCurrentEpoch(),
 	)
 
 	// return broadcast to heimdall
@@ -621,6 +622,22 @@ func (cp *CheckpointProcessor) getLastNoAckTime() uint64 {
 	}
 
 	return noackObject.Result
+}
+
+func (cp *CheckpointProcessor) getCurrentEpoch() uint64 {
+	response, err := helper.FetchFromAPI(cp.cliCtx, helper.GetHeimdallServerEndpoint(util.CurrentEpochURL))
+	if err != nil {
+		cp.Logger.Error("Error while sending request for current epoch", "Error", err)
+		return 1
+	}
+
+	var epochObject Result
+	if err := json.Unmarshal(response.Result, &epochObject); err != nil {
+		cp.Logger.Error("Error unmarshalling current epoch", "error", err)
+		return 1
+	}
+
+	return epochObject.Result
 }
 
 // checkIfNoAckIsRequired - check if NoAck has to be sent or not

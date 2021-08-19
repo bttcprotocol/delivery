@@ -139,6 +139,16 @@ func SendCheckpointTx(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("account root hash cannot be empty")
 			}
 
+			// epoch
+			epochStr := viper.GetString(FlagEpoch)
+			if epochStr == "" {
+				return fmt.Errorf("epoch cannot be empty")
+			}
+			epoch, err := strconv.ParseUint(epochStr, 10, 64)
+			if err != nil {
+				return err
+			}
+
 			msg := types.NewMsgCheckpointBlock(
 				proposer,
 				startBlock,
@@ -146,6 +156,7 @@ func SendCheckpointTx(cdc *codec.Codec) *cobra.Command {
 				hmTypes.HexToHeimdallHash(rootHashStr),
 				hmTypes.HexToHeimdallHash(accountRootHashStr),
 				borChainID,
+				epoch,
 			)
 
 			return helper.BroadcastMsgsWithCLI(cliCtx, []sdk.Msg{msg})
@@ -157,6 +168,7 @@ func SendCheckpointTx(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().StringP(FlagRootHash, "r", "", "--root-hash=<root-hash>")
 	cmd.Flags().String(FlagAccountRootHash, "", "--account-root=<account-root>")
 	cmd.Flags().String(FlagBorChainID, "", "--bor-chain-id=<bor-chain-id>")
+	cmd.Flags().String(FlagEpoch, "", "--epoch=<epoch>")
 	cmd.Flags().Bool(FlagAutoConfigure, false, "--auto-configure=true/false")
 
 	cmd.MarkFlagRequired(FlagRootHash)

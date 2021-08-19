@@ -11,4 +11,5 @@ const (
 	FlagCheckpointTxHash   = "txhash"
 	FlagCheckpointLogIndex = "log-index"
 	FlagAutoConfigure      = "auto-configure"
+	FlagEpoch              = "epoch"
 )

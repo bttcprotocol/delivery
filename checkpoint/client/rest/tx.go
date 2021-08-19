@@ -34,6 +34,7 @@ type (
 		EndBlock        uint64                  `json:"end_block"`
 		BorChainID      string                  `json:"bor_chain_id"`
 		RootChain       string                  `json:"root_chain"`
+		Epoch           uint64                  `json:"epoch"`
 	}
 
 	// HeaderACKReq struct for sending ACK for a new headers
@@ -80,6 +81,7 @@ func newCheckpointHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			req.RootHash,
 			req.AccountRootHash,
 			req.BorChainID,
+			req.Epoch,
 		)
 
 		// send response

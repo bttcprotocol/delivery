@@ -33,6 +33,7 @@ import (
 const (
 	AccountDetailsURL       = "/auth/accounts/%v"
 	LastNoAckURL            = "/checkpoints/last-no-ack"
+	CurrentEpochURL         = "/checkpoints/epoch"
 	CheckpointParamsURL     = "/checkpoints/params"
 	ChainManagerParamsURL   = "/chainmanager/params"
 	ProposersURL            = "/staking/proposer/%v"

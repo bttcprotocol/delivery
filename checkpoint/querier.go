@@ -186,6 +186,8 @@ func handleQueryNextCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(fmt.Sprintf("could not get generate account root hash. Error:%v", err), err.Error()))
 	}
 
+	epoch := keeper.GetACKCount(ctx) + 1
+
 	checkpointMsg := types.NewMsgCheckpointBlock(
 		proposer.Signer,
 		start,
@@ -193,6 +195,7 @@ func handleQueryNextCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		hmTypes.BytesToHeimdallHash(rootHash),
 		hmTypes.BytesToHeimdallHash(accRootHash),
 		queryParams.BorChainID,
+		epoch,
 	)
 	bz, err := json.Marshal(checkpointMsg)
 	if err != nil {

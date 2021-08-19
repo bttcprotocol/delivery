@@ -38,6 +38,8 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 
 	r.HandleFunc("/checkpoints/list", checkpointListhandlerFn(cliCtx)).Methods("GET")
 
+	r.HandleFunc("/checkpoints/epoch", currentEpochHandlerFunc(cliCtx)).Methods("GET")
+
 	r.HandleFunc("/checkpoints/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
 
 }
@@ -524,5 +526,40 @@ func checkpointListhandlerFn(
 		}
 
 		rest.PostProcessResponse(w, cliCtx, res)
+	}
+}
+
+func currentEpochHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
+		res, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), nil)
+		if err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// check content
+		if ok := hmRest.ReturnNotFoundIfNoContent(w, res, "No ack count found"); !ok {
+			return
+		}
+
+		var ackCount uint64
+		if err := json.Unmarshal(res, &ackCount); err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		result, err := json.Marshal(map[string]interface{}{"result": ackCount + 1})
+		if err != nil {
+			RestLogger.Error("Error while marshalling response to Json", "error", err)
+			hmRest.WriteErrorResponse(w, http.StatusNoContent, errors.New("error while sending current epoch").Error())
+			return
+		}
+		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, result)
 	}
 }

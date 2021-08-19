@@ -26,6 +26,7 @@ type MsgCheckpoint struct {
 	RootHash        types.HeimdallHash    `json:"root_hash"`
 	AccountRootHash types.HeimdallHash    `json:"account_root_hash"`
 	BorChainID      string                `json:"bor_chain_id"`
+	Epoch           uint64                `json:"epoch"`
 	RootChainType   string                `json:"root_chain_type"`
 }
 
@@ -37,6 +38,7 @@ func NewMsgCheckpointBlock(
 	roothash types.HeimdallHash,
 	accountRootHash types.HeimdallHash,
 	borChainID string,
+	epoch uint64,
 ) MsgCheckpoint {
 	return MsgCheckpoint{
 		Proposer:        proposer,
@@ -45,6 +47,7 @@ func NewMsgCheckpointBlock(
 		RootHash:        roothash,
 		AccountRootHash: accountRootHash,
 		BorChainID:      borChainID,
+		Epoch:           epoch,
 		RootChainType:   types.RootChainTypeEth,
 	}
 }
@@ -57,6 +60,7 @@ func NewMsgOtherCheckpointBlock(
 	roothash types.HeimdallHash,
 	accountRootHash types.HeimdallHash,
 	borChainID string,
+	epoch uint64,
 	rootChain string,
 ) MsgCheckpoint {
 	return MsgCheckpoint{
@@ -66,6 +70,7 @@ func NewMsgOtherCheckpointBlock(
 		RootHash:        roothash,
 		AccountRootHash: accountRootHash,
 		BorChainID:      borChainID,
+		Epoch:           epoch,
 		RootChainType:   rootChain,
 	}
 }
@@ -119,6 +124,7 @@ func (msg MsgCheckpoint) GetSideSignBytes() []byte {
 		msg.RootHash.Bytes(),
 		msg.AccountRootHash.Bytes(),
 		new(big.Int).SetUint64(borChainID).Bytes(),
+		new(big.Int).SetUint64(msg.Epoch).Bytes(),
 	)
 }
 

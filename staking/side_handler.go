@@ -763,7 +763,7 @@ func PostHandleMsgStakingSyncAck(ctx sdk.Context, k Keeper, msg types.MsgStaking
 	rootChainID := hmTypes.GetRootChainID(msg.RootChain)
 	// get last staking from buffer
 	stakingRecord, err := k.GetNextStakingRecordFromQueue(ctx, rootChainID)
-	if err == nil || stakingRecord == nil {
+	if err != nil || stakingRecord == nil {
 		logger.Error("Unable to get staking record from queue", "error", err)
 		return common.ErrBadAck(k.Codespace()).Result()
 	}

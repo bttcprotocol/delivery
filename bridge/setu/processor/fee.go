@@ -44,7 +44,12 @@ func (fp *FeeProcessor) RegisterTasks() {
 }
 
 // processTopupFeeEvent - processes topup fee event
-func (fp *FeeProcessor) sendTopUpFeeToHeimdall(eventName string, logBytes string) error {
+func (fp *FeeProcessor) sendTopUpFeeToHeimdall(eventName string, logBytes string, rootChain string) error {
+	if rootChain != hmTypes.RootChainTypeStake {
+		fp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
+		return nil
+	}
+
 	var vLog = types.Log{}
 	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
 		fp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)

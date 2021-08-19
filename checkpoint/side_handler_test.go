@@ -86,6 +86,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 			header.RootHash,
 			header.RootHash,
 			borChainId,
+			1,
 		)
 
 		suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
@@ -109,6 +110,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 			header.RootHash,
 			header.RootHash,
 			borChainId,
+			1,
 		)
 
 		suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
@@ -135,6 +137,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 			header.RootHash,
 			header.RootHash,
 			borChainId,
+			1,
 		)
 
 		suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
@@ -243,6 +246,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 	header.Proposer = stakingKeeper.GetValidatorSet(ctx).Proposer.Signer
 
 	borChainId := "1234"
+	epoch := uint64(1)
 	suite.Run("Failure", func() {
 		// create checkpoint msg
 		msgCheckpoint := types.NewMsgCheckpointBlock(
@@ -252,6 +256,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 			header.RootHash,
 			header.RootHash,
 			borChainId,
+			epoch,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_No)
@@ -271,6 +276,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 			header.RootHash,
 			header.RootHash,
 			borChainId,
+			epoch,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
@@ -294,6 +300,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 			header.RootHash,
 			header.RootHash,
 			borChainId,
+			epoch,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
@@ -344,6 +351,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header.RootHash,
 			header.RootHash,
 			"1234",
+			1,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
@@ -397,6 +405,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header2.RootHash,
 			header2.RootHash,
 			"1234",
+			1,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)

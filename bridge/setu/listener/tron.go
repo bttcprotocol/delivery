@@ -276,7 +276,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 						}
 					}
 
-				case "StakingSynced":
+				case "StakeAck":
 					if tl.rootChainType != types.RootChainTypeStake {
 						if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
 							tl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)

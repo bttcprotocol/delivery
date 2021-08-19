@@ -168,6 +168,7 @@ func (cp *CheckpointProcessor) createAndSendTronCheckpointToHeimdall(checkpointC
 		hmTypes.BytesToHeimdallHash(root),
 		accountRootHash,
 		chainParams.BorChainID,
+		cp.getCurrentEpoch(),
 		hmTypes.RootChainTypeTron,
 	)
 

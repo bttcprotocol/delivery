@@ -279,7 +279,7 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 						}
 					}
 
-				case "StakingSynced":
+				case "StakeAck":
 					if rl.rootChainType != types.RootChainTypeStake {
 						if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
 							rl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)

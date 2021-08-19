@@ -96,6 +96,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 			header.RootHash,
 			accountRoot,
 			borChainId,
+			1,
 		)
 
 		// send checkpoint to handler
@@ -114,6 +115,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 			header.RootHash,
 			accountRoot,
 			borChainId,
+			1,
 		)
 
 		// send checkpoint to handler
@@ -140,6 +142,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 			header.RootHash,
 			accountRoot,
 			borChainId,
+			1,
 		)
 
 		// send checkpoint to handler
@@ -412,6 +415,7 @@ func (suite *HandlerTestSuite) SendCheckpoint(header hmTypes.Checkpoint) (res sd
 		header.RootHash,
 		accountRoot,
 		borChainId,
+		1,
 	)
 
 	suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
