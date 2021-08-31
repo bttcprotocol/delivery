@@ -31,8 +31,8 @@ func NewSideTxHandler(k Keeper, contractCaller helper.IContractCaller) hmTypes.S
 			return SideHandleMsgValidatorExit(ctx, msg, k, contractCaller)
 		case types.MsgSignerUpdate:
 			return SideHandleMsgSignerUpdate(ctx, msg, k, contractCaller)
-		case types.MsgStakeUpdate:
-			return SideHandleMsgStakeUpdate(ctx, msg, k, contractCaller)
+		//case types.MsgStakeUpdate:
+		//	return SideHandleMsgStakeUpdate(ctx, msg, k, contractCaller)
 		case types.MsgStakingSync:
 			return SideHandleMsgStakingSync(ctx, msg, k, contractCaller)
 		case types.MsgStakingSyncAck:
@@ -57,8 +57,8 @@ func NewPostTxHandler(k Keeper, contractCaller helper.IContractCaller) hmTypes.P
 			return PostHandleMsgValidatorExit(ctx, k, msg, sideTxResult)
 		case types.MsgSignerUpdate:
 			return PostHandleMsgSignerUpdate(ctx, k, msg, sideTxResult)
-		case types.MsgStakeUpdate:
-			return PostHandleMsgStakeUpdate(ctx, k, msg, sideTxResult)
+		//case types.MsgStakeUpdate:
+		//	return PostHandleMsgStakeUpdate(ctx, k, msg, sideTxResult)
 		case types.MsgStakingSync:
 			return PostHandleMsgStakingSync(ctx, k, msg, sideTxResult)
 		case types.MsgStakingSyncAck:
@@ -169,71 +169,55 @@ func SideHandleMsgValidatorJoin(ctx sdk.Context, msg types.MsgValidatorJoin, k K
 }
 
 // SideHandleMsgStakeUpdate handles stake update message
-func SideHandleMsgStakeUpdate(ctx sdk.Context, msg types.MsgStakeUpdate, k Keeper, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
-	k.Logger(ctx).Debug("✅ Validating External call for stake update msg",
-		"txHash", hmTypes.BytesToHeimdallHash(msg.TxHash.Bytes()),
-		"logIndex", uint64(msg.LogIndex),
-		"blockNumber", msg.BlockNumber,
-	)
-
-	// chainManager params
-	params := k.chainKeeper.GetParams(ctx)
-	chainParams := params.ChainParams
-
-	var (
-		contractAddress ethCommon.Address
-		receipt         *ethTypes.Receipt
-		err             error
-	)
-	// get main tx receipt
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeEth {
-		// get event log on eth
-		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = chainParams.StakingInfoAddress.EthAddress()
-	} else {
-		// get event log on tron
-		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateInfoAddress)
-	}
-
-	eventLog, err := contractCaller.DecodeValidatorStakeUpdateEvent(contractAddress, receipt, msg.LogIndex)
-	if err != nil || eventLog == nil {
-		k.Logger(ctx).Error("Error fetching log from txhash")
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
-	}
-
-	if receipt.BlockNumber.Uint64() != msg.BlockNumber {
-		k.Logger(ctx).Error("BlockNumber in message doesn't match blocknumber in receipt", "MsgBlockNumber", msg.BlockNumber, "ReceiptBlockNumber", receipt.BlockNumber.Uint64)
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
-	}
-
-	if eventLog.ValidatorId.Uint64() != msg.ID.Uint64() {
-		k.Logger(ctx).Error("ID in message doesn't match with id in log", "msgId", msg.ID, "validatorIdFromTx", eventLog.ValidatorId)
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
-	}
-
-	// check Amount
-	if eventLog.NewAmount.Cmp(msg.NewAmount.BigInt()) != 0 {
-		k.Logger(ctx).Error("NewAmount in message doesn't match NewAmount in event logs", "MsgNewAmount", msg.NewAmount, "NewAmountFromEvent", eventLog.NewAmount)
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
-	}
-
-	// check nonce
-	if eventLog.Nonce.Uint64() != msg.Nonce {
-		k.Logger(ctx).Error("Nonce in message doesn't match with nonce in log", "msgNonce", msg.Nonce, "nonceFromTx", eventLog.Nonce)
-		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
-	}
-
-	k.Logger(ctx).Debug("✅ Succesfully validated External call for stake update msg")
-	result.Result = abci.SideTxResultType_Yes
-	return
-}
+//func SideHandleMsgStakeUpdate(ctx sdk.Context, msg types.MsgStakeUpdate, k Keeper, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
+//	k.Logger(ctx).Debug("✅ Validating External call for stake update msg",
+//		"txHash", hmTypes.BytesToHeimdallHash(msg.TxHash.Bytes()),
+//		"logIndex", uint64(msg.LogIndex),
+//		"blockNumber", msg.BlockNumber,
+//	)
+//
+//	// chainManager params
+//	params := k.chainKeeper.GetParams(ctx)
+//	chainParams := params.ChainParams
+//
+//	// get main tx receipt
+//	receipt, err := contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
+//	if err != nil || receipt == nil {
+//		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
+//	}
+//
+//	eventLog, err := contractCaller.DecodeValidatorStakeUpdateEvent(chainParams.StakingInfoAddress.EthAddress(), receipt, msg.LogIndex)
+//	if err != nil || eventLog == nil {
+//		k.Logger(ctx).Error("Error fetching log from txhash")
+//		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+//	}
+//
+//	if receipt.BlockNumber.Uint64() != msg.BlockNumber {
+//		k.Logger(ctx).Error("BlockNumber in message doesn't match blocknumber in receipt", "MsgBlockNumber", msg.BlockNumber, "ReceiptBlockNumber", receipt.BlockNumber.Uint64)
+//		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+//	}
+//
+//	if eventLog.ValidatorId.Uint64() != msg.ID.Uint64() {
+//		k.Logger(ctx).Error("ID in message doesn't match with id in log", "msgId", msg.ID, "validatorIdFromTx", eventLog.ValidatorId)
+//		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+//	}
+//
+//	// check Amount
+//	if eventLog.NewAmount.Cmp(msg.NewAmount.BigInt()) != 0 {
+//		k.Logger(ctx).Error("NewAmount in message doesn't match NewAmount in event logs", "MsgNewAmount", msg.NewAmount, "NewAmountFromEvent", eventLog.NewAmount)
+//		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+//	}
+//
+//	// check nonce
+//	if eventLog.Nonce.Uint64() != msg.Nonce {
+//		k.Logger(ctx).Error("Nonce in message doesn't match with nonce in log", "msgNonce", msg.Nonce, "nonceFromTx", eventLog.Nonce)
+//		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+//	}
+//
+//	k.Logger(ctx).Debug("✅ Succesfully validated External call for stake update msg")
+//	result.Result = abci.SideTxResultType_Yes
+//	return
+//}
 
 // SideHandleMsgSignerUpdate handles signer update message
 func SideHandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Keeper, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
@@ -492,6 +476,7 @@ func PostHandleMsgValidatorJoin(ctx sdk.Context, k Keeper, msg types.MsgValidato
 		LastUpdated: "",
 	}
 
+	newValidator.VotingPower = 1
 	// update last updated
 	newValidator.LastUpdated = sequence.String()
 
@@ -553,89 +538,89 @@ func PostHandleMsgValidatorJoin(ctx sdk.Context, k Keeper, msg types.MsgValidato
 }
 
 // PostHandleMsgStakeUpdate handles stake update message
-func PostHandleMsgStakeUpdate(ctx sdk.Context, k Keeper, msg types.MsgStakeUpdate, sideTxResult abci.SideTxResultType) sdk.Result {
-	// Skip handler if stakeUpdate is not approved
-	if sideTxResult != abci.SideTxResultType_Yes {
-		k.Logger(ctx).Debug("Skipping stake update since side-tx didn't get yes votes")
-		return common.ErrSideTxValidation(k.Codespace()).Result()
-	}
-
-	// Check for replay attack
-	blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
-	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-	sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
-
-	// check if incoming tx is older
-	if k.HasStakingSequence(ctx, sequence.String()) {
-		k.Logger(ctx).Error("Older invalid tx found")
-		return hmCommon.ErrOldTx(k.Codespace()).Result()
-	}
-
-	k.Logger(ctx).Debug("Updating validator stake", "sideTxResult", sideTxResult)
-
-	// pull validator from store
-	validator, ok := k.GetValidatorFromValID(ctx, msg.ID)
-	if !ok {
-		k.Logger(ctx).Error("Fetching of validator from store failed", "validatorId", msg.ID)
-		return hmCommon.ErrNoValidator(k.Codespace()).Result()
-	}
-
-	// update last updated
-	validator.LastUpdated = sequence.String()
-
-	// update nonce
-	validator.Nonce = msg.Nonce
-
-	// set validator amount
-	p, err := helper.GetPowerFromAmount(msg.NewAmount.BigInt())
-	if err != nil {
-		return hmCommon.ErrInvalidMsg(k.Codespace(), fmt.Sprintf("Invalid amount %v for validator %v", msg.NewAmount, msg.ID)).Result()
-	}
-	validator.VotingPower = p.Int64()
-
-	// save validator
-	err = k.AddValidator(ctx, validator)
-	if err != nil {
-		k.Logger(ctx).Error("Unable to update signer", "error", err, "ValidatorID", validator.ID)
-		return hmCommon.ErrSignerUpdateError(k.Codespace()).Result()
-	}
-
-	// save staking sequence
-	k.SetStakingSequence(ctx, sequence.String())
-
-	// TX bytes
-	txBytes := ctx.TxBytes()
-	hash := tmTypes.Tx(txBytes).Hash()
-
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeStakeUpdate,
-			sdk.NewAttribute(sdk.AttributeKeyAction, msg.Type()),
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
-			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),             // result
-			sdk.NewAttribute(types.AttributeKeyValidatorID, strconv.FormatUint(validator.ID.Uint64(), 10)),
-			sdk.NewAttribute(types.AttributeKeyValidatorNonce, strconv.FormatUint(msg.Nonce, 10)),
-		),
-	})
-
-	// save staking record
-	for root, rootID := range hmTypes.GetRootChainIDMap() {
-		if root != hmTypes.RootChainTypeStake {
-			k.AddStakingRecordToQueue(ctx, rootID, types.StakingRecord{
-				Type:        "stakeUpdate",
-				ValidatorID: msg.ID,
-				Nonce:       msg.Nonce,
-				Height:      ctx.BlockHeight(),
-				TxHash:      hmTypes.BytesToHeimdallHash(hash),
-			})
-		}
-	}
-
-	return sdk.Result{
-		Events: ctx.EventManager().Events(),
-	}
-}
+//func PostHandleMsgStakeUpdate(ctx sdk.Context, k Keeper, msg types.MsgStakeUpdate, sideTxResult abci.SideTxResultType) sdk.Result {
+//	// Skip handler if stakeUpdate is not approved
+//	if sideTxResult != abci.SideTxResultType_Yes {
+//		k.Logger(ctx).Debug("Skipping stake update since side-tx didn't get yes votes")
+//		return common.ErrSideTxValidation(k.Codespace()).Result()
+//	}
+//
+//	// Check for replay attack
+//	blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
+//	sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
+//	sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
+//
+//	// check if incoming tx is older
+//	if k.HasStakingSequence(ctx, sequence.String()) {
+//		k.Logger(ctx).Error("Older invalid tx found")
+//		return hmCommon.ErrOldTx(k.Codespace()).Result()
+//	}
+//
+//	k.Logger(ctx).Debug("Updating validator stake", "sideTxResult", sideTxResult)
+//
+//	// pull validator from store
+//	validator, ok := k.GetValidatorFromValID(ctx, msg.ID)
+//	if !ok {
+//		k.Logger(ctx).Error("Fetching of validator from store failed", "validatorId", msg.ID)
+//		return hmCommon.ErrNoValidator(k.Codespace()).Result()
+//	}
+//
+//	// update last updated
+//	validator.LastUpdated = sequence.String()
+//
+//	// update nonce
+//	validator.Nonce = msg.Nonce
+//
+//	// set validator amount
+//	p, err := helper.GetPowerFromAmount(msg.NewAmount.BigInt())
+//	if err != nil {
+//		return hmCommon.ErrInvalidMsg(k.Codespace(), fmt.Sprintf("Invalid amount %v for validator %v", msg.NewAmount, msg.ID)).Result()
+//	}
+//	validator.VotingPower = p.Int64()
+//
+//	// save validator
+//	err = k.AddValidator(ctx, validator)
+//	if err != nil {
+//		k.Logger(ctx).Error("Unable to update signer", "error", err, "ValidatorID", validator.ID)
+//		return hmCommon.ErrSignerUpdateError(k.Codespace()).Result()
+//	}
+//
+//	// save staking sequence
+//	k.SetStakingSequence(ctx, sequence.String())
+//
+//	// TX bytes
+//	txBytes := ctx.TxBytes()
+//	hash := tmTypes.Tx(txBytes).Hash()
+//
+//	ctx.EventManager().EmitEvents(sdk.Events{
+//		sdk.NewEvent(
+//			types.EventTypeStakeUpdate,
+//			sdk.NewAttribute(sdk.AttributeKeyAction, msg.Type()),
+//			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+//			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
+//			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),             // result
+//			sdk.NewAttribute(types.AttributeKeyValidatorID, strconv.FormatUint(validator.ID.Uint64(), 10)),
+//			sdk.NewAttribute(types.AttributeKeyValidatorNonce, strconv.FormatUint(msg.Nonce, 10)),
+//		),
+//	})
+//
+//	// save staking record
+//	for root, rootID := range hmTypes.GetRootChainIDMap() {
+//		if root != hmTypes.RootChainTypeStake {
+//			k.AddStakingRecordToQueue(ctx, rootID, types.StakingRecord{
+//				Type:        "stakeUpdate",
+//				ValidatorID: msg.ID,
+//				Nonce:       msg.Nonce,
+//				Height:      ctx.BlockHeight(),
+//				TxHash:      hmTypes.BytesToHeimdallHash(hash),
+//			})
+//		}
+//	}
+//
+//	return sdk.Result{
+//		Events: ctx.EventManager().Events(),
+//	}
+//}
 
 // PostHandleMsgSignerUpdate handles signer update message
 func PostHandleMsgSignerUpdate(ctx sdk.Context, k Keeper, msg types.MsgSignerUpdate, sideTxResult abci.SideTxResultType) sdk.Result {
