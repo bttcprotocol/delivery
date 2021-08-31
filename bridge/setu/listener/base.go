@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -210,4 +211,15 @@ func (bl *BaseListener) Stop() {
 
 	// cancel header process
 	bl.cancelHeaderProcess()
+}
+
+func (bl *BaseListener) setStartListenBLock(StartBlock uint64, key string ) error {
+	// int64 is bigger enough to hold all block
+	startBlock := big.NewInt(int64(StartBlock))
+	// set last block to storage
+	if err := bl.storageClient.Put([]byte(key), []byte(startBlock.String()), nil); err != nil {
+		bl.Logger.Error("tl.storageClient.Put", "Error", err)
+		return err
+	}
+	return nil
 }

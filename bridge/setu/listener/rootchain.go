@@ -70,6 +70,12 @@ func (rl *RootChainListener) Start() error {
 	headerCtx, cancelHeaderProcess := context.WithCancel(context.Background())
 	rl.cancelHeaderProcess = cancelHeaderProcess
 
+	// set start listen block
+	startListenBlock := rl.contractConnector.GetStartListenBlock(rl.rootChainType)
+	if startListenBlock != 0 {
+		rl.setStartListenBLock(startListenBlock, lastRootBlockKey)
+	}
+
 	// start header process
 	go rl.StartHeaderProcess(headerCtx)
 
@@ -127,8 +133,11 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 			if result >= newHeader.Number.Uint64() {
 				return
 			}
-			fromBlock = big.NewInt(0).SetUint64(result + 1)
+			if result+1 < fromBlock.Uint64() {  // only start from solidity block
+				fromBlock = big.NewInt(0).SetUint64(result + 1)
+			}
 		}
+
 	}
 
 	// to block

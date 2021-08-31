@@ -814,6 +814,20 @@ func (_m *IContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Addr
 	return r0, r1
 }
 
+// GetStartListenBlock provides a mock function with given fields: rootChainType
+func (_m *IContractCaller) GetStartListenBlock(rootChainType string) uint64 {
+	ret := _m.Called(rootChainType)
+
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func(string) uint64); ok {
+		r0 = rf(rootChainType)
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	return r0
+}
+
 // GetStateReceiverInstance provides a mock function with given fields: stateReceiverAddress
 func (_m *IContractCaller) GetStateReceiverInstance(stateReceiverAddress common.Address) (*statereceiver.Statereceiver, error) {
 	ret := _m.Called(stateReceiverAddress)

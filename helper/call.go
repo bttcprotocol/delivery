@@ -28,6 +28,7 @@ import (
 	"github.com/maticnetwork/heimdall/contracts/validatorset"
 
 	"github.com/maticnetwork/heimdall/types"
+	hmTypes "github.com/maticnetwork/heimdall/types"
 )
 
 // IContractCaller represents contract caller
@@ -92,7 +93,8 @@ type IContractCaller interface {
 
 	GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error)
 	GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error)
-	GetTronLatestBlockNumber()(int64, error)
+	GetTronLatestBlockNumber() (int64, error)
+	GetStartListenBlock(rootChainType string) uint64
 }
 
 // ContractCaller contract caller
@@ -880,8 +882,16 @@ func (c *ContractCaller) GetTronEventsByContractAddress(address []string, from, 
 	return filterChangeResult.Result, nil
 }
 
-func (c *ContractCaller)  GetTronLatestBlockNumber()(int64, error) {
-	req, err := http.NewRequest("GET",GetTronGridEndpoint("/wallet/getnowblock"), nil)
+func (c *ContractCaller) GetTronLatestBlockNumber() (int64, error) {
+	var empty []string
+	queryFilter := tron.FilterOtherParams{
+		BaseQueryParam: tron.GetDefaultBaseParm(),
+		Method:         tron.GetBlockByNumber,
+		Params:         empty,
+	}
+
+	queryByte, err := json.Marshal(queryFilter)
+	req, err := http.NewRequest("POST", GetTronGridEndpoint("/jsonrpc"), bytes.NewBuffer(queryByte))
 	if err != nil {
 		return 0, err
 	}
@@ -889,9 +899,27 @@ func (c *ContractCaller)  GetTronLatestBlockNumber()(int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	var Block tron.Block
+	var Block tron.FilterTxNumberResponse
 	if err := json.Unmarshal(result, &Block); err != nil {
 		return 0, err
 	}
-	return *Block.BlockHeader.RawData.Number,nil
+	if len(Block.Result) > 2 && Block.Result[:2] == "0x" {
+		Block.Result = Block.Result[2:]
+	}
+	blockNumber, err := strconv.ParseUint(Block.Result, 16, 64)
+	if err != nil {
+		return 0, err
+	}
+	return int64(blockNumber), nil
+}
+
+func (c *ContractCaller) GetStartListenBlock(rootChainType string) uint64 {
+	if rootChainType == hmTypes.RootChainTypeEth {
+		return GetConfig().TronStartListenBlock
+	} else if rootChainType == hmTypes.RootChainTypeEth {
+		return GetConfig().EthStartListenBlock
+	} else {
+		Logger.Error("Wrong rootType ", rootChainType)
+		return 0
+	}
 }

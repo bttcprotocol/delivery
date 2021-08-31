@@ -67,6 +67,7 @@ const (
 	DefaultNoACKPollInterval        = 1010 * time.Second
 	DefaultClerkPollInterval        = 10 * time.Second
 	DefaultSpanPollInterval         = 1 * time.Minute
+	DefaultStartListenBlock         = 0
 
 	DefaultMainchainGasLimit = uint64(5000000)
 
@@ -116,6 +117,9 @@ type Configuration struct {
 
 	// wait time related options
 	NoACKWaitTime time.Duration `mapstructure:"no_ack_wait_time"` // Time ack service waits to clear buffer and elect new proposer
+
+	TronStartListenBlock uint64 `mapstructure:"tron_start_listen_block"` // tron chain start listen block on bridge
+	EthStartListenBlock  uint64 `mapstructure:"eth_start_listen_block"`  // eth chain start listen block on bridge
 }
 
 var conf Configuration
@@ -242,6 +246,8 @@ func GetDefaultHeimdallConfig() Configuration {
 		NoACKWaitTime: NoACKWaitTime,
 
 		TronGridApiKey: DefaultTronGridApiKey,
+		TronStartListenBlock: DefaultStartListenBlock,
+		EthStartListenBlock: DefaultStartListenBlock,
 	}
 }
 
