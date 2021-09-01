@@ -58,6 +58,11 @@ func (tl *TronListener) Start() error {
 	headerCtx, cancelHeaderProcess := context.WithCancel(context.Background())
 	tl.cancelHeaderProcess = cancelHeaderProcess
 
+	// set start listen block
+	startListenBlock := tl.contractConnector.GetStartListenBlock(tl.rootChainType)
+	if startListenBlock != 0 {
+		tl.setStartListenBLock(startListenBlock, tronLastBlockKey)
+	}
 	// start header process
 	go tl.StartHeaderProcess(headerCtx)
 
@@ -133,7 +138,9 @@ func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 			if result >= newHeader.Number.Uint64() {
 				return
 			}
-			fromBlock = big.NewInt(0).SetUint64(result + 1)
+			if result+1 < fromBlock.Uint64() {  // only start from solidity block
+				fromBlock = big.NewInt(0).SetUint64(result + 1)
+			}
 		}
 	}
 
@@ -163,7 +170,6 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 	// current public key
 	pubkeyBytes := helper.GetPubKey().Bytes()
 	logs, err := tl.contractConnector.GetTronEventsByContractAddress(tronContractAddresses, fromBlock.Int64(), toBlock.Int64())
-
 	if err != nil {
 		tl.Logger.Error("Error while query tron logs", "error", err)
 		return
@@ -286,7 +292,6 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 			}
 		}
 	}
-
 }
 
 func (tl *TronListener) sendTaskWithDelay(taskName string, eventName string, eventBytes []byte, delay time.Duration) {

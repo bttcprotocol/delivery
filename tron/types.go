@@ -10,7 +10,7 @@ const (
 	JsonRpcVersion       = "2.0"
 	GetLogsMethod        = "eth_getLogs"
 	GetTransactionByHash = "eth_getTransactionReceipt"
-	GetBlockByNumber     = "eth_getBlockByNumber"
+	GetBlockByNumber     = "eth_blockNumber"
 	MAXQueryAddress      = 3
 )
 
@@ -44,20 +44,16 @@ type FilterTxResponse struct {
 	Result  types.Receipt `json:result`
 }
 
+type FilterTxNumberResponse struct {
+	BaseQueryParam
+	Result  string `json:result`
+}
+
+
 func  GetDefaultBaseParm() BaseQueryParam {
 	param := BaseQueryParam{
 		Jsonrpc: JsonRpcVersion,
 		Id:      strconv.FormatInt(int64(rand.Int()%100), 10),
 	}
 	return param
-}
-
-type Block struct {
-	BlockHeader *BlockHeader  `json:"block_header"`
-}
-type BlockHeader struct {
-	RawData *RawData `json:"raw_data"`
-}
-type RawData struct {
-	Number *int64  `json:"number"`
 }

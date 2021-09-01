@@ -12,6 +12,7 @@ import (
 	"github.com/maticnetwork/heimdall/clerk/types"
 	"github.com/maticnetwork/heimdall/common"
 	hmCommon "github.com/maticnetwork/heimdall/common"
+	borCommon "github.com/maticnetwork/bor/common"
 	"github.com/maticnetwork/heimdall/helper"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -63,6 +64,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	var receipt *ethTypes.Receipt
 	var err error
 	var eventLog *statesender.StatesenderStateSynced
+	var contractAddress borCommon.Address
 	// get main tx receipt
 	if msg.RootChainType == hmTypes.RootChainTypeEth {
 		// get event log for topup on eth
@@ -70,25 +72,22 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
-		eventLog, err = contractCaller.DecodeStateSyncedEvent(chainParams.StateSenderAddress.EthAddress(), receipt, msg.LogIndex)
-		if err != nil || eventLog == nil {
-			k.Logger(ctx).Error("Error fetching log from txhash")
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
-		}
+		contractAddress = chainParams.StateSenderAddress.EthAddress()
 	} else if msg.RootChainType == hmTypes.RootChainTypeTron {
 		// get event log for topup on  tron
 		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
-		eventLog, err = contractCaller.DecodeStateSyncedEvent(hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress), receipt, msg.LogIndex)
-		if err != nil || eventLog == nil {
-			k.Logger(ctx).Error("Error fetching log from txhash")
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
-		}
+		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress)
 	} else {
 		k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, "does not  match ETH or TRON ")
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+	}
+	eventLog, err = contractCaller.DecodeStateSyncedEvent(contractAddress, receipt, msg.LogIndex)
+	if err != nil || eventLog == nil {
+		k.Logger(ctx).Error("Error fetching log from txhash")
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
 	}
 
 	if receipt.BlockNumber.Uint64() != msg.BlockNumber {
