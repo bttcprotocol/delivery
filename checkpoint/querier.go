@@ -26,6 +26,8 @@ func NewQuerier(keeper Keeper, stakingKeeper staking.Keeper, topupKeeper topup.K
 			return handleQueryCheckpoint(ctx, req, keeper)
 		case types.QueryCheckpointBuffer:
 			return handleQueryCheckpointBuffer(ctx, req, keeper)
+		case types.QueryCheckpointSyncBuffer:
+			return handleQueryCheckpointSyncBuffer(ctx, req, keeper)
 		case types.QueryLastNoAck:
 			return handleQueryLastNoAck(ctx, req, keeper)
 		case types.QueryCheckpointList:
@@ -106,6 +108,29 @@ func handleQueryCheckpointBuffer(ctx sdk.Context, req abci.RequestQuery, keeper 
 	} else {
 		res, err = keeper.GetCheckpointFromBuffer(ctx)
 	}
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not fetch checkpoint buffer", err.Error()))
+	}
+
+	if res == nil {
+		return nil, common.ErrNoCheckpointBufferFound(keeper.Codespace())
+	}
+
+	bz, err := json.Marshal(res)
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+	return bz, nil
+}
+
+func handleQueryCheckpointSyncBuffer(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryCheckpointParams
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
+	}
+
+	res, err := keeper.GetCheckpointSyncFromBuffer(ctx, params.RootChain)
+
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not fetch checkpoint buffer", err.Error()))
 	}

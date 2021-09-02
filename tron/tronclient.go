@@ -11,7 +11,6 @@ import (
 	"github.com/maticnetwork/bor/common"
 	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/tron/pb"
-	"github.com/maticnetwork/heimdall/types"
 	"google.golang.org/grpc"
 )
 
@@ -114,46 +113,6 @@ func (tc *Client) CurrentHeaderBlock(contractAddress string, childBlockInterval 
 		return 0, nil
 	}
 	return (*ret0).Uint64() / childBlockInterval, nil
-}
-
-// HeaderBlocks is a free data retrieval call binding the contract method 0x41539d4a.
-//
-// Solidity: function headerBlocks(uint256 ) view returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
-func (tc *Client) GetHeaderInfo(number uint64, contractAddress string, childBlockInterval uint64) (
-	root common.Hash,
-	start uint64,
-	end uint64,
-	createdAt uint64,
-	proposer types.HeimdallAddress,
-	err error,
-) {
-	// Pack the input
-	btsPack, err := tc.rootchainABI.Pack("headerBlocks",
-		big.NewInt(0).Mul(big.NewInt(0).SetUint64(number), big.NewInt(0).SetUint64(childBlockInterval)))
-	if err != nil {
-		return root, 0, 0, 0, types.HeimdallAddress{}, err
-	}
-
-	// Call
-	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
-	if err != nil {
-		return root, 0, 0, 0, types.HeimdallAddress{}, err
-	}
-
-	// Unpack the results
-	ret := new(struct {
-		Root      [32]byte
-		Start     *big.Int
-		End       *big.Int
-		CreatedAt *big.Int
-		Proposer  common.Address
-	})
-	if err = tc.rootchainABI.Unpack(ret, "headerBlocks", data); err != nil {
-		return root, 0, 0, 0, types.HeimdallAddress{}, err
-	}
-
-	return ret.Root, ret.Start.Uint64(), ret.End.Uint64(),
-		ret.CreatedAt.Uint64(), types.HeimdallAddress(ret.Proposer), nil
 }
 
 // GetLastChildBlock is a free data retrieval call binding the contract method 0xb87e1b66.

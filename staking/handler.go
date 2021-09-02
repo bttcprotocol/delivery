@@ -136,7 +136,7 @@ func HandleMsgStakeUpdate(ctx sdk.Context, msg types.MsgStakeUpdate, k Keeper, c
 		return hmCommon.ErrNoValidator(k.Codespace()).Result()
 	}
 
-	if msg.Nonce != validator.Nonce+1 {
+	if msg.Nonce <= validator.Nonce {
 		k.Logger(ctx).Error("Incorrect validator nonce")
 		return hmCommon.ErrNonce(k.Codespace()).Result()
 	}
@@ -201,7 +201,7 @@ func HandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Keeper,
 	}
 
 	// check nonce validity
-	if msg.Nonce != validator.Nonce+1 {
+	if msg.Nonce <= validator.Nonce {
 		k.Logger(ctx).Error("Incorrect validator nonce")
 		return hmCommon.ErrNonce(k.Codespace()).Result()
 	}
@@ -256,7 +256,7 @@ func HandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k Keepe
 	}
 
 	// check nonce validity
-	if msg.Nonce != validator.Nonce+1 {
+	if msg.Nonce <= validator.Nonce {
 		k.Logger(ctx).Error("Incorrect validator nonce")
 		return hmCommon.ErrNonce(k.Codespace()).Result()
 	}

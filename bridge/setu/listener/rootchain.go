@@ -211,18 +211,18 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 						}
 					}
 
-				case "StakeUpdate":
-					if rl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoStakeUpdate)
-						if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-						}
-						if util.IsEventSender(rl.cliCtx, event.ValidatorId.Uint64()) {
-							rl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
+				//case "StakeUpdate":
+				//	if rl.rootChainType == types.RootChainTypeStake {
+				//		event := new(stakinginfo.StakinginfoStakeUpdate)
+				//		if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
+				//			rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
+				//		}
+				//		if util.IsEventSender(rl.cliCtx, event.ValidatorId.Uint64()) {
+				//			rl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, 0)
+				//		} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
+				//			rl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, delay)
+				//		}
+				//	}
 
 				case "SignerChange":
 					if rl.rootChainType == types.RootChainTypeStake {

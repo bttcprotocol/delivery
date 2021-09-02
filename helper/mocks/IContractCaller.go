@@ -874,6 +874,27 @@ func (_m *IContractCaller) GetStateSenderInstance(stateSenderAddress common.Addr
 	return r0, r1
 }
 
+// GetSyncedCheckpointId provides a mock function with given fields: rootChain, contractAddress
+func (_m *IContractCaller) GetSyncedCheckpointId(rootChain string, contractAddress string) (uint64, error) {
+	ret := _m.Called(rootChain, contractAddress)
+
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func(string, string) uint64); ok {
+		r0 = rf(rootChain, contractAddress)
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(rootChain, contractAddress)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTronEventsByContractAddress provides a mock function with given fields: address, from, to
 func (_m *IContractCaller) GetTronEventsByContractAddress(address []string, from int64, to int64) ([]types.Log, error) {
 	ret := _m.Called(address, from, to)
@@ -895,6 +916,59 @@ func (_m *IContractCaller) GetTronEventsByContractAddress(address []string, from
 	}
 
 	return r0, r1
+}
+
+// GetTronHeaderInfo provides a mock function with given fields: headerID, rootChainAddress, childBlockInterval
+func (_m *IContractCaller) GetTronHeaderInfo(headerID uint64, rootChainAddress string, childBlockInterval uint64) (common.Hash, uint64, uint64, uint64, heimdalltypes.HeimdallAddress, error) {
+	ret := _m.Called(headerID, rootChainAddress, childBlockInterval)
+
+	var r0 common.Hash
+	if rf, ok := ret.Get(0).(func(uint64, string, uint64) common.Hash); ok {
+		r0 = rf(headerID, rootChainAddress, childBlockInterval)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(common.Hash)
+		}
+	}
+
+	var r1 uint64
+	if rf, ok := ret.Get(1).(func(uint64, string, uint64) uint64); ok {
+		r1 = rf(headerID, rootChainAddress, childBlockInterval)
+	} else {
+		r1 = ret.Get(1).(uint64)
+	}
+
+	var r2 uint64
+	if rf, ok := ret.Get(2).(func(uint64, string, uint64) uint64); ok {
+		r2 = rf(headerID, rootChainAddress, childBlockInterval)
+	} else {
+		r2 = ret.Get(2).(uint64)
+	}
+
+	var r3 uint64
+	if rf, ok := ret.Get(3).(func(uint64, string, uint64) uint64); ok {
+		r3 = rf(headerID, rootChainAddress, childBlockInterval)
+	} else {
+		r3 = ret.Get(3).(uint64)
+	}
+
+	var r4 heimdalltypes.HeimdallAddress
+	if rf, ok := ret.Get(4).(func(uint64, string, uint64) heimdalltypes.HeimdallAddress); ok {
+		r4 = rf(headerID, rootChainAddress, childBlockInterval)
+	} else {
+		if ret.Get(4) != nil {
+			r4 = ret.Get(4).(heimdalltypes.HeimdallAddress)
+		}
+	}
+
+	var r5 error
+	if rf, ok := ret.Get(5).(func(uint64, string, uint64) error); ok {
+		r5 = rf(headerID, rootChainAddress, childBlockInterval)
+	} else {
+		r5 = ret.Error(5)
+	}
+
+	return r0, r1, r2, r3, r4, r5
 }
 
 // GetTronLatestBlockNumber provides a mock function with given fields:

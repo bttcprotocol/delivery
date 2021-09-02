@@ -70,9 +70,9 @@ func (sp *StakingProcessor) RegisterTasks() {
 	if err := sp.queueConnector.Server.RegisterTask("sendUnstakeInitToHeimdall", sp.sendUnstakeInitToHeimdall); err != nil {
 		sp.Logger.Error("RegisterTasks | sendUnstakeInitToHeimdall", "error", err)
 	}
-	if err := sp.queueConnector.Server.RegisterTask("sendStakeUpdateToHeimdall", sp.sendStakeUpdateToHeimdall); err != nil {
-		sp.Logger.Error("RegisterTasks | sendStakeUpdateToHeimdall", "error", err)
-	}
+	//if err := sp.queueConnector.Server.RegisterTask("sendStakeUpdateToHeimdall", sp.sendStakeUpdateToHeimdall); err != nil {
+	//	sp.Logger.Error("RegisterTasks | sendStakeUpdateToHeimdall", "error", err)
+	//}
 	if err := sp.queueConnector.Server.RegisterTask("sendSignerChangeToHeimdall", sp.sendSignerChangeToHeimdall); err != nil {
 		sp.Logger.Error("RegisterTasks | sendSignerChangeToHeimdall", "error", err)
 	}
@@ -233,64 +233,64 @@ func (sp *StakingProcessor) sendUnstakeInitToHeimdall(eventName string, logBytes
 	return nil
 }
 
-func (sp *StakingProcessor) sendStakeUpdateToHeimdall(eventName string, logBytes string, rootChain string) error {
-	if rootChain != hmTypes.RootChainTypeStake {
-		sp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
-		return nil
-	}
-
-	var vLog = types.Log{}
-	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
-		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
-		return err
-	}
-
-	event := new(stakinginfo.StakinginfoStakeUpdate)
-	if err := helper.UnpackLog(sp.stakingInfoAbi, event, eventName, &vLog); err != nil {
-		sp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
-	} else {
-		if isOld, _ := sp.isOldTx(sp.cliCtx, vLog.TxHash.String(), uint64(vLog.Index)); isOld {
-			sp.Logger.Info("Ignoring task to send unstakeinit to heimdall as already processed",
-				"event", eventName,
-				"validatorID", event.ValidatorId,
-				"nonce", event.Nonce,
-				"newAmount", event.NewAmount,
-				"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
-				"logIndex", uint64(vLog.Index),
-				"blockNumber", vLog.BlockNumber,
-			)
-			return nil
-		}
-		sp.Logger.Info(
-			"✅ Received task to send stake-update to heimdall",
-			"event", eventName,
-			"validatorID", event.ValidatorId,
-			"nonce", event.Nonce,
-			"newAmount", event.NewAmount,
-			"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
-			"logIndex", uint64(vLog.Index),
-			"blockNumber", vLog.BlockNumber,
-		)
-
-		// msg validator exit
-		msg := stakingTypes.NewMsgStakeUpdate(
-			hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
-			event.ValidatorId.Uint64(),
-			sdk.NewIntFromBigInt(event.NewAmount),
-			hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
-			uint64(vLog.Index),
-			vLog.BlockNumber,
-			event.Nonce.Uint64(),
-		)
-
-		// return broadcast to heimdall
-		if err := sp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
-			sp.Logger.Error("Error while broadcasting stakeupdate to heimdall", "validatorId", event.ValidatorId.Uint64(), "error", err)
-			return err
-		}
-	}
-	return nil
-}
+//func (sp *StakingProcessor) sendStakeUpdateToHeimdall(eventName string, logBytes string, rootChain string) error {
+//	if rootChain != hmTypes.RootChainTypeStake {
+//		sp.Logger.Error("There should be no messages from un-stake.", "root", rootChain)
+//		return nil
+//	}
+//
+//	var vLog = types.Log{}
+//	if err := json.Unmarshal([]byte(logBytes), &vLog); err != nil {
+//		sp.Logger.Error("Error while unmarshalling event from rootchain", "error", err)
+//		return err
+//	}
+//
+//	event := new(stakinginfo.StakinginfoStakeUpdate)
+//	if err := helper.UnpackLog(sp.stakingInfoAbi, event, eventName, &vLog); err != nil {
+//		sp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
+//	} else {
+//		if isOld, _ := sp.isOldTx(sp.cliCtx, vLog.TxHash.String(), uint64(vLog.Index)); isOld {
+//			sp.Logger.Info("Ignoring task to send unstakeinit to heimdall as already processed",
+//				"event", eventName,
+//				"validatorID", event.ValidatorId,
+//				"nonce", event.Nonce,
+//				"newAmount", event.NewAmount,
+//				"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
+//				"logIndex", uint64(vLog.Index),
+//				"blockNumber", vLog.BlockNumber,
+//			)
+//			return nil
+//		}
+//		sp.Logger.Info(
+//			"✅ Received task to send stake-update to heimdall",
+//			"event", eventName,
+//			"validatorID", event.ValidatorId,
+//			"nonce", event.Nonce,
+//			"newAmount", event.NewAmount,
+//			"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
+//			"logIndex", uint64(vLog.Index),
+//			"blockNumber", vLog.BlockNumber,
+//		)
+//
+//		// msg validator exit
+//		msg := stakingTypes.NewMsgStakeUpdate(
+//			hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
+//			event.ValidatorId.Uint64(),
+//			sdk.NewIntFromBigInt(event.NewAmount),
+//			hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
+//			uint64(vLog.Index),
+//			vLog.BlockNumber,
+//			event.Nonce.Uint64(),
+//		)
+//
+//		// return broadcast to heimdall
+//		if err := sp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+//			sp.Logger.Error("Error while broadcasting stakeupdate to heimdall", "validatorId", event.ValidatorId.Uint64(), "error", err)
+//			return err
+//		}
+//	}
+//	return nil
+//}
 
 func (sp *StakingProcessor) sendSignerChangeToHeimdall(eventName string, logBytes string, rootChain string) error {
 	if rootChain != hmTypes.RootChainTypeStake {

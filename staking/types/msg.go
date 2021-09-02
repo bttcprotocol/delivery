@@ -111,7 +111,7 @@ func (msg MsgValidatorJoin) GetSideSignBytes() []byte {
 	return helper.AppendBytes32(
 		new(big.Int).SetUint64(msg.ID.Uint64()).Bytes(),
 		new(big.Int).SetUint64(msg.Nonce).Bytes(),
-		msg.Amount.BigInt().Bytes(),
+		big.NewInt(10).Exp(big.NewInt(10), big.NewInt(18), nil).Bytes(), //msg.Amount.BigInt().Bytes(),
 		new(big.Int).SetUint64(msg.ActivationEpoch).Bytes(),
 		big.NewInt(0).Bytes(),
 		msg.SignerPubKey.Address().Bytes(),

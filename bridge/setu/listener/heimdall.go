@@ -187,13 +187,14 @@ func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight
 	switch event.Type {
 	case checkpointTypes.EventTypeCheckpoint:
 		hl.sendBlockTask("sendCheckpointToRootchain", eventBytes, blockHeight)
+	case checkpointTypes.EventTypeCheckpointSync:
+		hl.sendBlockTask("sendCheckpointSyncToStakeChain", eventBytes, blockHeight)
 	case slashingTypes.EventTypeSlashLimit:
 		hl.sendBlockTask("sendTickToHeimdall", eventBytes, blockHeight)
 	case slashingTypes.EventTypeTickConfirm:
 		hl.sendBlockTask("sendTickToRootchain", eventBytes, blockHeight)
 
 	case stakingTypes.EventTypeValidatorJoin,
-		stakingTypes.EventTypeStakeUpdate,
 		stakingTypes.EventTypeSignerUpdate,
 		stakingTypes.EventTypeValidatorExit,
 		stakingTypes.EventTypeStakingSyncAck:

@@ -28,6 +28,8 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 
 	r.HandleFunc("/checkpoints/buffer/{root}", checkpointBufferHandlerFn(cliCtx)).Methods("GET")
 
+	r.HandleFunc("/checkpoints/sync/{root}", checkpointSyncBufferHandlerFn(cliCtx)).Methods("GET")
+
 	r.HandleFunc("/checkpoints/count", checkpointCountHandlerFn(cliCtx)).Methods("GET")
 
 	r.HandleFunc("/checkpoints/prepare", prepareCheckpointHandlerFn(cliCtx)).Methods("GET")
@@ -88,6 +90,40 @@ func checkpointBufferHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		// fetch checkpoint
 		result, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointBuffer), queryParams)
+		if err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, result)
+	}
+}
+
+func checkpointSyncBufferHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
+		// get checkpoint number
+		vars := mux.Vars(r)
+		rootChain, ok := vars["root"]
+		if !ok {
+			err := fmt.Errorf("'%s' is not a valid rootChain", vars["root"])
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// get query params
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(0, rootChain))
+		if err != nil {
+			return
+		}
+
+		// fetch checkpoint
+		result, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointSyncBuffer), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

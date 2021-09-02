@@ -293,3 +293,116 @@ func (msg MsgCheckpointNoAck) ValidateBasic() sdk.Error {
 
 	return nil
 }
+
+//
+// Msg Checkpoint Sync
+//
+
+var _ sdk.Msg = &MsgCheckpointSync{}
+
+type MsgCheckpointSync struct {
+	Number        uint64                `json:"Number"`
+	Proposer      types.HeimdallAddress `json:"proposer"`
+	StartBlock    uint64                `json:"start_block"`
+	EndBlock      uint64                `json:"end_block"`
+	RootChainType string                `json:"root_chain_type"`
+}
+
+func NewMsgCheckpointSync(proposer types.HeimdallAddress, number, start, end uint64, rootChain string) MsgCheckpointSync {
+	return MsgCheckpointSync{
+		Number:        number,
+		Proposer:      proposer,
+		StartBlock:    start,
+		EndBlock:      end,
+		RootChainType: rootChain,
+	}
+}
+
+func (msg MsgCheckpointSync) Type() string {
+	return "checkpoint-sync"
+}
+
+func (msg MsgCheckpointSync) Route() string {
+	return RouterKey
+}
+
+func (msg MsgCheckpointSync) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{types.HeimdallAddressToAccAddress(msg.Proposer)}
+}
+
+func (msg MsgCheckpointSync) GetSignBytes() []byte {
+	b, err := ModuleCdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+
+func (msg MsgCheckpointSync) ValidateBasic() sdk.Error {
+	if msg.Proposer.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid from %v", msg.Proposer.String())
+	}
+	return nil
+}
+
+// GetSideSignBytes returns side sign bytes
+func (msg MsgCheckpointSync) GetSideSignBytes() []byte {
+	// data: (address proposer, uint256 start, uint256 end, uint256 headerBlockId, uint256 chainID)
+	return appendBytes32(
+		msg.Proposer.Bytes(),
+		new(big.Int).SetUint64(msg.StartBlock).Bytes(),
+		new(big.Int).SetUint64(msg.EndBlock).Bytes(),
+		new(big.Int).SetUint64(msg.Number).Bytes(),
+		new(big.Int).SetUint64(uint64(types.GetRootChainID(msg.RootChainType))).Bytes(),
+	)
+}
+
+//
+// Msg Checkpoint Sync
+//
+
+var _ sdk.Msg = &MsgCheckpointSyncAck{}
+
+type MsgCheckpointSyncAck MsgCheckpointSync
+
+func NewMsgCheckpointSyncAck(proposer types.HeimdallAddress, number, start, end uint64, rootChain string) MsgCheckpointSyncAck {
+	return MsgCheckpointSyncAck{
+		Number:        number,
+		Proposer:      proposer,
+		StartBlock:    start,
+		EndBlock:      end,
+		RootChainType: rootChain,
+	}
+}
+
+func (msg MsgCheckpointSyncAck) Type() string {
+	return "checkpoint-sync-ack"
+}
+
+func (msg MsgCheckpointSyncAck) Route() string {
+	return RouterKey
+}
+
+func (msg MsgCheckpointSyncAck) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{types.HeimdallAddressToAccAddress(msg.Proposer)}
+}
+
+func (msg MsgCheckpointSyncAck) GetSignBytes() []byte {
+	b, err := ModuleCdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+
+func (msg MsgCheckpointSyncAck) ValidateBasic() sdk.Error {
+	if msg.Proposer.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid from %v", msg.Proposer.String())
+	}
+	return nil
+}
+
+// GetSideSignBytes returns side sign bytes
+func (msg MsgCheckpointSyncAck) GetSideSignBytes() []byte {
+	return nil
+}

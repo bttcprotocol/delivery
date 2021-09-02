@@ -24,6 +24,10 @@ func NewHandler(k Keeper, contractCaller helper.IContractCaller) sdk.Handler {
 			return handleMsgCheckpointAck(ctx, msg, k, contractCaller)
 		case types.MsgCheckpointNoAck:
 			return handleMsgCheckpointNoAck(ctx, msg, k)
+		case types.MsgCheckpointSync:
+			return handleMsgCheckpointSync(ctx, msg, k)
+		case types.MsgCheckpointSyncAck:
+			return handleMsgCheckpointSyncAck(ctx, msg, k)
 		default:
 			return sdk.ErrTxDecode("Invalid message in checkpoint module").Result()
 		}
@@ -287,6 +291,82 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 			types.EventTypeCheckpointNoAck,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
 			sdk.NewAttribute(types.AttributeKeyNewProposer, newProposer.Signer.String()),
+		),
+	})
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+// handleMsgCheckpointSync Validates if checkpoint sync submitted on chain is valid
+func handleMsgCheckpointSync(ctx sdk.Context, msg types.MsgCheckpointSync, k Keeper) sdk.Result {
+	logger := k.Logger(ctx)
+	k.Logger(ctx).Debug("✅ Validating checkpoint sync msg",
+		"root", msg.RootChainType,
+		"number", msg.Number,
+	)
+	timeStamp := uint64(ctx.BlockTime().Unix())
+	params := k.GetParams(ctx)
+	//
+	// Check checkpoint sync buffer
+	//
+	bufferSync, err := k.GetCheckpointSyncFromBuffer(ctx, msg.RootChainType)
+	if err == nil {
+		checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
+		if bufferSync.TimeStamp == 0 || ((timeStamp > bufferSync.TimeStamp) && timeStamp-bufferSync.TimeStamp >= checkpointBufferTime) {
+			logger.Debug("Checkpoint sync has been timed out. Flushing buffer.", "root", msg.RootChainType)
+			k.FlushCheckpointSyncBuffer(ctx, msg.RootChainType)
+		} else {
+			expiryTime := bufferSync.TimeStamp + checkpointBufferTime
+			logger.Error("Checkpoint sync already exits in buffer", "root", msg.RootChainType, "now", timeStamp, "Expires", expiryTime)
+			return common.ErrNoACK(k.Codespace(), expiryTime).Result()
+		}
+	}
+
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeCheckpointSync,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(types.AttributeKeyProposer, msg.Proposer.String()),
+			sdk.NewAttribute(types.AttributeKeyStartBlock, strconv.FormatUint(msg.StartBlock, 10)),
+			sdk.NewAttribute(types.AttributeKeyEndBlock, strconv.FormatUint(msg.EndBlock, 10)),
+		),
+	})
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+// handleMsgCheckpointSyncAck Validates if checkpoint sync submitted on chain is valid
+func handleMsgCheckpointSyncAck(ctx sdk.Context, msg types.MsgCheckpointSyncAck, k Keeper) sdk.Result {
+	logger := k.Logger(ctx)
+	k.Logger(ctx).Debug("✅ Validating checkpoint sync ack msg",
+		"root", msg.RootChainType,
+		"number", msg.Number,
+	)
+	timeStamp := uint64(ctx.BlockTime().Unix())
+	params := k.GetParams(ctx)
+	//
+	// Check checkpoint sync buffer
+	//
+	bufferSync, err := k.GetCheckpointSyncFromBuffer(ctx, msg.RootChainType)
+	if err == nil {
+		checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
+		if bufferSync.TimeStamp == 0 || ((timeStamp > bufferSync.TimeStamp) && timeStamp-bufferSync.TimeStamp >= checkpointBufferTime) {
+			logger.Debug("Checkpoint sync has been timed out. Flushing buffer.", "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", bufferSync.TimeStamp)
+			k.FlushCheckpointSyncBuffer(ctx, msg.RootChainType)
+		}
+	}
+
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeCheckpointSyncAck,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(types.AttributeKeyProposer, msg.Proposer.String()),
+			sdk.NewAttribute(types.AttributeKeyStartBlock, strconv.FormatUint(msg.StartBlock, 10)),
+			sdk.NewAttribute(types.AttributeKeyEndBlock, strconv.FormatUint(msg.EndBlock, 10)),
 		),
 	})
 

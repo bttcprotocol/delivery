@@ -79,6 +79,12 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 	if err := cp.queueConnector.Server.RegisterTask("sendCheckpointAckToHeimdall", cp.sendCheckpointAckToHeimdall); err != nil {
 		cp.Logger.Error("RegisterTasks | sendCheckpointAckToHeimdall", "error", err)
 	}
+	if err := cp.queueConnector.Server.RegisterTask("sendCheckpointSyncToStakeChain", cp.sendCheckpointSyncToStakeChain); err != nil {
+		cp.Logger.Error("RegisterTasks | sendCheckpointSyncToStakeChain", "error", err)
+	}
+	if err := cp.queueConnector.Server.RegisterTask("sendCheckpointSyncAckToHeimdall", cp.sendCheckpointSyncAckToHeimdall); err != nil {
+		cp.Logger.Error("RegisterTasks | sendCheckpointSyncAckToHeimdall", "error", err)
+	}
 }
 
 func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interval time.Duration) {
@@ -89,6 +95,7 @@ func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interva
 		select {
 		case <-ticker.C:
 			go cp.handleCheckpointNoAck()
+			go cp.handleCheckpointSync()
 		case <-ctx.Done():
 			cp.Logger.Info("No-ack Polling stopped")
 			ticker.Stop()
