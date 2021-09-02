@@ -313,7 +313,7 @@ func handleMsgCheckpointSync(ctx sdk.Context, msg types.MsgCheckpointSync, k Kee
 	//
 	bufferSync, err := k.GetCheckpointSyncFromBuffer(ctx, msg.RootChainType)
 	if err == nil {
-		checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
+		checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds() / 5)
 		if bufferSync.TimeStamp == 0 || ((timeStamp > bufferSync.TimeStamp) && timeStamp-bufferSync.TimeStamp >= checkpointBufferTime) {
 			logger.Debug("Checkpoint sync has been timed out. Flushing buffer.", "root", msg.RootChainType)
 			k.FlushCheckpointSyncBuffer(ctx, msg.RootChainType)

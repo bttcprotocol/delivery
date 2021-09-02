@@ -177,7 +177,7 @@ func (hl *HeimdallListener) fetchFromAndToBlock() (uint64, uint64, error) {
 
 // ProcessBlockEvent - process Blockevents (BeginBlock, EndBlock events) from heimdall.
 func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight int64) {
-	hl.Logger.Info("Received block event from Heimdall", "eventType", event.Type)
+	hl.Logger.Info("Received block event from Heimdall", "eventType", event.Type, "height", blockHeight)
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		hl.Logger.Error("Error while parsing block event", "error", err, "eventType", event.Type)

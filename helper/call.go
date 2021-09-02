@@ -918,12 +918,12 @@ func (c *ContractCaller) GetTronLatestBlockNumber() (int64, error) {
 }
 
 func (c *ContractCaller) GetStartListenBlock(rootChainType string) uint64 {
-	if rootChainType == hmTypes.RootChainTypeEth {
+	if rootChainType == hmTypes.RootChainTypeTron {
 		return GetConfig().TronStartListenBlock
 	} else if rootChainType == hmTypes.RootChainTypeEth {
 		return GetConfig().EthStartListenBlock
 	} else {
-		Logger.Error("Wrong rootType ", rootChainType)
+		Logger.Error("Wrong rootType ", "root", rootChainType)
 		return 0
 	}
 }
@@ -959,7 +959,7 @@ func (c *ContractCaller) GetTronHeaderInfo(headerID uint64, contractAddress stri
 		ret.CreatedAt.Uint64(), types.HeimdallAddress(ret.Proposer), nil
 }
 
-func (c *ContractCaller) GetSyncedCheckpointId(rootChain string, contractAddress string) (currentHeader uint64, err error) {
+func (c *ContractCaller) GetSyncedCheckpointId(contractAddress string, rootChain string) (currentHeader uint64, err error) {
 	// Pack the input
 	chainID := types.GetRootChainID(rootChain)
 	btsPack, err := c.StakeManagerABI.Pack("getCurrentSyncedCheckpoint", big.NewInt(int64(chainID)))
@@ -976,7 +976,7 @@ func (c *ContractCaller) GetSyncedCheckpointId(rootChain string, contractAddress
 	// Unpack the results
 	ret := new(*big.Int)
 
-	if err = c.RootChainABI.Unpack(ret, "headerBlocks", data); err != nil {
+	if err = c.StakeManagerABI.Unpack(ret, "getCurrentSyncedCheckpoint", data); err != nil {
 		return 0, err
 	}
 

@@ -34,7 +34,8 @@ type CheckpointProcessor struct {
 	// Rootchain instance
 
 	// Rootchain abi
-	rootchainAbi *abi.ABI
+	rootchainAbi   *abi.ABI
+	stakingInfoAbi *abi.ABI
 }
 
 // Result represents single req result
@@ -49,9 +50,10 @@ type CheckpointContext struct {
 }
 
 // NewCheckpointProcessor - add rootchain abi to checkpoint processor
-func NewCheckpointProcessor(rootchainAbi *abi.ABI) *CheckpointProcessor {
+func NewCheckpointProcessor(rootchainAbi, stakingInfoAbi *abi.ABI) *CheckpointProcessor {
 	checkpointProcessor := &CheckpointProcessor{
-		rootchainAbi: rootchainAbi,
+		rootchainAbi:   rootchainAbi,
+		stakingInfoAbi: stakingInfoAbi,
 	}
 	return checkpointProcessor
 }
@@ -89,12 +91,15 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 
 func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
+	ticker1 := time.NewTicker(time.Minute)
 	// stop ticker when everything done
 	defer ticker.Stop()
+	defer ticker1.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			go cp.handleCheckpointNoAck()
+		case <-ticker1.C:
 			go cp.handleCheckpointSync()
 		case <-ctx.Done():
 			cp.Logger.Info("No-ack Polling stopped")

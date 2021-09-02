@@ -12,11 +12,16 @@ RUN apt-get update -y && apt-get upgrade -y && apt install build-essential -y
 # create go src directory and clone heimdall
 RUN mkdir -p /root/heimdall
 
-# add code to docker instance
-ADD . /root/heimdall/
-
 # change work directory
 WORKDIR /root/heimdall
+
+# download mod
+ADD go.mod /root/heimdall/
+ADD go.sum /root/heimdall/
+RUN go mod download
+
+# add code to docker instance
+ADD . /root/heimdall/
 
 # GOBIN required for go install
 ENV GOBIN $GOPATH/bin

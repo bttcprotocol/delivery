@@ -74,7 +74,7 @@ func newCheckpointHandler(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		// draft a message and send response
-		msg := types.NewMsgCheckpointBlock(
+		msg := types.NewMsgOtherCheckpointBlock(
 			req.Proposer,
 			req.StartBlock,
 			req.EndBlock,
@@ -82,6 +82,7 @@ func newCheckpointHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			req.AccountRootHash,
 			req.BorChainID,
 			req.Epoch,
+			req.RootChain,
 		)
 
 		// send response

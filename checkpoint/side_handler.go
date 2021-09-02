@@ -194,7 +194,9 @@ func SideHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpo
 		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
 	}
 
-	return common.ErrorSideTx(k.Codespace(), common.CodeInvalidBlockInput)
+	// say `yes`
+	result.Result = abci.SideTxResultType_Yes
+	return
 }
 
 // SideHandleMsgCheckpointSyncAck handles MsgCheckpointAck message for external call
@@ -500,6 +502,7 @@ func PostHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpo
 		"startBlock", msg.StartBlock,
 		"endBlock", msg.EndBlock,
 		"proposer", msg.Proposer,
+		"number", msg.Number,
 	)
 	// Skip handler if checkpoint is not approved
 	if sideTxResult != abci.SideTxResultType_Yes {
@@ -538,6 +541,7 @@ func PostHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpo
 		"startBlock", msg.StartBlock,
 		"endBlock", msg.EndBlock,
 		"proposer", msg.Proposer,
+		"number", msg.Number,
 	)
 
 	// TX bytes
@@ -556,6 +560,7 @@ func PostHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpo
 			sdk.NewAttribute(types.AttributeKeyStartBlock, strconv.FormatUint(msg.StartBlock, 10)),
 			sdk.NewAttribute(types.AttributeKeyEndBlock, strconv.FormatUint(msg.EndBlock, 10)),
 			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChainType),
+			sdk.NewAttribute(types.AttributeKeyHeaderIndex, strconv.FormatUint(msg.Number, 10)),
 		),
 	})
 

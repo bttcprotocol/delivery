@@ -41,6 +41,8 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	for _, sequence := range data.StakingSequences {
 		keeper.SetStakingSequence(ctx, sequence)
 	}
+
+	keeper.SetParams(ctx, data.Params)
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.

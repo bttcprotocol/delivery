@@ -52,7 +52,7 @@ func NewProcessorService(
 	//
 
 	// initialize checkpoint processor
-	checkpointProcessor := NewCheckpointProcessor(&contractCaller.RootChainABI)
+	checkpointProcessor := NewCheckpointProcessor(&contractCaller.RootChainABI, &contractCaller.StakingInfoABI)
 	checkpointProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "checkpoint", checkpointProcessor)
 
 	// initialize fee processor

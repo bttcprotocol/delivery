@@ -23,10 +23,10 @@ import (
 func (cp *CheckpointProcessor) handleCheckpointSync() {
 	// fetch fresh checkpoint context
 	checkpointContext, err := cp.getCheckpointContext()
-	checkpointParams := checkpointContext.CheckpointParams
 	if err != nil {
 		return
 	}
+	checkpointParams := checkpointContext.CheckpointParams
 	currentTime := time.Now().UTC()
 
 	for rootChain := range hmTypes.GetRootChainIDMap() {
@@ -34,10 +34,12 @@ func (cp *CheckpointProcessor) handleCheckpointSync() {
 			continue
 		}
 		bufferedCheckpoint, err := util.GetBufferedCheckpointSync(cp.cliCtx, rootChain)
-		bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
-		if err == nil && currentTime.Sub(bufferedTime).Seconds() < checkpointParams.CheckpointBufferTime.Seconds() {
-			cp.Logger.Debug("Cannot send multiple checkpoint sync in short time", "error", err)
-			continue
+		if err == nil {
+			bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
+			if currentTime.Sub(bufferedTime).Seconds() < checkpointParams.CheckpointBufferTime.Seconds()/5 {
+				cp.Logger.Debug("Cannot send multiple checkpoint sync in short time", "error", err)
+				continue
+			}
 		}
 
 		// fetch latest syncHeaderBlock from stakeChain
@@ -130,7 +132,8 @@ func (cp *CheckpointProcessor) sendCheckpointSyncToStakeChain(eventBytes string,
 			return err
 		}
 		if number != lastSyncedHeaderNumber+1 {
-			cp.Logger.Error("Checkpoint sync number mismatch", "eventType", event.Type)
+			cp.Logger.Error("Checkpoint sync number mismatch", "eventType", event.Type,
+				"number", number, "lastSynced", lastSyncedHeaderNumber)
 		} else {
 			txHash := common.FromHex(txHash)
 			if err := cp.createAndSendCheckpointSyncToTron(checkpointContext, number, startBlock, endBlock, rootChain, blockHeight, txHash); err != nil {
@@ -165,7 +168,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 		Start            *big.Int
 		End              *big.Int
 	})
-	if err := helper.UnpackLog(cp.rootchainAbi, event, eventName, &log); err != nil {
+	if err := helper.UnpackLog(cp.stakingInfoAbi, event, eventName, &log); err != nil {
 		cp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
 	} else {
 		checkpointChain := hmTypes.GetRootChainName(event.ChainID.Uint64())
@@ -183,7 +186,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 		bufferedCheckpoint, err := util.GetBufferedCheckpointSync(cp.cliCtx, checkpointChain)
 		bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
 		currentTime := time.Now().UTC()
-		if err == nil && currentTime.Sub(bufferedTime).Seconds() > checkpointParams.CheckpointBufferTime.Seconds() {
+		if err == nil && currentTime.Sub(bufferedTime).Seconds() > checkpointParams.CheckpointBufferTime.Seconds()/5 {
 			cp.Logger.Debug("checkpoint sync buffer has expired, ignore this ack")
 			return nil
 		}
