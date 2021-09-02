@@ -91,9 +91,13 @@ type IContractCaller interface {
 	GetStateReceiverInstance(stateReceiverAddress common.Address) (*statereceiver.Statereceiver, error)
 	GetMaticTokenInstance(maticTokenAddress common.Address) (*erc20.Erc20, error)
 
+	GetTronHeaderInfo(headerID uint64, rootChainAddress string, childBlockInterval uint64) (root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error)
 	GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error)
 	GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error)
 	GetTronLatestBlockNumber() (int64, error)
+
+	// checkpoint sync
+	GetSyncedCheckpointId(rootChain string, contractAddress string) (currentHeader uint64, err error)
 	GetStartListenBlock(rootChainType string) uint64
 }
 
@@ -922,4 +926,59 @@ func (c *ContractCaller) GetStartListenBlock(rootChainType string) uint64 {
 		Logger.Error("Wrong rootType ", rootChainType)
 		return 0
 	}
+}
+
+func (c *ContractCaller) GetTronHeaderInfo(headerID uint64, contractAddress string, childBlockInterval uint64) (
+	root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error) {
+	// Pack the input
+	btsPack, err := c.RootChainABI.Pack("headerBlocks",
+		big.NewInt(0).Mul(big.NewInt(0).SetUint64(headerID), big.NewInt(0).SetUint64(childBlockInterval)))
+	if err != nil {
+		return root, 0, 0, 0, types.HeimdallAddress{}, err
+	}
+
+	// Call
+	data, err := c.TronChainRPC.TriggerConstantContract(contractAddress, btsPack)
+	if err != nil {
+		return root, 0, 0, 0, types.HeimdallAddress{}, err
+	}
+
+	// Unpack the results
+	ret := new(struct {
+		Root      [32]byte
+		Start     *big.Int
+		End       *big.Int
+		CreatedAt *big.Int
+		Proposer  common.Address
+	})
+	if err = c.RootChainABI.Unpack(ret, "headerBlocks", data); err != nil {
+		return root, 0, 0, 0, types.HeimdallAddress{}, err
+	}
+
+	return ret.Root, ret.Start.Uint64(), ret.End.Uint64(),
+		ret.CreatedAt.Uint64(), types.HeimdallAddress(ret.Proposer), nil
+}
+
+func (c *ContractCaller) GetSyncedCheckpointId(rootChain string, contractAddress string) (currentHeader uint64, err error) {
+	// Pack the input
+	chainID := types.GetRootChainID(rootChain)
+	btsPack, err := c.StakeManagerABI.Pack("getCurrentSyncedCheckpoint", big.NewInt(int64(chainID)))
+	if err != nil {
+		return 0, err
+	}
+
+	// Call
+	data, err := c.TronChainRPC.TriggerConstantContract(contractAddress, btsPack)
+	if err != nil {
+		return 0, err
+	}
+
+	// Unpack the results
+	ret := new(*big.Int)
+
+	if err = c.RootChainABI.Unpack(ret, "headerBlocks", data); err != nil {
+		return 0, err
+	}
+
+	return (*ret).Uint64(), nil
 }

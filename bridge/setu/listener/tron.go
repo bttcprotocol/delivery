@@ -288,6 +288,13 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 							tl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)
 						}
 					}
+
+				case "CheckpointSyncAck":
+					if tl.rootChainType == types.RootChainTypeStake {
+						if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+							tl.sendTaskWithDelay("sendCheckpointSyncAckToHeimdall", selectedEvent.Name, logBytes, delay)
+						}
+					}
 				}
 			}
 		}

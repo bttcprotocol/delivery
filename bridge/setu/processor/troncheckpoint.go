@@ -61,7 +61,7 @@ func (cp *CheckpointProcessor) nextExpectedTronCheckpoint(checkpointContext *Che
 	currentHeaderBlockNumber := big.NewInt(0).SetUint64(_currentHeaderBlock)
 
 	// get header info
-	_, currentStart, currentEnd, lastCheckpointTime, _, err := cp.contractConnector.TronChainRPC.GetHeaderInfo(
+	_, currentStart, currentEnd, lastCheckpointTime, _, err := cp.contractConnector.GetTronHeaderInfo(
 		currentHeaderBlockNumber.Uint64(), chainManagerParams.ChainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
 	if err != nil {
 		cp.Logger.Error("Error while fetching current header block object from tron", "error", err)
@@ -281,7 +281,7 @@ func (cp *CheckpointProcessor) getLatestTronCheckpointTime(checkpointContext *Ch
 	}
 
 	// header block
-	_, _, _, createdAt, _, err := cp.contractConnector.TronChainRPC.GetHeaderInfo(lastHeaderNumber, chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
+	_, _, _, createdAt, _, err := cp.contractConnector.GetTronHeaderInfo(lastHeaderNumber, chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
 	if err != nil {
 		cp.Logger.Error("Error while fetching header block object", "error", err)
 		return 0, err

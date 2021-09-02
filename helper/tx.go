@@ -220,9 +220,41 @@ func (c *ContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.In
 	return nil
 }
 
+// SendCheckpointSyncToTron sends staking sync to tron stake manager contract
+func (c *ContractCaller) SendCheckpointSyncToTron(signedData []byte, sigs [][3]*big.Int, stakeManagerAddress string) error {
+	data, err := c.StakeManagerABI.Pack("submitCheckpointSync", signedData, sigs)
+	if err != nil {
+		return err
+	}
+	privateKey := GetPrivKey()
+	// trigger
+	trx, err := c.TronChainRPC.TriggerContract(privateKey.PubKey().Address().String(), stakeManagerAddress, data)
+	if err != nil {
+		return err
+	}
+	rawData, _ := proto.Marshal(trx.GetRawData())
+	hash, err := Hash(rawData)
+	if err != nil {
+		return err
+	}
+
+	signature, err := ethCrypto.Sign(hash, privateKey[:])
+	if err != nil {
+		return err
+	}
+
+	trx.Signature = append(trx.GetSignature(), signature)
+
+	err = c.TronChainRPC.BroadcastTransaction(context.Background(), trx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // SendMainStakingSync sends staking sync to rootchain contract
 func (c *ContractCaller) SendMainStakingSync(syncMethod string, signedData []byte, sigs [][3]*big.Int, stakingManager common.Address, stakingManagerInstance *stakemanager.Stakemanager) (er error) {
-	data, err := c.RootChainABI.Pack(syncMethod, signedData, sigs)
+	data, err := c.StakeManagerABI.Pack(syncMethod, signedData, sigs)
 	if err != nil {
 		Logger.Error("Unable to pack tx for submitStakingSync", "error", err, "syncMethod", syncMethod)
 		return err

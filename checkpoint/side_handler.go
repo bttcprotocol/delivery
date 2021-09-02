@@ -24,6 +24,10 @@ func NewSideTxHandler(k Keeper, contractCaller helper.IContractCaller) hmTypes.S
 			return SideHandleMsgCheckpoint(ctx, k, msg, contractCaller)
 		case types.MsgCheckpointAck:
 			return SideHandleMsgCheckpointAck(ctx, k, msg, contractCaller)
+		case types.MsgCheckpointSync:
+			return SideHandleMsgCheckpointSync(ctx, k, msg, contractCaller)
+		case types.MsgCheckpointSyncAck:
+			return SideHandleMsgCheckpointSyncAck(ctx, k, msg, contractCaller)
 		default:
 			return abci.ResponseDeliverSideTx{
 				Code: uint32(sdk.CodeUnknownRequest),
@@ -118,7 +122,7 @@ func SideHandleMsgOtherCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgChe
 	// Validate data from root chain
 	//
 	if msg.RootChainType == hmTypes.RootChainTypeTron {
-		root, start, end, _, proposer, err := helper.GetTronChainRPCClient().GetHeaderInfo(msg.Number, chainParams.TronChainAddress, params.ChildBlockInterval)
+		root, start, end, _, proposer, err := contractCaller.GetTronHeaderInfo(msg.Number, chainParams.TronChainAddress, params.ChildBlockInterval)
 		if err != nil {
 			logger.Error("Unable to fetch checkpoint from tron", "error", err, "checkpointNumber", msg.Number)
 			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
@@ -141,6 +145,91 @@ func SideHandleMsgOtherCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgChe
 	return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
 }
 
+// SideHandleMsgCheckpointSync handles MsgCheckpointSync message for external call
+func SideHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpointSync, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
+	// logger
+	logger := k.Logger(ctx)
+	logger.Debug("✅ Validating External call for checkpoint sync msg",
+		"root", msg.RootChainType,
+		"number", msg.Number,
+	)
+
+	params := k.GetParams(ctx)
+	chainParams := k.ck.GetParams(ctx).ChainParams
+
+	//
+	// Validate data from root chain
+	//
+	var (
+		start, end uint64
+		proposer   hmTypes.HeimdallAddress
+		err        error
+	)
+	if msg.RootChainType == hmTypes.RootChainTypeEth {
+		rootChainInstance, err := contractCaller.GetRootChainInstance(chainParams.RootChainAddress.EthAddress())
+		if err != nil {
+			logger.Error("Unable to fetch rootchain contract instance", "root", msg.RootChainType, "error", err)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+		_, start, end, _, proposer, err = contractCaller.GetHeaderInfo(msg.Number, rootChainInstance, params.ChildBlockInterval)
+		if err != nil {
+			logger.Error("Unable to fetch checkpoint from rootchain",
+				"root", msg.RootChainType, "error", err, "checkpointNumber", msg.Number)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+	} else if msg.RootChainType == hmTypes.RootChainTypeTron {
+		_, start, end, _, proposer, err = contractCaller.GetTronHeaderInfo(msg.Number, chainParams.TronChainAddress, params.ChildBlockInterval)
+		if err != nil {
+			logger.Error("Unable to fetch checkpoint from rootchain",
+				"root", msg.RootChainType, "error", err, "checkpointNumber", msg.Number)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+	}
+	// check if message data matches with contract data
+	if msg.StartBlock != start ||
+		msg.EndBlock != end ||
+		!msg.Proposer.Equals(proposer) {
+		logger.Error("Invalid checkpoint sync message. It doesn't match with contract state",
+			"root", msg.RootChainType, "error", err, "checkpointNumber", msg.Number)
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+	}
+
+	return common.ErrorSideTx(k.Codespace(), common.CodeInvalidBlockInput)
+}
+
+// SideHandleMsgCheckpointSyncAck handles MsgCheckpointAck message for external call
+func SideHandleMsgCheckpointSyncAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointSyncAck, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
+	// logger
+	logger := k.Logger(ctx)
+
+	logger.Debug("✅ Validating External call for checkpoint sync ack msg",
+		"root", msg.RootChainType,
+		"number", msg.Number,
+	)
+
+	chainParams := k.ck.GetParams(ctx).ChainParams
+
+	//
+	// Validate data from root chain
+	//
+	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeTron {
+		currentNumber, err := contractCaller.GetSyncedCheckpointId(chainParams.TronStakingManagerAddress, msg.RootChainType)
+		if err != nil {
+			logger.Error("Unable to fetch checkpoint from rootchain", "error", err, "checkpointNumber", msg.Number)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+		if msg.Number > currentNumber {
+			logger.Error("Invalid message. It doesn't match with contract state", "error", err, "checkpointNumber", msg.Number)
+			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+		}
+	}
+
+	// say `yes`
+	result.Result = abci.SideTxResultType_Yes
+
+	return
+}
+
 //
 // Tx handler
 //
@@ -155,6 +244,10 @@ func NewPostTxHandler(k Keeper, contractCaller helper.IContractCaller) hmTypes.P
 			return PostHandleMsgCheckpoint(ctx, k, msg, sideTxResult)
 		case types.MsgCheckpointAck:
 			return PostHandleMsgCheckpointAck(ctx, k, msg, sideTxResult)
+		case types.MsgCheckpointSync:
+			return PostHandleMsgCheckpointSync(ctx, k, msg, sideTxResult)
+		case types.MsgCheckpointSyncAck:
+			return PostHandleMsgCheckpointSyncAck(ctx, k, msg, sideTxResult)
 		default:
 			return sdk.ErrUnknownRequest("Unrecognized checkpoint Msg type").Result()
 		}
@@ -385,6 +478,117 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	ctx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
 			types.EventTypeCheckpointAck,
+			sdk.NewAttribute(sdk.AttributeKeyAction, msg.Type()),                                  // action
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),                // module name
+			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
+			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),             // result
+			sdk.NewAttribute(types.AttributeKeyHeaderIndex, strconv.FormatUint(msg.Number, 10)),
+			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChainType),
+		),
+	})
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+// PostHandleMsgCheckpointSync handles msg checkpoint
+func PostHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpointSync, sideTxResult abci.SideTxResultType) sdk.Result {
+	logger := k.Logger(ctx)
+	logger.Debug("Post handle checkpoint sync",
+		"rootChain", msg.RootChainType,
+		"startBlock", msg.StartBlock,
+		"endBlock", msg.EndBlock,
+		"proposer", msg.Proposer,
+	)
+	// Skip handler if checkpoint is not approved
+	if sideTxResult != abci.SideTxResultType_Yes {
+		logger.Debug("Skipping new checkpoint sync since side-tx didn't get yes votes",
+			"root", msg.RootChainType, "startBlock", msg.StartBlock, "endBlock", msg.EndBlock)
+		return common.ErrBadBlockDetails(k.Codespace()).Result()
+	}
+
+	//
+	// Save checkpoint to buffer store
+	//
+	checkpointSyncBuffer, err := k.GetCheckpointSyncFromBuffer(ctx, msg.RootChainType)
+
+	if err == nil && checkpointSyncBuffer != nil {
+		logger.Debug("Checkpoint sync already exists in buffer")
+
+		// get checkpoint buffer time from params
+		params := k.GetParams(ctx)
+		expiryTime := checkpointSyncBuffer.TimeStamp + uint64(params.CheckpointBufferTime.Seconds())
+
+		// return with error (ack is required)
+		return common.ErrNoACK(k.Codespace(), expiryTime).Result()
+	}
+
+	timeStamp := uint64(ctx.BlockTime().Unix())
+
+	k.SetCheckpointSyncBuffer(ctx, hmTypes.Checkpoint{
+		StartBlock: msg.StartBlock,
+		EndBlock:   msg.EndBlock,
+		Proposer:   msg.Proposer,
+		TimeStamp:  timeStamp,
+	}, msg.RootChainType)
+
+	logger.Debug("New checkpoint sync into buffer stored",
+		"rootChain", msg.RootChainType,
+		"startBlock", msg.StartBlock,
+		"endBlock", msg.EndBlock,
+		"proposer", msg.Proposer,
+	)
+
+	// TX bytes
+	txBytes := ctx.TxBytes()
+	hash := tmTypes.Tx(txBytes).Hash()
+
+	// Emit event for checkpoints
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeCheckpointSync,
+			sdk.NewAttribute(sdk.AttributeKeyAction, msg.Type()),                                  // action
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),                // module name
+			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash
+			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),             // result
+			sdk.NewAttribute(types.AttributeKeyProposer, msg.Proposer.String()),
+			sdk.NewAttribute(types.AttributeKeyStartBlock, strconv.FormatUint(msg.StartBlock, 10)),
+			sdk.NewAttribute(types.AttributeKeyEndBlock, strconv.FormatUint(msg.EndBlock, 10)),
+			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChainType),
+		),
+	})
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+// PostHandleMsgCheckpointSyncAck handles msg checkpoint ack
+func PostHandleMsgCheckpointSyncAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointSyncAck, sideTxResult abci.SideTxResultType) sdk.Result {
+	logger := k.Logger(ctx)
+
+	// Skip handler if checkpoint-ack is not approved
+	if sideTxResult != abci.SideTxResultType_Yes {
+		logger.Debug("Skipping new checkpoint-sync-ack since side-tx didn't get yes votes",
+			"checkpointNumber", msg.Number, "root", msg.RootChainType)
+		return common.ErrBadBlockDetails(k.Codespace()).Result()
+	}
+
+	//
+	// Update checkpoint sync state
+	//
+	k.FlushCheckpointSyncBuffer(ctx, msg.RootChainType)
+	logger.Debug("Checkpoint buffer flushed after receiving checkpoint sync ack", "root", msg.RootChainType)
+
+	// TX bytes
+	txBytes := ctx.TxBytes()
+	hash := tmTypes.Tx(txBytes).Hash()
+
+	// Emit event for checkpoints
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeCheckpointSyncAck,
 			sdk.NewAttribute(sdk.AttributeKeyAction, msg.Type()),                                  // action
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),                // module name
 			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, hmTypes.BytesToHeimdallHash(hash).Hex()), // tx hash

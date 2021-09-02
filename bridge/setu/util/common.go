@@ -31,29 +31,30 @@ import (
 )
 
 const (
-	AccountDetailsURL       = "/auth/accounts/%v"
-	LastNoAckURL            = "/checkpoints/last-no-ack"
-	CurrentEpochURL         = "/checkpoints/epoch"
-	CheckpointParamsURL     = "/checkpoints/params"
-	ChainManagerParamsURL   = "/chainmanager/params"
-	ProposersURL            = "/staking/proposer/%v"
-	BufferedCheckpointURL   = "/checkpoints/buffer/%v"
-	LatestCheckpointURL     = "/checkpoints/latest/%v"
-	CurrentProposerURL      = "/staking/current-proposer"
-	LatestSpanURL           = "/bor/latest-span"
-	NextSpanInfoURL         = "/bor/prepare-next-span"
-	NextSpanSeedURL         = "/bor/next-span-seed"
-	DividendAccountRootURL  = "/topup/dividend-account-root"
-	ValidatorURL            = "/staking/validator/%v"
-	CurrentValidatorSetURL  = "staking/validator-set"
-	StakingTxStatusURL      = "/staking/isoldtx"
-	NextStakingRecordURL    = "/staking/next/%v"
-	TopupTxStatusURL        = "/topup/isoldtx"
-	ClerkTxStatusURL        = "/clerk/isoldtx"
-	LatestSlashInfoBytesURL = "/slashing/latest_slash_info_bytes"
-	TickSlashInfoListURL    = "/slashing/tick_slash_infos"
-	SlashingTxStatusURL     = "/slashing/isoldtx"
-	SlashingTickCountURL    = "/slashing/tick-count"
+	AccountDetailsURL         = "/auth/accounts/%v"
+	LastNoAckURL              = "/checkpoints/last-no-ack"
+	CurrentEpochURL           = "/checkpoints/epoch"
+	CheckpointParamsURL       = "/checkpoints/params"
+	ChainManagerParamsURL     = "/chainmanager/params"
+	ProposersURL              = "/staking/proposer/%v"
+	BufferedCheckpointURL     = "/checkpoints/buffer/%v"
+	BufferedCheckpointSyncURL = "/checkpoints/sync/%v"
+	LatestCheckpointURL       = "/checkpoints/latest/%v"
+	CurrentProposerURL        = "/staking/current-proposer"
+	LatestSpanURL             = "/bor/latest-span"
+	NextSpanInfoURL           = "/bor/prepare-next-span"
+	NextSpanSeedURL           = "/bor/next-span-seed"
+	DividendAccountRootURL    = "/topup/dividend-account-root"
+	ValidatorURL              = "/staking/validator/%v"
+	CurrentValidatorSetURL    = "staking/validator-set"
+	StakingTxStatusURL        = "/staking/isoldtx"
+	NextStakingRecordURL      = "/staking/next/%v"
+	TopupTxStatusURL          = "/topup/isoldtx"
+	ClerkTxStatusURL          = "/clerk/isoldtx"
+	LatestSlashInfoBytesURL   = "/slashing/latest_slash_info_bytes"
+	TickSlashInfoListURL      = "/slashing/tick_slash_infos"
+	SlashingTxStatusURL       = "/slashing/isoldtx"
+	SlashingTickCountURL      = "/slashing/tick-count"
 
 	TransactionTimeout      = 1 * time.Minute
 	CommitTimeout           = 2 * time.Minute
@@ -350,6 +351,27 @@ func GetBufferedCheckpoint(cliCtx cliContext.CLIContext, rootChain string) (*hmt
 	var checkpoint hmtypes.Checkpoint
 	if err := json.Unmarshal(response.Result, &checkpoint); err != nil {
 		logger.Error("Error unmarshalling buffered checkpoint", "url", BufferedCheckpointURL, "err", err)
+		return nil, err
+	}
+
+	return &checkpoint, nil
+}
+
+// GetBufferedCheckpointSync return checkpoint sync from buffer
+func GetBufferedCheckpointSync(cliCtx cliContext.CLIContext, rootChain string) (*hmtypes.Checkpoint, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(BufferedCheckpointSyncURL, rootChain)),
+	)
+
+	if err != nil {
+		logger.Debug("Error fetching buffered checkpoint sync", "root", rootChain, "err", err)
+		return nil, err
+	}
+
+	var checkpoint hmtypes.Checkpoint
+	if err := json.Unmarshal(response.Result, &checkpoint); err != nil {
+		logger.Error("Error unmarshalling buffered checkpoint sync", "root", rootChain, "err", err)
 		return nil, err
 	}
 

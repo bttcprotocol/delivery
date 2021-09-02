@@ -19,6 +19,8 @@ import (
 var (
 	DefaultValue = []byte{0x01} // Value to store in CacheCheckpoint and CacheCheckpointACK & ValidatorSetChange Flag
 
+	BufferCheckpointSyncKey = []byte{0x02} // Key to store checkpoint in buffer
+
 	ACKCountKey         = []byte{0x11} // key to store ACK count
 	BufferCheckpointKey = []byte{0x12} // Key to store checkpoint in buffer
 	CheckpointKey       = []byte{0x13} // prefix key for when storing checkpoint after ACK
@@ -27,7 +29,7 @@ var (
 	TronACKCountKey         = []byte{0x21} // key to store ACK count
 	TronBufferCheckpointKey = []byte{0x22} // Key to store checkpoint in buffer
 	TronCheckpointKey       = []byte{0x23} // prefix key for when storing checkpoint after ACK
-	TronLastNoACKKey        = []byte{0x24} // key to store last no-ack
+
 )
 
 // ModuleCommunicator manages different module interaction
@@ -321,6 +323,52 @@ func (k *Keeper) GetOtherCheckpointFromBuffer(ctx sdk.Context, rootChain string)
 	}
 
 	return nil, errors.New("no checkpoint found in buffer")
+}
+
+func getCheckpointSyncKey(rootID byte) []byte {
+	return append(BufferCheckpointSyncKey, rootID)
+}
+
+// CheckpointSyncBuffer set Checkpoint sync Buffer
+func (k *Keeper) SetCheckpointSyncBuffer(ctx sdk.Context, checkpoint hmTypes.Checkpoint, rootChain string) error {
+	store := ctx.KVStore(k.storeKey)
+
+	key := getCheckpointSyncKey(hmTypes.GetRootChainID(rootChain))
+
+	// create Checkpoint sync and marshall
+	out, err := k.cdc.MarshalBinaryBare(checkpoint)
+	if err != nil {
+		k.Logger(ctx).Error("Error marshalling checkpoint", "error", err)
+		return err
+	}
+
+	// store in key provided
+	store.Set(key, out)
+	return nil
+}
+
+// GetCheckpointSyncFromBuffer gets checkpoint sync in buffer
+func (k *Keeper) GetCheckpointSyncFromBuffer(ctx sdk.Context, rootChain string) (*hmTypes.Checkpoint, error) {
+	store := ctx.KVStore(k.storeKey)
+
+	key := getCheckpointSyncKey(hmTypes.GetRootChainID(rootChain))
+	// checkpoint block header
+	if store.Has(key) {
+		var checkpoint hmTypes.Checkpoint
+		// Get checkpoint and unmarshall
+		err := k.cdc.UnmarshalBinaryBare(store.Get(key), &checkpoint)
+		return &checkpoint, err
+	}
+
+	return nil, errors.New("no checkpoint sync found in buffer")
+}
+
+// FlushCheckpointSyncBuffer flushes Checkpoint sync Buffer
+func (k *Keeper) FlushCheckpointSyncBuffer(ctx sdk.Context, rootChain string) {
+	store := ctx.KVStore(k.storeKey)
+
+	key := getCheckpointSyncKey(hmTypes.GetRootChainID(rootChain))
+	store.Delete(key)
 }
 
 // SetLastNoAck set last no-ack object
