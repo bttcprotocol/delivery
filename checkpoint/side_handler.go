@@ -214,16 +214,14 @@ func SideHandleMsgCheckpointSyncAck(ctx sdk.Context, k Keeper, msg types.MsgChec
 	//
 	// Validate data from root chain
 	//
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeTron {
-		currentNumber, err := contractCaller.GetSyncedCheckpointId(chainParams.TronStakingManagerAddress, msg.RootChainType)
-		if err != nil {
-			logger.Error("Unable to fetch checkpoint from rootchain", "error", err, "checkpointNumber", msg.Number)
-			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
-		}
-		if msg.Number > currentNumber {
-			logger.Error("Invalid message. It doesn't match with contract state", "error", err, "checkpointNumber", msg.Number)
-			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
-		}
+	currentNumber, err := contractCaller.GetSyncedCheckpointId(chainParams.TronStakingManagerAddress, msg.RootChainType)
+	if err != nil {
+		logger.Error("Unable to fetch checkpoint from rootchain", "error", err, "checkpointNumber", msg.Number)
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+	}
+	if msg.Number > currentNumber {
+		logger.Error("Invalid message. It doesn't match with contract state", "error", err, "checkpointNumber", msg.Number)
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
 	}
 
 	// say `yes`

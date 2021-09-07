@@ -346,11 +346,7 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 	}
 
 	var lastCreatedAt int64
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeTron {
-		lastCreatedAt, err = cp.getLatestTronCheckpointTime(checkpointContext)
-	} else {
-		lastCreatedAt, err = cp.getLatestCheckpointTime(checkpointContext)
-	}
+	lastCreatedAt, err = cp.getLatestTronCheckpointTime(checkpointContext)
 	if err != nil {
 		cp.Logger.Error("Error fetching latest checkpoint time from rootchain", "error", err)
 		return

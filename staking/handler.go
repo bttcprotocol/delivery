@@ -283,9 +283,6 @@ func handleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keeper, c
 		"nonce", msg.Nonce,
 		"root", msg.RootChain,
 	)
-	if msg.RootChain == hmTypes.RootChainTypeStake {
-		return common.ErrBadAck(k.Codespace()).Result()
-	}
 
 	// Get last staking sync from buffer
 	stakingRecord, err := k.GetNextStakingRecordFromQueue(ctx, hmTypes.GetRootChainID(msg.RootChain))
@@ -339,9 +336,6 @@ func handleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k Kee
 		"nonce", msg.Nonce,
 		"root", msg.RootChain,
 	)
-	if msg.RootChain == hmTypes.RootChainTypeStake {
-		return common.ErrBadAck(k.Codespace()).Result()
-	}
 
 	// Get last staking sync from buffer
 	stakingRecord, err := k.GetNextStakingRecordFromQueue(ctx, hmTypes.GetRootChainID(msg.RootChain))

@@ -124,24 +124,21 @@ func (cp *CheckpointProcessor) sendCheckpointSyncToStakeChain(eventBytes string,
 		return err
 	}
 
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeTron {
-		// fetch latest syncHeaderBlock from stakeChain
-		lastSyncedHeaderNumber, err := cp.getLastSyncedCheckpointNumber(checkpointContext, rootChain)
-		if err != nil {
-			cp.Logger.Error("Error fetching syncedHeaderNumber from stakeChain", "root", rootChain, "error", err)
+	// fetch latest syncHeaderBlock from stakeChain
+	lastSyncedHeaderNumber, err := cp.getLastSyncedCheckpointNumber(checkpointContext, rootChain)
+	if err != nil {
+		cp.Logger.Error("Error fetching syncedHeaderNumber from stakeChain", "root", rootChain, "error", err)
+		return err
+	}
+	if number != lastSyncedHeaderNumber+1 {
+		cp.Logger.Error("Checkpoint sync number mismatch", "eventType", event.Type,
+			"number", number, "lastSynced", lastSyncedHeaderNumber)
+	} else {
+		txHash := common.FromHex(txHash)
+		if err := cp.createAndSendCheckpointSyncToTron(checkpointContext, number, startBlock, endBlock, rootChain, blockHeight, txHash); err != nil {
+			cp.Logger.Error("Error sending checkpoint to rootchain", "error", err)
 			return err
 		}
-		if number != lastSyncedHeaderNumber+1 {
-			cp.Logger.Error("Checkpoint sync number mismatch", "eventType", event.Type,
-				"number", number, "lastSynced", lastSyncedHeaderNumber)
-		} else {
-			txHash := common.FromHex(txHash)
-			if err := cp.createAndSendCheckpointSyncToTron(checkpointContext, number, startBlock, endBlock, rootChain, blockHeight, txHash); err != nil {
-				cp.Logger.Error("Error sending checkpoint to rootchain", "error", err)
-				return err
-			}
-		}
-		return nil
 	}
 	return nil
 }
@@ -241,15 +238,12 @@ func (cp *CheckpointProcessor) getHeaderBlock(checkpointContext *CheckpointConte
 // getLastSyncedCheckpointNumber - get last checkpoint header number from stake chain
 func (cp *CheckpointProcessor) getLastSyncedCheckpointNumber(checkpointContext *CheckpointContext, rootChain string) (uint64, error) {
 	chainParams := checkpointContext.ChainmanagerParams.ChainParams
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeTron {
-		syncedHeaderNumber, err := cp.contractConnector.GetSyncedCheckpointId(chainParams.TronStakingManagerAddress, rootChain)
-		if err != nil {
-			cp.Logger.Error("Error while fetching current synced header block number from stake chain", "error", err)
-			return 0, err
-		}
-		return syncedHeaderNumber, nil
+	syncedHeaderNumber, err := cp.contractConnector.GetSyncedCheckpointId(chainParams.TronStakingManagerAddress, rootChain)
+	if err != nil {
+		cp.Logger.Error("Error while fetching current synced header block number from stake chain", "error", err)
+		return 0, err
 	}
-	return 0, nil
+	return syncedHeaderNumber, nil
 }
 
 // createAndSendCheckpointSyncToTron prepares the data required for checkpoint sync submission

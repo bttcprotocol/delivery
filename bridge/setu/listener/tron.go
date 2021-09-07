@@ -61,7 +61,7 @@ func (tl *TronListener) Start() error {
 	// set start listen block
 	startListenBlock := tl.contractConnector.GetStartListenBlock(tl.rootChainType)
 	if startListenBlock != 0 {
-		tl.setStartListenBLock(startListenBlock, tronLastBlockKey)
+		_ = tl.setStartListenBLock(startListenBlock, tronLastBlockKey)
 	}
 	// start header process
 	go tl.StartHeaderProcess(headerCtx)
@@ -138,7 +138,7 @@ func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 			if result >= newHeader.Number.Uint64() {
 				return
 			}
-			if result+1 < fromBlock.Uint64() {  // only start from solidity block
+			if result+1 < fromBlock.Uint64() { // only start from solidity block
 				fromBlock = big.NewInt(0).SetUint64(result + 1)
 			}
 		}
@@ -166,7 +166,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 	var tronContractAddresses []string
 	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronStateSenderAddress)
 	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronChainAddress)
-	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronStateInfoAddress)
+	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronStakeInfoAddress)
 	// current public key
 	pubkeyBytes := helper.GetPubKey().Bytes()
 	logs, err := tl.contractConnector.GetTronEventsByContractAddress(tronContractAddresses, fromBlock.Int64(), toBlock.Int64())
@@ -190,24 +190,21 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 						tl.sendTaskWithDelay("sendCheckpointAckToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 				case "Staked":
-					if tl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoStaked)
-						if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
-						}
-						if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
-							// topup has to be processed first before validator join. so adding delay.
-							delay := util.TaskDelayBetweenEachVal
-							tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							// topup has to be processed first before validator join. so adding delay.
-							delay = delay + util.TaskDelayBetweenEachVal
-							tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					event := new(stakinginfo.StakinginfoStaked)
+					if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
+						tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
+					}
+					if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
+						// topup has to be processed first before validator join. so adding delay.
+						delay := util.TaskDelayBetweenEachVal
+						tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
+					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						// topup has to be processed first before validator join. so adding delay.
+						delay = delay + util.TaskDelayBetweenEachVal
+						tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
 				//case "StakeUpdate":
-				//	if tl.rootChainType == types.RootChainTypeStake {
 				//		event := new(stakinginfo.StakinginfoStakeUpdate)
 				//		if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
 				//			tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
@@ -217,31 +214,26 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 				//		} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
 				//			tl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, delay)
 				//		}
-				//	}
 				case "SignerChange":
-					if tl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoSignerChange)
-						if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
-						}
-						if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
-							tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					event := new(stakinginfo.StakinginfoSignerChange)
+					if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
+						tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
+					}
+					if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
+						tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, 0)
+					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
 				case "UnstakeInit":
-					if tl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoUnstakeInit)
-						if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
-						}
-						if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
-							tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					event := new(stakinginfo.StakinginfoUnstakeInit)
+					if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
+						tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
+					}
+					if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
+						tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, 0)
+					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
 				case "StateSynced":
@@ -250,51 +242,37 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 
 				case "TopUpFee":
-					if tl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoTopUpFee)
-						if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
-						}
-						if bytes.Equal(event.User.Bytes(), helper.GetAddress()) {
-							tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					event := new(stakinginfo.StakinginfoTopUpFee)
+					if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
+						tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
+					}
+					if bytes.Equal(event.User.Bytes(), helper.GetAddress()) {
+						tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, 0)
+					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
 				case "Slashed":
-					if tl.rootChainType == types.RootChainTypeStake {
-						if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendTickAckToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendTickAckToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
 				case "UnJailed":
-					if tl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoUnJailed)
-						if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
-						}
-						if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
-							tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					event := new(stakinginfo.StakinginfoUnJailed)
+					if err := helper.UnpackLog(tl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
+						tl.Logger.Error("Error while parsing tron event", "name", selectedEvent.Name, "error", err)
 					}
-
-				case "StakeAck":
-					if tl.rootChainType != types.RootChainTypeStake {
-						if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
+						tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, 0)
+					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
 				case "CheckpointSyncAck":
-					if tl.rootChainType == types.RootChainTypeStake {
-						if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
-							tl.sendTaskWithDelay("sendCheckpointSyncAckToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendCheckpointSyncAckToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
+
 				}
 			}
 		}

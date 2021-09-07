@@ -1,7 +1,6 @@
 package listener
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"math/big"
@@ -15,7 +14,6 @@ import (
 	ethTypes "github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
-	"github.com/maticnetwork/heimdall/contracts/stakinginfo"
 	"github.com/maticnetwork/heimdall/helper"
 	"github.com/maticnetwork/heimdall/types"
 )
@@ -73,7 +71,7 @@ func (rl *RootChainListener) Start() error {
 	// set start listen block
 	startListenBlock := rl.contractConnector.GetStartListenBlock(rl.rootChainType)
 	if startListenBlock != 0 {
-		rl.setStartListenBLock(startListenBlock, lastRootBlockKey)
+		_ = rl.setStartListenBLock(startListenBlock, lastRootBlockKey)
 	}
 
 	// start header process
@@ -133,7 +131,7 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 			if result >= newHeader.Number.Uint64() {
 				return
 			}
-			if result+1 < fromBlock.Uint64() {  // only start from solidity block
+			if result+1 < fromBlock.Uint64() { // only start from solidity block
 				fromBlock = big.NewInt(0).SetUint64(result + 1)
 			}
 		}
@@ -158,10 +156,6 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 
 func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChainListenerContext, fromBlock *big.Int, toBlock *big.Int) {
 	rl.Logger.Info("Query rootchain event logs", "fromBlock", fromBlock, "toBlock", toBlock)
-
-	// current public key
-	pubkey := helper.GetPubKey()
-	pubkeyBytes := pubkey[1:]
 
 	// get chain params
 	chainParams := rootchainContext.ChainmanagerParams.ChainParams
@@ -194,105 +188,15 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
 						rl.sendTaskWithDelay("sendCheckpointAckToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
-				case "Staked":
-					if rl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoStaked)
-						if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-						}
-						if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
-							// topup has to be processed first before validator join. so adding delay.
-							delay := util.TaskDelayBetweenEachVal
-							rl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							// topup has to be processed first before validator join. so adding delay.
-							delay = delay + util.TaskDelayBetweenEachVal
-							rl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
-
-				//case "StakeUpdate":
-				//	if rl.rootChainType == types.RootChainTypeStake {
-				//		event := new(stakinginfo.StakinginfoStakeUpdate)
-				//		if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-				//			rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-				//		}
-				//		if util.IsEventSender(rl.cliCtx, event.ValidatorId.Uint64()) {
-				//			rl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, 0)
-				//		} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-				//			rl.sendTaskWithDelay("sendStakeUpdateToHeimdall", selectedEvent.Name, logBytes, delay)
-				//		}
-				//	}
-
-				case "SignerChange":
-					if rl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoSignerChange)
-						if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-						}
-						if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
-							rl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
-
-				case "UnstakeInit":
-					if rl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoUnstakeInit)
-						if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-						}
-						if util.IsEventSender(rl.cliCtx, event.ValidatorId.Uint64()) {
-							rl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
 
 				case "StateSynced":
 					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
 						rl.sendTaskWithDelay("sendStateSyncedToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
-				case "TopUpFee":
-					if rl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoTopUpFee)
-						if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-						}
-						if bytes.Equal(event.User.Bytes(), helper.GetAddress()) {
-							rl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
-
-				case "Slashed":
-					if rl.rootChainType == types.RootChainTypeStake {
-						if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendTickAckToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
-
-				case "UnJailed":
-					if rl.rootChainType == types.RootChainTypeStake {
-						event := new(stakinginfo.StakinginfoUnJailed)
-						if err := helper.UnpackLog(rl.stakingInfoAbi, event, selectedEvent.Name, &vLog); err != nil {
-							rl.Logger.Error("Error while parsing event", "name", selectedEvent.Name, "error", err)
-						}
-						if util.IsEventSender(rl.cliCtx, event.ValidatorId.Uint64()) {
-							rl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, 0)
-						} else if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
-					}
-
 				case "StakeAck":
-					if rl.rootChainType != types.RootChainTypeStake {
-						if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
-							rl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)
-						}
+					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
+						rl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 				}
 			}

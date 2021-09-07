@@ -87,22 +87,12 @@ func SideHandleMsgValidatorJoin(ctx sdk.Context, msg types.MsgValidatorJoin, k K
 		receipt         *ethTypes.Receipt
 		err             error
 	)
-	// get main tx receipt
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeEth {
-		// get event log on eth
-		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = chainParams.StakingInfoAddress.EthAddress()
-	} else {
-		// get event log on tron
-		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateInfoAddress)
+	// get event log on tron
+	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	if err != nil || receipt == nil {
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress)
 	// decode validator join event
 	eventLog, err := contractCaller.DecodeValidatorJoinEvent(contractAddress, receipt, msg.LogIndex)
 	if err != nil || eventLog == nil {
@@ -236,22 +226,12 @@ func SideHandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Kee
 		receipt         *ethTypes.Receipt
 		err             error
 	)
-	// get main tx receipt
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeEth {
-		// get event log on eth
-		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = chainParams.StakingInfoAddress.EthAddress()
-	} else {
-		// get event log on tron
-		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateInfoAddress)
+	// get event log on tron
+	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	if err != nil || receipt == nil {
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress)
 
 	newPubKey := msg.NewSignerPubKey
 	newSigner := newPubKey.Address()
@@ -311,22 +291,12 @@ func SideHandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k K
 		receipt         *ethTypes.Receipt
 		err             error
 	)
-	// get main tx receipt
-	if hmTypes.RootChainTypeStake == hmTypes.RootChainTypeEth {
-		// get event log on eth
-		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = chainParams.StakingInfoAddress.EthAddress()
-	} else {
-		// get event log on tron
-		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
-		if err != nil || receipt == nil {
-			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
-		}
-		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateInfoAddress)
+	// get event log on tron
+	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	if err != nil || receipt == nil {
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress)
 
 	// decode validator exit
 	eventLog, err := contractCaller.DecodeValidatorExitEvent(contractAddress, receipt, msg.LogIndex)
