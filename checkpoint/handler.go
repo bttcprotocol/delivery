@@ -188,7 +188,12 @@ func handleMsgCheckpointAck(ctx sdk.Context, msg types.MsgCheckpointAck, k Keepe
 	logger := k.Logger(ctx)
 
 	// Get last checkpoint from buffer
-
+	logger.Debug("✅ Validating checkpoint ack",
+		"root", msg.RootChainType,
+		"number", msg.Number,
+		"start", msg.StartBlock,
+		"end", msg.EndBlock,
+	)
 	var headerBlock *hmTypes.Checkpoint
 	var err error
 	if msg.RootChainType != hmTypes.RootChainTypeEth {
@@ -196,28 +201,25 @@ func handleMsgCheckpointAck(ctx sdk.Context, msg types.MsgCheckpointAck, k Keepe
 	} else {
 		headerBlock, err = k.GetCheckpointFromBuffer(ctx)
 	}
-	if err != nil {
-		logger.Error("Unable to get checkpoint", "error", err)
-		return common.ErrBadAck(k.Codespace()).Result()
-	}
 
-	if msg.StartBlock != headerBlock.StartBlock {
-		logger.Error("Invalid start block", "startExpected", headerBlock.StartBlock, "startReceived", msg.StartBlock)
-		return common.ErrBadAck(k.Codespace()).Result()
-	}
-
-	// Return err if start and end matches but contract root hash doesn't match
-	if msg.StartBlock == headerBlock.StartBlock && msg.EndBlock == headerBlock.EndBlock && !msg.RootHash.Equals(headerBlock.RootHash) {
-		logger.Error("Invalid ACK",
-			"startExpected", headerBlock.StartBlock,
-			"startReceived", msg.StartBlock,
-			"endExpected", headerBlock.EndBlock,
-			"endReceived", msg.StartBlock,
-			"rootExpected", headerBlock.RootHash.String(),
-			"rootRecieved", msg.RootHash.String(),
-			"rootChain", msg.RootChainType,
-		)
-		return common.ErrBadAck(k.Codespace()).Result()
+	if err == nil {
+		if msg.StartBlock != headerBlock.StartBlock {
+			logger.Error("Invalid start block", "startExpected", headerBlock.StartBlock, "startReceived", msg.StartBlock)
+			return common.ErrBadAck(k.Codespace()).Result()
+		}
+		// Return err if start and end matches but contract root hash doesn't match
+		if msg.StartBlock == headerBlock.StartBlock && msg.EndBlock == headerBlock.EndBlock && !msg.RootHash.Equals(headerBlock.RootHash) {
+			logger.Error("Invalid ACK",
+				"startExpected", headerBlock.StartBlock,
+				"startReceived", msg.StartBlock,
+				"endExpected", headerBlock.EndBlock,
+				"endReceived", msg.StartBlock,
+				"rootExpected", headerBlock.RootHash.String(),
+				"rootRecieved", msg.RootHash.String(),
+				"rootChain", msg.RootChainType,
+			)
+			return common.ErrBadAck(k.Codespace()).Result()
+		}
 	}
 
 	ctx.EventManager().EmitEvents(sdk.Events{

@@ -222,7 +222,9 @@ func (hl *HeimdallListener) sendBlockTask(taskName string, eventBytes []byte, bl
 		},
 	}
 	signature.RetryCount = 3
-	hl.Logger.Info("Sending block level task", "taskName", taskName, "currentTime", time.Now(), "blockHeight", blockHeight)
+	signature.RetryTimeout = 3
+	hl.Logger.Info("Sending block level task",
+		"taskName", taskName, "eventBytes", eventBytes, "currentTime", time.Now(), "blockHeight", blockHeight)
 	// send task
 	_, err := hl.queueConnector.Server.SendTask(signature)
 	if err != nil {

@@ -76,7 +76,7 @@ func (ml *MaticChainListener) sendTaskWithDelay(taskName string, headerBytes []b
 		},
 	}
 	signature.RetryCount = 3
-
+	signature.RetryTimeout = 3
 	// add delay for task so that multiple validators won't send same transaction at same time
 	eta := time.Now().Add(delay)
 	signature.ETA = &eta

@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/maticnetwork/bor/core/types"
+
 	ethCrypto "github.com/maticnetwork/bor/crypto/secp256k1"
 	"google.golang.org/protobuf/proto"
 
@@ -276,12 +278,24 @@ func (c *ContractCaller) SendMainStakingSync(syncMethod string, signedData []byt
 		"data", hex.EncodeToString(signedData),
 	)
 
-	tx, err := stakingManagerInstance.ValidatorJoin(auth, signedData, sigs)
+	var tx *types.Transaction
+	switch syncMethod {
+	case "validatorJoin":
+		tx, err = stakingManagerInstance.ValidatorJoin(auth, signedData, sigs)
+	case "validatorExit":
+		tx, err = stakingManagerInstance.ValidatorExit(auth, signedData, sigs)
+	case "signerUpdate":
+		tx, err = stakingManagerInstance.SignerUpdate(auth, signedData, sigs)
+	default:
+		Logger.Error("Submitted new staking sync to stake chain failed", "method", syncMethod)
+		return
+	}
+
 	if err != nil {
 		Logger.Error("Error while submitting staking sync", "error", err)
 		return err
 	}
-	Logger.Info("Submitted new staking sync to rootchain successfully", "txHash", tx.Hash().String())
+	Logger.Info("Submitted new staking sync to stake chain successfully", "txHash", tx.Hash().String())
 	return
 }
 

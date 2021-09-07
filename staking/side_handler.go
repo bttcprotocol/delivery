@@ -354,7 +354,7 @@ func SideHandleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keepe
 		stakingManagerAddress := chainParams.TronStakingManagerAddress
 		nonce = contractCaller.GetTronStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerAddress)
 	}
-	if nonce+1 != msg.Nonce {
+	if nonce >= msg.Nonce {
 		k.Logger(ctx).Error("Nonce in message is not match with nonce in root", "msgNonce",
 			msg.Nonce, "nonceFromRoot", nonce, "root", msg.RootChain)
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)

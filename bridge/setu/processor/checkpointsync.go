@@ -159,16 +159,16 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 	}
 
 	event := new(struct {
-		Proposer         common.Address
-		ChainID          *big.Int
-		CheckpointNumber *big.Int
-		Start            *big.Int
-		End              *big.Int
+		Proposer     common.Address
+		ChainId      *big.Int
+		CheckpointId *big.Int
+		Start        *big.Int
+		End          *big.Int
 	})
 	if err := helper.UnpackLog(cp.stakingInfoAbi, event, eventName, &log); err != nil {
 		cp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
 	} else {
-		checkpointChain := hmTypes.GetRootChainName(event.ChainID.Uint64())
+		checkpointChain := hmTypes.GetRootChainName(event.ChainId.Uint64())
 
 		cp.Logger.Info(
 			"✅ Received task to send checkpoint-sync-ack to heimdall",
@@ -177,7 +177,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 			"end", event.End,
 			"root", checkpointChain,
 			"proposer", event.Proposer.Hex(),
-			"checkpointNumber", event.CheckpointNumber,
+			"checkpointNumber", event.CheckpointId,
 		)
 		// fetch checkpoint sync buffer
 		bufferedCheckpoint, err := util.GetBufferedCheckpointSync(cp.cliCtx, checkpointChain)
@@ -191,7 +191,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 		// create msg checkpoint ack message
 		msg := checkpointTypes.NewMsgCheckpointSyncAck(
 			hmTypes.HeimdallAddress(event.Proposer),
-			event.CheckpointNumber.Uint64(),
+			event.CheckpointId.Uint64(),
 			event.Start.Uint64(),
 			event.End.Uint64(),
 			checkpointChain,

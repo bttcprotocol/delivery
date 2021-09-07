@@ -437,9 +437,6 @@ func (sp *StakingProcessor) checkStakingSyncAck() {
 			continue
 		}
 		currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, res.ValidatorID.Uint64())
-		if currentNonce == 0 {
-			continue
-		}
 		if res.Nonce == currentNonce {
 			// create msg staking ack message
 			msg := stakingTypes.NewMsgStakingSyncAck(
@@ -511,7 +508,7 @@ func (sp *StakingProcessor) shouldSendStakingSync(stakingContext *StakingContext
 		return nil, false
 	}
 	currentNonce := sp.getNonceFromRootChain(stakingContext, rootChain, res.ValidatorID.Uint64())
-	if res.Nonce == currentNonce+1 {
+	if res.Nonce > currentNonce {
 		return res, true
 	}
 	return nil, false

@@ -59,13 +59,13 @@ func SideHandleMsgTopup(ctx sdk.Context, k Keeper, msg types.MsgTopup, contractC
 	chainParams := params.ChainParams
 
 	// get main tx receipt
-	receipt, err := contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
+	receipt, err := contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
 
 	// get event log for topup
-	eventLog, err := contractCaller.DecodeValidatorTopupFeesEvent(chainParams.StakingInfoAddress.EthAddress(), receipt, msg.LogIndex)
+	eventLog, err := contractCaller.DecodeValidatorTopupFeesEvent(hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress), receipt, msg.LogIndex)
 	if err != nil || eventLog == nil {
 		k.Logger(ctx).Error("Error fetching log from txhash")
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
