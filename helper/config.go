@@ -95,6 +95,7 @@ func init() {
 type Configuration struct {
 	EthRPCUrl        string `mapstructure:"eth_rpc_url"`        // RPC endpoint for main chain
 	TronRPCUrl       string `mapstructure:"tron_rpc_url"`       // RPC endpoint for tron chain
+	BscRPCUrl        string `mapstructure:"bsc_rpc_url"`        // RPC endpoint for bsc chain
 	BorRPCUrl        string `mapstructure:"bor_rpc_url"`        // RPC endpoint for bor chain
 	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
@@ -126,9 +127,13 @@ type Configuration struct {
 
 var conf Configuration
 
-// MainChainClient stores eth clie nt for Main chain Network
+// MainChainClient stores eth client for Main chain Network
 var mainChainClient *ethclient.Client
 var mainRPCClient *rpc.Client
+
+// BscChainClient stores eth client for Bsc chain Network
+var bscChainClient *ethclient.Client
+var bscRPCClient *rpc.Client
 
 var tronRPCClient *tron.Client
 
@@ -204,6 +209,11 @@ func InitHeimdallConfigWith(homeDir string, heimdallConfigFilePath string) {
 	if maticRPCClient, err = rpc.Dial(conf.BorRPCUrl); err != nil {
 		log.Fatal(err)
 	}
+
+	if bscRPCClient, err = rpc.Dial(conf.BscRPCUrl); err != nil {
+		log.Fatalln("Unable to dial via ethClient", "URL=", conf.BscRPCUrl, "chain=bsc", "Error", err)
+	}
+	bscChainClient = ethclient.NewClient(bscRPCClient)
 
 	tronRPCClient = tron.NewClient(conf.TronRPCUrl)
 
@@ -282,6 +292,16 @@ func GetMainChainRPCClient() *rpc.Client {
 // GetMainClient returns main chain's eth client
 func GetMainClient() *ethclient.Client {
 	return mainChainClient
+}
+
+// GetBscChainRPCClient returns bsc chain RPC client
+func GetBscChainRPCClient() *rpc.Client {
+	return bscRPCClient
+}
+
+// GetBscClient returns bsc chain's eth client
+func GetBscClient() *ethclient.Client {
+	return bscChainClient
 }
 
 // GetTronChainRPCClient returns main chain RPC client

@@ -15,7 +15,7 @@ import (
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/helper"
-	"github.com/maticnetwork/heimdall/types"
+	hmtypes "github.com/maticnetwork/heimdall/types"
 )
 
 // RootChainListenerContext root chain listener context
@@ -31,14 +31,18 @@ type RootChainListener struct {
 	abis []*abi.ABI
 
 	stakingInfoAbi *abi.ABI
+
+	rootChainType string
+	blockKey      string
 }
 
 const (
-	lastRootBlockKey = "rootchain-last-block" // storage key
+	lastEthBlockKey = "eth-last-block" // storage key
+	lastBscBlockKey = "bsc-last-block"
 )
 
 // NewRootChainListener - constructor func
-func NewRootChainListener() *RootChainListener {
+func NewRootChainListener(rootChain string) *RootChainListener {
 	contractCaller, err := helper.NewContractCaller()
 	if err != nil {
 		panic(err)
@@ -48,17 +52,28 @@ func NewRootChainListener() *RootChainListener {
 		&contractCaller.StateSenderABI,
 		&contractCaller.StakingInfoABI,
 	}
-	rootchainListener := &RootChainListener{
-		rootChainType:  types.RootChainTypeEth,
+	blockKey := ""
+	switch rootChain {
+	case hmtypes.RootChainTypeEth:
+		blockKey = lastEthBlockKey
+	case hmtypes.RootChainTypeBsc:
+		blockKey = lastBscBlockKey
+	default:
+		panic("wrong chain type for root chain")
+	}
+
+	rootChainListener := &RootChainListener{
 		abis:           abis,
 		stakingInfoAbi: &contractCaller.StakingInfoABI,
+		rootChainType:  rootChain,
+		blockKey:       blockKey,
 	}
-	return rootchainListener
+	return rootChainListener
 }
 
 // Start starts new block subscription
 func (rl *RootChainListener) Start() error {
-	rl.Logger.Info("Starting")
+	rl.Logger.Info("Starting", "root", rl.rootChainType)
 
 	// create cancellable context
 	ctx, cancelSubscription := context.WithCancel(context.Background())
@@ -71,17 +86,18 @@ func (rl *RootChainListener) Start() error {
 	// set start listen block
 	startListenBlock := rl.contractConnector.GetStartListenBlock(rl.rootChainType)
 	if startListenBlock != 0 {
-		_ = rl.setStartListenBLock(startListenBlock, lastRootBlockKey)
+		_ = rl.setStartListenBLock(startListenBlock, rl.blockKey)
 	}
 
 	// start header process
 	go rl.StartHeaderProcess(headerCtx)
 
 	// subscribe to new head
-	subscription, err := rl.contractConnector.MainChainClient.SubscribeNewHead(ctx, rl.HeaderChannel)
+	subscription, err := rl.chainClient.SubscribeNewHead(ctx, rl.HeaderChannel)
 	if err != nil {
 		// start go routine to poll for new header using client object
-		rl.Logger.Info("Start polling for rootchain header blocks", "pollInterval", helper.GetConfig().SyncerPollInterval)
+		rl.Logger.Info("Start polling for root chain header blocks",
+			"root", rl.rootChainType, "pollInterval", helper.GetConfig().SyncerPollInterval)
 		go rl.StartPolling(ctx, helper.GetConfig().SyncerPollInterval)
 	} else {
 		// start go routine to listen new header using subscription
@@ -89,14 +105,14 @@ func (rl *RootChainListener) Start() error {
 	}
 
 	// subscribed to new head
-	rl.Logger.Info("Subscribed to new head")
+	rl.Logger.Info("Subscribed to new head", "root", rl.rootChainType)
 
 	return nil
 }
 
 // ProcessHeader - process headerblock from rootchain
 func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
-	rl.Logger.Debug("New block detected", "blockNumber", newHeader.Number)
+	rl.Logger.Debug("New block detected", "root", rl.rootChainType, "blockNumber", newHeader.Number)
 
 	// fetch context
 	rootchainContext, err := rl.getRootChainContext()
@@ -104,13 +120,17 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 		return
 	}
 	requiredConfirmations := rootchainContext.ChainmanagerParams.MainchainTxConfirmations
+	if rl.rootChainType == hmtypes.RootChainTypeBsc {
+		requiredConfirmations = rootchainContext.ChainmanagerParams.BscChainTxConfirmations
+	}
 	latestNumber := newHeader.Number
 
 	// confirmation
 	confirmationBlocks := big.NewInt(0).SetUint64(requiredConfirmations)
 
 	if latestNumber.Cmp(confirmationBlocks) <= 0 {
-		rl.Logger.Error("Block number less than Confirmations required", "blockNumber", latestNumber.Uint64, "confirmationsRequired", confirmationBlocks.Uint64)
+		rl.Logger.Error("Block number less than Confirmations required",
+			"root", rl.rootChainType, "blockNumber", latestNumber.Uint64, "confirmationsRequired", confirmationBlocks.Uint64)
 		return
 	}
 	latestNumber = latestNumber.Sub(latestNumber, confirmationBlocks)
@@ -119,14 +139,14 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	fromBlock := latestNumber
 
 	// get last block from storage
-	hasLastBlock, _ := rl.storageClient.Has([]byte(lastRootBlockKey), nil)
+	hasLastBlock, _ := rl.storageClient.Has([]byte(rl.blockKey), nil)
 	if hasLastBlock {
-		lastBlockBytes, err := rl.storageClient.Get([]byte(lastRootBlockKey), nil)
+		lastBlockBytes, err := rl.storageClient.Get([]byte(rl.blockKey), nil)
 		if err != nil {
-			rl.Logger.Info("Error while fetching last block bytes from storage", "error", err)
+			rl.Logger.Info("Error while fetching last block bytes from storage", "root", rl.rootChainType, "error", err)
 			return
 		}
-		rl.Logger.Debug("Got last block from bridge storage", "lastBlock", string(lastBlockBytes))
+		rl.Logger.Debug("Got last block from bridge storage", "root", rl.rootChainType, "lastBlock", string(lastBlockBytes))
 		if result, err := strconv.ParseUint(string(lastBlockBytes), 10, 64); err == nil {
 			if result >= newHeader.Number.Uint64() {
 				return
@@ -150,19 +170,28 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 }
 
 func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChainListenerContext, fromBlock *big.Int, toBlock *big.Int) {
-	rl.Logger.Info("Query rootchain event logs", "fromBlock", fromBlock, "toBlock", toBlock)
+	rl.Logger.Info("Query rootchain event logs", "root", rl.rootChainType, "fromBlock", fromBlock, "toBlock", toBlock)
 
 	// get chain params
 	chainParams := rootchainContext.ChainmanagerParams.ChainParams
 
 	// draft a query
-	query := ethereum.FilterQuery{FromBlock: fromBlock, ToBlock: toBlock, Addresses: []ethCommon.Address{
+
+	queryAddresses := []ethCommon.Address{
 		chainParams.RootChainAddress.EthAddress(),
 		chainParams.StakingInfoAddress.EthAddress(),
 		chainParams.StateSenderAddress.EthAddress(),
-	}}
-	// get logs from rootchain by filter
-	logs, err := rl.contractConnector.MainChainClient.FilterLogs(context.Background(), query)
+	}
+	if rl.rootChainType == hmtypes.RootChainTypeBsc {
+		queryAddresses = []ethCommon.Address{
+			chainParams.BscChainAddress.EthAddress(),
+			chainParams.BscStakingInfoAddress.EthAddress(),
+			chainParams.BscStateSenderAddress.EthAddress(),
+		}
+	}
+	query := ethereum.FilterQuery{FromBlock: fromBlock, ToBlock: toBlock, Addresses: queryAddresses}
+	// get logs from root chain by filter
+	logs, err := rl.chainClient.FilterLogs(context.Background(), query)
 	if err != nil {
 		rl.Logger.Error("Error while filtering logs", "error", err)
 		return
@@ -171,7 +200,11 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 	}
 
 	// set last block to storage
-	if err := rl.storageClient.Put([]byte(lastRootBlockKey), []byte(toBlock.String()), nil); err != nil {
+	key := lastEthBlockKey
+	if rl.rootChainType == hmtypes.RootChainTypeBsc {
+		key = lastBscBlockKey
+	}
+	if err := rl.storageClient.Put([]byte(key), []byte(toBlock.String()), nil); err != nil {
 		rl.Logger.Error("rl.storageClient.Put", "Error", err)
 	}
 
@@ -182,7 +215,7 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 			selectedEvent := helper.EventByID(abiObject, topic)
 			logBytes, _ := json.Marshal(vLog)
 			if selectedEvent != nil {
-				rl.Logger.Debug("ReceivedEvent", "eventname", selectedEvent.Name)
+				rl.Logger.Debug("ReceivedEvent", "eventname", selectedEvent.Name, "root", rl.rootChainType)
 				switch selectedEvent.Name {
 				case "NewHeaderBlock":
 					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
@@ -227,7 +260,7 @@ func (rl *RootChainListener) sendTaskWithDelay(taskName string, eventName string
 	// add delay for task so that multiple validators won't send same transaction at same time
 	eta := time.Now().Add(delay)
 	signature.ETA = &eta
-	rl.Logger.Info("Sending task", "taskName", taskName, "currentTime", time.Now(), "delayTime", eta)
+	rl.Logger.Info("Sending task", "root", rl.rootChainType, "taskName", taskName, "currentTime", time.Now(), "delayTime", eta)
 	_, err := rl.queueConnector.Server.SendTask(signature)
 	if err != nil {
 		rl.Logger.Error("Error sending task", "taskName", taskName, "error", err)

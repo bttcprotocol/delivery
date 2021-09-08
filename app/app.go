@@ -146,7 +146,7 @@ type ModuleCommunicator struct {
 
 // GetACKCount returns ack count
 func (d ModuleCommunicator) GetACKCount(ctx sdk.Context) uint64 {
-	return d.App.CheckpointKeeper.GetACKCount(ctx)
+	return d.App.CheckpointKeeper.GetACKCount(ctx, types.RootChainTypeStake)
 }
 
 // IsCurrentValidatorByAddress check if validator is current validator
@@ -580,7 +580,7 @@ func (app *HeimdallApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) ab
 	// --- Start update to new validators
 	currentValidatorSet := app.StakingKeeper.GetValidatorSet(ctx)
 	allValidators := app.StakingKeeper.GetAllValidators(ctx)
-	ackCount := app.CheckpointKeeper.GetACKCount(ctx)
+	ackCount := app.CheckpointKeeper.GetACKCount(ctx, types.RootChainTypeStake)
 
 	// get validator updates
 	setUpdates := helper.GetUpdatedValidators(

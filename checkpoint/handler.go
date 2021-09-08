@@ -44,46 +44,26 @@ func handleMsgCheckpoint(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper, con
 	//
 	// Check checkpoint buffer
 	//
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		checkpointBuffer, err := k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
-		if err == nil {
-			checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
-			if checkpointBuffer.TimeStamp == 0 || ((timeStamp > checkpointBuffer.TimeStamp) && timeStamp-checkpointBuffer.TimeStamp >= checkpointBufferTime) {
-				logger.Debug("Checkpoint has been timed out. Flushing buffer.", "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", checkpointBuffer.TimeStamp)
-				k.FlushOtherCheckpointBuffer(ctx, msg.RootChainType)
-			} else {
-				expiryTime := checkpointBuffer.TimeStamp + checkpointBufferTime
-				logger.Error("Checkpoint already exits in buffer", "root", msg.RootChainType, "Checkpoint", checkpointBuffer.String(), "Expires", expiryTime)
-				return common.ErrNoACK(k.Codespace(), expiryTime).Result()
-			}
-		}
-	} else {
-		checkpointBuffer, err := k.GetCheckpointFromBuffer(ctx)
-		if err == nil {
-			checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
 
-			if checkpointBuffer.TimeStamp == 0 || ((timeStamp > checkpointBuffer.TimeStamp) && timeStamp-checkpointBuffer.TimeStamp >= checkpointBufferTime) {
-				logger.Debug("Checkpoint has been timed out. Flushing buffer.", "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", checkpointBuffer.TimeStamp)
-				k.FlushCheckpointBuffer(ctx)
-			} else {
-				expiryTime := checkpointBuffer.TimeStamp + checkpointBufferTime
-				logger.Error("Checkpoint already exits in buffer", "Checkpoint", checkpointBuffer.String(), "Expires", expiryTime)
-				return common.ErrNoACK(k.Codespace(), expiryTime).Result()
-			}
-		}
+	checkpointBuffer, err := k.GetCheckpointFromBuffer(ctx, msg.RootChainType)
+	if err == nil {
+		checkpointBufferTime := uint64(params.CheckpointBufferTime.Seconds())
 
+		if checkpointBuffer.TimeStamp == 0 || ((timeStamp > checkpointBuffer.TimeStamp) && timeStamp-checkpointBuffer.TimeStamp >= checkpointBufferTime) {
+			logger.Debug("Checkpoint has been timed out. Flushing buffer.", "root", msg.RootChainType, "checkpointTimestamp", timeStamp, "prevCheckpointTimestamp", checkpointBuffer.TimeStamp)
+			k.FlushCheckpointBuffer(ctx, msg.RootChainType)
+		} else {
+			expiryTime := checkpointBuffer.TimeStamp + checkpointBufferTime
+			logger.Error("Checkpoint already exits in buffer", "root", msg.RootChainType, "Checkpoint", checkpointBuffer.String(), "Expires", expiryTime)
+			return common.ErrNoACK(k.Codespace(), expiryTime).Result()
+		}
 	}
 
 	//
 	// Validate last checkpoint
 	//
-	var lastCheckpoint hmTypes.Checkpoint
-	var err error
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		lastCheckpoint, err = k.GetLastOtherCheckpoint(ctx, msg.RootChainType)
-	} else {
-		lastCheckpoint, err = k.GetLastCheckpoint(ctx)
-	}
+	lastCheckpoint, err := k.GetLastCheckpoint(ctx, msg.RootChainType)
+
 	// fetch last checkpoint from store
 	if err == nil {
 		// make sure new checkpoint is after tip
@@ -159,7 +139,7 @@ func handleMsgCheckpoint(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper, con
 	//
 	// Validate epoch
 	//
-	epoch := k.GetOtherACKCount(ctx, hmTypes.RootChainTypeStake) + 1
+	epoch := k.GetACKCount(ctx, hmTypes.RootChainTypeStake) + 1
 	if epoch != msg.Epoch {
 		logger.Error("Current epoch does not match msg", "msg.epoch", msg.Epoch, "current", epoch)
 		return common.ErrInvalidMsg(k.Codespace(), "No proposer in stored validator set").Result()
@@ -194,13 +174,7 @@ func handleMsgCheckpointAck(ctx sdk.Context, msg types.MsgCheckpointAck, k Keepe
 		"start", msg.StartBlock,
 		"end", msg.EndBlock,
 	)
-	var headerBlock *hmTypes.Checkpoint
-	var err error
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		headerBlock, err = k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
-	} else {
-		headerBlock, err = k.GetCheckpointFromBuffer(ctx)
-	}
+	headerBlock, err := k.GetCheckpointFromBuffer(ctx, msg.RootChainType)
 
 	if err == nil {
 		if msg.StartBlock != headerBlock.StartBlock {
@@ -247,7 +221,7 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 
 	// Fetch last checkpoint from store
 	// TODO figure out how to handle this error
-	lastCheckpoint, _ := k.GetLastCheckpoint(ctx)
+	lastCheckpoint, _ := k.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	lastCheckpointTime := time.Unix(int64(lastCheckpoint.TimeStamp), 0)
 
 	// If last checkpoint is not present or last checkpoint happens before checkpoint buffer time -- thrown an error

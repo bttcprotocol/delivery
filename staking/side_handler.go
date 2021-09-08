@@ -92,7 +92,7 @@ func SideHandleMsgValidatorJoin(ctx sdk.Context, msg types.MsgValidatorJoin, k K
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
-	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress)
+	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 	// decode validator join event
 	eventLog, err := contractCaller.DecodeValidatorJoinEvent(contractAddress, receipt, msg.LogIndex)
 	if err != nil || eventLog == nil {
@@ -231,7 +231,7 @@ func SideHandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Kee
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
-	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress)
+	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 
 	newPubKey := msg.NewSignerPubKey
 	newSigner := newPubKey.Address()
@@ -296,7 +296,7 @@ func SideHandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k K
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
-	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress)
+	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 
 	// decode validator exit
 	eventLog, err := contractCaller.DecodeValidatorExitEvent(contractAddress, receipt, msg.LogIndex)
@@ -348,7 +348,11 @@ func SideHandleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keepe
 	switch msg.RootChain {
 	case hmTypes.RootChainTypeEth:
 		stakingManagerAddress := chainParams.StakingManagerAddress.EthAddress()
-		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress)
+		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
+		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
+	case hmTypes.RootChainTypeBsc:
+		stakingManagerAddress := chainParams.BscStakingManagerAddress.EthAddress()
+		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
 		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:
 		stakingManagerAddress := chainParams.TronStakingManagerAddress
@@ -382,7 +386,11 @@ func SideHandleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k
 	switch msg.RootChain {
 	case hmTypes.RootChainTypeEth:
 		stakingManagerAddress := chainParams.StakingManagerAddress.EthAddress()
-		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress)
+		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
+		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
+	case hmTypes.RootChainTypeBsc:
+		stakingManagerAddress := chainParams.BscStakingManagerAddress.EthAddress()
+		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
 		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:
 		stakingManagerAddress := chainParams.TronStakingManagerAddress

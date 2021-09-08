@@ -39,14 +39,13 @@ type IContractCaller interface {
 	GetLastChildBlock(rootChainInstance *rootchain.Rootchain) (uint64, error)
 	CurrentHeaderBlock(rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (uint64, error)
 	GetBalance(address common.Address) (*big.Int, error)
-	SendCheckpoint(sigedData []byte, sigs [][3]*big.Int, rootchainAddress common.Address, rootChainInstance *rootchain.Rootchain) (err error)
+	SendCheckpoint(sigedData []byte, sigs [][3]*big.Int, rootchainAddress common.Address, rootChainInstance *rootchain.Rootchain, rootChain string) (err error)
 	SendTronCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress string) error
 	SendTick(sigedData []byte, sigs []byte, slashManagerAddress common.Address, slashManagerInstance *slashmanager.Slashmanager) (err error)
 	GetCheckpointSign(txHash common.Hash) ([]byte, []byte, []byte, error)
-	GetMainChainBlock(*big.Int) (*ethTypes.Header, error)
+	GetMainChainBlock(*big.Int, string) (*ethTypes.Header, error)
 	GetMaticChainBlock(*big.Int) (*ethTypes.Header, error)
-	IsTxConfirmed(common.Hash, uint64) bool
-	GetConfirmedTxReceipt(common.Hash, uint64) (*ethTypes.Receipt, error)
+	GetConfirmedTxReceipt(common.Hash, uint64, string) (*ethTypes.Receipt, error)
 	GetBlockNumberFromTxHash(common.Hash) (*big.Int, error)
 
 	// decode header event
@@ -64,7 +63,7 @@ type IContractCaller interface {
 	DecodeSlashedEvent(common.Address, *ethTypes.Receipt, uint64) (*stakinginfo.StakinginfoSlashed, error)
 	DecodeUnJailedEvent(common.Address, *ethTypes.Receipt, uint64) (*stakinginfo.StakinginfoUnJailed, error)
 
-	GetMainTxReceipt(common.Hash) (*ethTypes.Receipt, error)
+	GetMainTxReceipt(common.Hash, string) (*ethTypes.Receipt, error)
 	GetMaticTxReceipt(common.Hash) (*ethTypes.Receipt, error)
 	ApproveTokens(*big.Int, common.Address, common.Address, *erc20.Erc20) error
 	StakeFor(common.Address, *big.Int, *big.Int, bool, common.Address, *stakemanager.Stakemanager) error
@@ -82,10 +81,10 @@ type IContractCaller interface {
 	SendMainStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress common.Address, stakingManagerInstance *stakemanager.Stakemanager) (err error)
 	SendTronStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress string) (err error)
 
-	GetRootChainInstance(rootchainAddress common.Address) (*rootchain.Rootchain, error)
-	GetStakingInfoInstance(stakingInfoAddress common.Address) (*stakinginfo.Stakinginfo, error)
+	GetRootChainInstance(rootchainAddress common.Address, rootChain string) (*rootchain.Rootchain, error)
+	GetStakingInfoInstance(stakingInfoAddress common.Address, rootChain string) (*stakinginfo.Stakinginfo, error)
 	GetValidatorSetInstance(validatorSetAddress common.Address) (*validatorset.Validatorset, error)
-	GetStakeManagerInstance(stakingManagerAddress common.Address) (*stakemanager.Stakemanager, error)
+	GetStakeManagerInstance(stakingManagerAddress common.Address, rootChain string) (*stakemanager.Stakemanager, error)
 	GetSlashManagerInstance(slashManagerAddress common.Address) (*slashmanager.Slashmanager, error)
 	GetStateSenderInstance(stateSenderAddress common.Address) (*statesender.Statesender, error)
 	GetStateReceiverInstance(stateReceiverAddress common.Address) (*statereceiver.Statereceiver, error)
@@ -108,6 +107,8 @@ type ContractCaller struct {
 	TronChainRPC     *tron.Client
 	MaticChainClient *ethclient.Client
 	MaticChainRPC    *rpc.Client
+	BscChainClient   *ethclient.Client
+	BscChainRPC      *rpc.Client
 
 	RootChainABI     abi.ABI
 	StakingInfoABI   abi.ABI
@@ -137,8 +138,10 @@ type rpcTransaction struct {
 func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainClient = GetMainClient()
 	contractCallerObj.MaticChainClient = GetMaticClient()
+	contractCallerObj.BscChainClient = GetBscClient()
 	contractCallerObj.TronChainRPC = GetTronChainRPCClient()
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
+	contractCallerObj.BscChainRPC = GetBscChainRPCClient()
 	contractCallerObj.MaticChainRPC = GetMaticRPCClient()
 	contractCallerObj.ReceiptCache, _ = NewLru(1000)
 
@@ -184,10 +187,17 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 }
 
 // GetRootChainInstance returns RootChain contract instance for selected base chain
-func (c *ContractCaller) GetRootChainInstance(rootchainAddress common.Address) (*rootchain.Rootchain, error) {
+func (c *ContractCaller) GetRootChainInstance(rootchainAddress common.Address, rootChain string) (*rootchain.Rootchain, error) {
 	contractInstance, ok := c.ContractInstanceCache[rootchainAddress]
 	if !ok {
-		ci, err := rootchain.NewRootchain(rootchainAddress, mainChainClient)
+		var client *ethclient.Client
+		switch rootChain {
+		case hmTypes.RootChainTypeEth:
+			client = mainChainClient
+		case hmTypes.RootChainTypeBsc:
+			client = bscChainClient
+		}
+		ci, err := rootchain.NewRootchain(rootchainAddress, client)
 		c.ContractInstanceCache[rootchainAddress] = ci
 		return ci, err
 	}
@@ -195,10 +205,17 @@ func (c *ContractCaller) GetRootChainInstance(rootchainAddress common.Address) (
 }
 
 // GetStakingInfoInstance returns stakinginfo contract instance for selected base chain
-func (c *ContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Address) (*stakinginfo.Stakinginfo, error) {
+func (c *ContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Address, rootChain string) (*stakinginfo.Stakinginfo, error) {
 	contractInstance, ok := c.ContractInstanceCache[stakingInfoAddress]
 	if !ok {
-		ci, err := stakinginfo.NewStakinginfo(stakingInfoAddress, mainChainClient)
+		var client *ethclient.Client
+		switch rootChain {
+		case hmTypes.RootChainTypeEth:
+			client = mainChainClient
+		case hmTypes.RootChainTypeBsc:
+			client = bscChainClient
+		}
+		ci, err := stakinginfo.NewStakinginfo(stakingInfoAddress, client)
 		c.ContractInstanceCache[stakingInfoAddress] = ci
 		return ci, err
 	}
@@ -218,10 +235,17 @@ func (c *ContractCaller) GetValidatorSetInstance(validatorSetAddress common.Addr
 }
 
 // GetStakeManagerInstance returns stakinginfo contract instance for selected base chain
-func (c *ContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Address) (*stakemanager.Stakemanager, error) {
+func (c *ContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Address, rootChain string) (*stakemanager.Stakemanager, error) {
 	contractInstance, ok := c.ContractInstanceCache[stakingManagerAddress]
 	if !ok {
-		ci, err := stakemanager.NewStakemanager(stakingManagerAddress, mainChainClient)
+		var client *ethclient.Client
+		switch rootChain {
+		case hmTypes.RootChainTypeEth:
+			client = mainChainClient
+		case hmTypes.RootChainTypeBsc:
+			client = bscChainClient
+		}
+		ci, err := stakemanager.NewStakemanager(stakingManagerAddress, client)
 		c.ContractInstanceCache[stakingManagerAddress] = ci
 		return ci, err
 	}
@@ -383,8 +407,16 @@ func (c *ContractCaller) GetValidatorInfo(valID types.ValidatorID, stakingInfoIn
 }
 
 // GetMainChainBlock returns main chain block header
-func (c *ContractCaller) GetMainChainBlock(blockNum *big.Int) (header *ethTypes.Header, err error) {
-	latestBlock, err := c.MainChainClient.HeaderByNumber(context.Background(), blockNum)
+func (c *ContractCaller) GetMainChainBlock(blockNum *big.Int, rootChain string) (header *ethTypes.Header, err error) {
+	var latestBlock *ethTypes.Header
+	switch rootChain {
+	case hmTypes.RootChainTypeEth:
+		latestBlock, err = c.MainChainClient.HeaderByNumber(context.Background(), blockNum)
+	case hmTypes.RootChainTypeBsc:
+		latestBlock, err = c.BscChainClient.HeaderByNumber(context.Background(), blockNum)
+	default:
+		return nil, errors.New("wrong chain type")
+	}
 	if err != nil {
 		Logger.Error("Unable to connect to main chain", "Error", err)
 		return
@@ -421,19 +453,8 @@ func (c *ContractCaller) GetBlockNumberFromTxHash(tx common.Hash) (*big.Int, err
 	return blkNum, nil
 }
 
-// IsTxConfirmed is tx confirmed
-func (c *ContractCaller) IsTxConfirmed(tx common.Hash, requiredConfirmations uint64) bool {
-	// get main tx receipt
-	receipt, err := c.GetConfirmedTxReceipt(tx, requiredConfirmations)
-	if receipt == nil || err != nil {
-		return false
-	}
-
-	return true
-}
-
 // GetConfirmedTxReceipt returns confirmed tx receipt
-func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmations uint64) (*ethTypes.Receipt, error) {
+func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmations uint64, rootChain string) (*ethTypes.Receipt, error) {
 
 	var receipt *ethTypes.Receipt = nil
 	receiptCache, ok := c.ReceiptCache.Get(tx.String())
@@ -442,7 +463,7 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 		var err error
 
 		// get main tx receipt
-		receipt, err = c.GetMainTxReceipt(tx)
+		receipt, err = c.GetMainTxReceipt(tx, rootChain)
 		if err != nil {
 			Logger.Error("Error while fetching mainchain receipt", "error", err, "txHash", tx.Hex())
 			return nil, err
@@ -453,15 +474,15 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 		receipt, _ = receiptCache.(*ethTypes.Receipt)
 	}
 
-	Logger.Debug("Tx included in block", "block", receipt.BlockNumber.Uint64(), "tx", tx)
+	Logger.Debug("Tx included in block", "root", rootChain, "block", receipt.BlockNumber.Uint64(), "tx", tx)
 
 	// get main chain block
-	latestBlk, err := c.GetMainChainBlock(nil)
+	latestBlk, err := c.GetMainChainBlock(nil, rootChain)
 	if err != nil {
 		Logger.Error("error getting latest block from main chain", "Error", err)
 		return nil, err
 	}
-	Logger.Debug("Latest block on main chain obtained", "Block", latestBlk.Number.Uint64())
+	Logger.Debug("Latest block on main chain obtained", "root", rootChain, "Block", latestBlk.Number.Uint64())
 
 	diff := latestBlk.Number.Uint64() - receipt.BlockNumber.Uint64()
 	if diff < requiredConfirmations {
@@ -751,8 +772,14 @@ func (c *ContractCaller) CheckIfBlocksExist(end uint64) bool {
 //
 
 // GetMainTxReceipt returns main tx receipt
-func (c *ContractCaller) GetMainTxReceipt(txHash common.Hash) (*ethTypes.Receipt, error) {
-	return c.getTxReceipt(c.MainChainClient, txHash)
+func (c *ContractCaller) GetMainTxReceipt(txHash common.Hash, rootChain string) (*ethTypes.Receipt, error) {
+	switch rootChain {
+	case hmTypes.RootChainTypeEth:
+		return c.getTxReceipt(c.MainChainClient, txHash)
+	case hmTypes.RootChainTypeBsc:
+		return c.getTxReceipt(c.BscChainClient, txHash)
+	}
+	return nil, errors.New("wrong chain type")
 }
 
 // GetMaticTxReceipt returns matic tx receipt

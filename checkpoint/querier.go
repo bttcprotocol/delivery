@@ -58,11 +58,10 @@ func handleQueryAckCount(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) 
 	}
 
 	var res uint64
-	if params.RootChain != hmTypes.RootChainTypeEth && params.RootChain != "" {
-		res = keeper.GetOtherACKCount(ctx, params.RootChain)
-	} else {
-		res = keeper.GetACKCount(ctx)
+	if params.RootChain == "" {
+		params.RootChain = hmTypes.RootChainTypeStake
 	}
+	res = keeper.GetACKCount(ctx, params.RootChain)
 
 	bz, err := json.Marshal(res)
 	if err != nil {
@@ -94,11 +93,10 @@ func handleQueryCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Keeper
 
 	var res hmTypes.Checkpoint
 	var err error
-	if params.RootChain != hmTypes.RootChainTypeEth && params.RootChain != "" {
-		res, err = keeper.GetOtherCheckpointByNumber(ctx, params.Number, params.RootChain)
-	} else {
-		res, err = keeper.GetCheckpointByNumber(ctx, params.Number)
+	if params.RootChain == "" {
+		params.RootChain = hmTypes.RootChainTypeStake
 	}
+	res, err = keeper.GetCheckpointByNumber(ctx, params.Number, params.RootChain)
 
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(
@@ -118,13 +116,7 @@ func handleQueryCheckpointBuffer(ctx sdk.Context, req abci.RequestQuery, keeper 
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
-	var res *hmTypes.Checkpoint
-	var err error
-	if params.RootChain != hmTypes.RootChainTypeEth && params.RootChain != "" {
-		res, err = keeper.GetOtherCheckpointFromBuffer(ctx, params.RootChain)
-	} else {
-		res, err = keeper.GetCheckpointFromBuffer(ctx)
-	}
+	res, err := keeper.GetCheckpointFromBuffer(ctx, params.RootChain)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not fetch checkpoint buffer", err.Error()))
 	}
@@ -201,14 +193,14 @@ func handleQueryNextCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 	// get validator set
 	validatorSet := sk.GetValidatorSet(ctx)
 	proposer := validatorSet.GetProposer()
-	ackCount := keeper.GetACKCount(ctx)
+	ackCount := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)
 	params := keeper.GetParams(ctx)
 
 	var start uint64
 
 	if ackCount != 0 {
 		checkpointNumber := ackCount
-		lastCheckpoint, err := keeper.GetCheckpointByNumber(ctx, checkpointNumber)
+		lastCheckpoint, err := keeper.GetCheckpointByNumber(ctx, checkpointNumber, hmTypes.RootChainTypeStake)
 		if err != nil {
 			return nil, sdk.ErrInternal(sdk.AppendMsgToErr(fmt.Sprintf("could not fetch checkpoint by index %v", checkpointNumber), err.Error()))
 		}
@@ -228,7 +220,7 @@ func handleQueryNextCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(fmt.Sprintf("could not get generate account root hash. Error:%v", err), err.Error()))
 	}
 
-	epoch := keeper.GetACKCount(ctx) + 1
+	epoch := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake) + 1
 
 	checkpointMsg := types.NewMsgCheckpointBlock(
 		proposer.Signer,
@@ -238,6 +230,7 @@ func handleQueryNextCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		hmTypes.BytesToHeimdallHash(accRootHash),
 		queryParams.BorChainID,
 		epoch,
+		hmTypes.RootChainTypeStake,
 	)
 	bz, err := json.Marshal(checkpointMsg)
 	if err != nil {

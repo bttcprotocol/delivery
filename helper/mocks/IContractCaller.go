@@ -432,13 +432,13 @@ func (_m *IContractCaller) GetCheckpointSign(txHash common.Hash) ([]byte, []byte
 	return r0, r1, r2, r3
 }
 
-// GetConfirmedTxReceipt provides a mock function with given fields: _a0, _a1
-func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64) (*types.Receipt, error) {
-	ret := _m.Called(_a0, _a1)
+// GetConfirmedTxReceipt provides a mock function with given fields: _a0, _a1, _a2
+func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64, _a2 string) (*types.Receipt, error) {
+	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *types.Receipt
-	if rf, ok := ret.Get(0).(func(common.Hash, uint64) *types.Receipt); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(common.Hash, uint64, string) *types.Receipt); ok {
+		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.Receipt)
@@ -446,8 +446,8 @@ func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64) (*
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(common.Hash, uint64) error); ok {
-		r1 = rf(_a0, _a1)
+	if rf, ok := ret.Get(1).(func(common.Hash, uint64, string) error); ok {
+		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -529,13 +529,13 @@ func (_m *IContractCaller) GetLastChildBlock(rootChainInstance *rootchain.Rootch
 	return r0, r1
 }
 
-// GetMainChainBlock provides a mock function with given fields: _a0
-func (_m *IContractCaller) GetMainChainBlock(_a0 *big.Int) (*types.Header, error) {
-	ret := _m.Called(_a0)
+// GetMainChainBlock provides a mock function with given fields: _a0, _a1
+func (_m *IContractCaller) GetMainChainBlock(_a0 *big.Int, _a1 string) (*types.Header, error) {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 *types.Header
-	if rf, ok := ret.Get(0).(func(*big.Int) *types.Header); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(*big.Int, string) *types.Header); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.Header)
@@ -543,8 +543,8 @@ func (_m *IContractCaller) GetMainChainBlock(_a0 *big.Int) (*types.Header, error
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*big.Int) error); ok {
-		r1 = rf(_a0)
+	if rf, ok := ret.Get(1).(func(*big.Int, string) error); ok {
+		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -566,13 +566,13 @@ func (_m *IContractCaller) GetMainStakingSyncNonce(validatorID uint64, stakingMa
 	return r0
 }
 
-// GetMainTxReceipt provides a mock function with given fields: _a0
-func (_m *IContractCaller) GetMainTxReceipt(_a0 common.Hash) (*types.Receipt, error) {
-	ret := _m.Called(_a0)
+// GetMainTxReceipt provides a mock function with given fields: _a0, _a1
+func (_m *IContractCaller) GetMainTxReceipt(_a0 common.Hash, _a1 string) (*types.Receipt, error) {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 *types.Receipt
-	if rf, ok := ret.Get(0).(func(common.Hash) *types.Receipt); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(common.Hash, string) *types.Receipt); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.Receipt)
@@ -580,8 +580,8 @@ func (_m *IContractCaller) GetMainTxReceipt(_a0 common.Hash) (*types.Receipt, er
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(common.Hash) error); ok {
-		r1 = rf(_a0)
+	if rf, ok := ret.Get(1).(func(common.Hash, string) error); ok {
+		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -658,13 +658,13 @@ func (_m *IContractCaller) GetMaticTxReceipt(_a0 common.Hash) (*types.Receipt, e
 	return r0, r1
 }
 
-// GetRootChainInstance provides a mock function with given fields: rootchainAddress
-func (_m *IContractCaller) GetRootChainInstance(rootchainAddress common.Address) (*rootchain.Rootchain, error) {
-	ret := _m.Called(rootchainAddress)
+// GetRootChainInstance provides a mock function with given fields: rootchainAddress, rootChain
+func (_m *IContractCaller) GetRootChainInstance(rootchainAddress common.Address, rootChain string) (*rootchain.Rootchain, error) {
+	ret := _m.Called(rootchainAddress, rootChain)
 
 	var r0 *rootchain.Rootchain
-	if rf, ok := ret.Get(0).(func(common.Address) *rootchain.Rootchain); ok {
-		r0 = rf(rootchainAddress)
+	if rf, ok := ret.Get(0).(func(common.Address, string) *rootchain.Rootchain); ok {
+		r0 = rf(rootchainAddress, rootChain)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*rootchain.Rootchain)
@@ -672,8 +672,8 @@ func (_m *IContractCaller) GetRootChainInstance(rootchainAddress common.Address)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(common.Address) error); ok {
-		r1 = rf(rootchainAddress)
+	if rf, ok := ret.Get(1).(func(common.Address, string) error); ok {
+		r1 = rf(rootchainAddress, rootChain)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -768,13 +768,13 @@ func (_m *IContractCaller) GetSpanDetails(id *big.Int, _a1 *validatorset.Validat
 	return r0, r1, r2, r3
 }
 
-// GetStakeManagerInstance provides a mock function with given fields: stakingManagerAddress
-func (_m *IContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Address) (*stakemanager.Stakemanager, error) {
-	ret := _m.Called(stakingManagerAddress)
+// GetStakeManagerInstance provides a mock function with given fields: stakingManagerAddress, rootChain
+func (_m *IContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Address, rootChain string) (*stakemanager.Stakemanager, error) {
+	ret := _m.Called(stakingManagerAddress, rootChain)
 
 	var r0 *stakemanager.Stakemanager
-	if rf, ok := ret.Get(0).(func(common.Address) *stakemanager.Stakemanager); ok {
-		r0 = rf(stakingManagerAddress)
+	if rf, ok := ret.Get(0).(func(common.Address, string) *stakemanager.Stakemanager); ok {
+		r0 = rf(stakingManagerAddress, rootChain)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*stakemanager.Stakemanager)
@@ -782,8 +782,8 @@ func (_m *IContractCaller) GetStakeManagerInstance(stakingManagerAddress common.
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(common.Address) error); ok {
-		r1 = rf(stakingManagerAddress)
+	if rf, ok := ret.Get(1).(func(common.Address, string) error); ok {
+		r1 = rf(stakingManagerAddress, rootChain)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -791,13 +791,13 @@ func (_m *IContractCaller) GetStakeManagerInstance(stakingManagerAddress common.
 	return r0, r1
 }
 
-// GetStakingInfoInstance provides a mock function with given fields: stakingInfoAddress
-func (_m *IContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Address) (*stakinginfo.Stakinginfo, error) {
-	ret := _m.Called(stakingInfoAddress)
+// GetStakingInfoInstance provides a mock function with given fields: stakingInfoAddress, rootChain
+func (_m *IContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Address, rootChain string) (*stakinginfo.Stakinginfo, error) {
+	ret := _m.Called(stakingInfoAddress, rootChain)
 
 	var r0 *stakinginfo.Stakinginfo
-	if rf, ok := ret.Get(0).(func(common.Address) *stakinginfo.Stakinginfo); ok {
-		r0 = rf(stakingInfoAddress)
+	if rf, ok := ret.Get(0).(func(common.Address, string) *stakinginfo.Stakinginfo); ok {
+		r0 = rf(stakingInfoAddress, rootChain)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*stakinginfo.Stakinginfo)
@@ -805,8 +805,8 @@ func (_m *IContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Addr
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(common.Address) error); ok {
-		r1 = rf(stakingInfoAddress)
+	if rf, ok := ret.Get(1).(func(common.Address, string) error); ok {
+		r1 = rf(stakingInfoAddress, rootChain)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1073,27 +1073,13 @@ func (_m *IContractCaller) GetValidatorSetInstance(validatorSetAddress common.Ad
 	return r0, r1
 }
 
-// IsTxConfirmed provides a mock function with given fields: _a0, _a1
-func (_m *IContractCaller) IsTxConfirmed(_a0 common.Hash, _a1 uint64) bool {
-	ret := _m.Called(_a0, _a1)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(common.Hash, uint64) bool); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// SendCheckpoint provides a mock function with given fields: sigedData, sigs, rootchainAddress, rootChainInstance
-func (_m *IContractCaller) SendCheckpoint(sigedData []byte, sigs [][3]*big.Int, rootchainAddress common.Address, rootChainInstance *rootchain.Rootchain) error {
-	ret := _m.Called(sigedData, sigs, rootchainAddress, rootChainInstance)
+// SendCheckpoint provides a mock function with given fields: sigedData, sigs, rootchainAddress, rootChainInstance, rootChain
+func (_m *IContractCaller) SendCheckpoint(sigedData []byte, sigs [][3]*big.Int, rootchainAddress common.Address, rootChainInstance *rootchain.Rootchain, rootChain string) error {
+	ret := _m.Called(sigedData, sigs, rootchainAddress, rootChainInstance, rootChain)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]byte, [][3]*big.Int, common.Address, *rootchain.Rootchain) error); ok {
-		r0 = rf(sigedData, sigs, rootchainAddress, rootChainInstance)
+	if rf, ok := ret.Get(0).(func([]byte, [][3]*big.Int, common.Address, *rootchain.Rootchain, string) error); ok {
+		r0 = rf(sigedData, sigs, rootchainAddress, rootChainInstance, rootChain)
 	} else {
 		r0 = ret.Error(0)
 	}

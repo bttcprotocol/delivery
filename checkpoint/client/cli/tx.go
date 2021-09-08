@@ -157,6 +157,7 @@ func SendCheckpointTx(cdc *codec.Codec) *cobra.Command {
 				hmTypes.HexToHeimdallHash(accountRootHashStr),
 				borChainID,
 				epoch,
+				hmTypes.RootChainTypeStake,
 			)
 
 			return helper.BroadcastMsgsWithCLI(cliCtx, []sdk.Msg{msg})
@@ -224,7 +225,7 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 			}
 
 			// get main tx receipt
-			receipt, err := contractCallerObj.GetConfirmedTxReceipt(txHash.EthHash(), chainmanagerParams.MainchainTxConfirmations)
+			receipt, err := contractCallerObj.GetConfirmedTxReceipt(txHash.EthHash(), chainmanagerParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth)
 			if err != nil || receipt == nil {
 				return errors.New("Transaction is not confirmed yet. Please wait for sometime and try again")
 			}
@@ -249,6 +250,7 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 				res.Root,
 				txHash,
 				uint64(viper.GetInt64(FlagCheckpointLogIndex)),
+				hmTypes.RootChainTypeEth,
 			)
 
 			// msg

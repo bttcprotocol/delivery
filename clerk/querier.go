@@ -102,11 +102,16 @@ func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 	var receipt *ethTypes.Receipt
 	var err error
 	// get main tx receipt
-	if params.RootChainType == hmTypes.RootChainTypeEth {
-		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(), chainParams.MainchainTxConfirmations)
-	} else if params.RootChainType == hmTypes.RootChainTypeTron {
+	switch params.RootChainType {
+	case hmTypes.RootChainTypeEth:
+		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
+			chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth)
+	case hmTypes.RootChainTypeBsc:
+		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
+			chainParams.BscChainTxConfirmations, hmTypes.RootChainTypeEth)
+	case hmTypes.RootChainTypeTron:
 		receipt, err = contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
-	} else {
+	default:
 		return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "please pass correct chainType like ETH or TRON"))
 	}
 	if err != nil || receipt == nil {

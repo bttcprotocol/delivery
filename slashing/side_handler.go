@@ -74,7 +74,7 @@ func SideHandleMsgTickAck(ctx sdk.Context, k Keeper, msg types.MsgTickAck, contr
 	chainParams := params.ChainParams
 
 	// get main tx receipt
-	receipt, err := contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
+	receipt, err := contractCaller.GetTronTransactionReceipt(msg.TxHash.TronHash().Hex())
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
@@ -115,7 +115,7 @@ func SideHandleMsgUnjail(ctx sdk.Context, k Keeper, msg types.MsgUnjail, contrac
 	chainParams := params.ChainParams
 
 	// get main tx receipt
-	receipt, err := contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
+	receipt, err := contractCaller.GetTronTransactionReceipt(msg.TxHash.TronHash().Hex())
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}

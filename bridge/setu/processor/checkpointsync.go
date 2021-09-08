@@ -212,8 +212,9 @@ func (cp *CheckpointProcessor) getHeaderBlock(checkpointContext *CheckpointConte
 	chainParams := checkpointContext.ChainmanagerParams.ChainParams
 	checkpointParams := checkpointContext.CheckpointParams
 
-	if rootChain == hmTypes.RootChainTypeEth {
-		rootChainInstance, err := cp.contractConnector.GetRootChainInstance(chainParams.RootChainAddress.EthAddress())
+	switch rootChain {
+	case hmTypes.RootChainTypeEth:
+		rootChainInstance, err := cp.contractConnector.GetRootChainInstance(chainParams.RootChainAddress.EthAddress(), rootChain)
 		if err != nil {
 			return 0, 0, hmTypes.ZeroHeimdallAddress, err
 		}
@@ -223,9 +224,20 @@ func (cp *CheckpointProcessor) getHeaderBlock(checkpointContext *CheckpointConte
 			return 0, 0, hmTypes.ZeroHeimdallAddress, err
 		}
 		return start, end, proposer, nil
-	} else if rootChain == hmTypes.RootChainTypeTron {
+	case hmTypes.RootChainTypeTron:
 		_, start, end, _, proposer, err := cp.contractConnector.GetTronHeaderInfo(headerNumber, chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
 
+		if err != nil {
+			cp.Logger.Error("Error while fetching header block", "root", rootChain, "error", err)
+			return 0, 0, hmTypes.ZeroHeimdallAddress, err
+		}
+		return start, end, proposer, nil
+	case hmTypes.RootChainTypeBsc:
+		rootChainInstance, err := cp.contractConnector.GetRootChainInstance(chainParams.BscChainAddress.EthAddress(), rootChain)
+		if err != nil {
+			return 0, 0, hmTypes.ZeroHeimdallAddress, err
+		}
+		_, start, end, _, proposer, err := cp.contractConnector.GetHeaderInfo(headerNumber, rootChainInstance, checkpointParams.ChildBlockInterval)
 		if err != nil {
 			cp.Logger.Error("Error while fetching header block", "root", rootChain, "error", err)
 			return 0, 0, hmTypes.ZeroHeimdallAddress, err

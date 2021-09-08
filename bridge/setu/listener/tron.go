@@ -165,7 +165,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 	var tronContractAddresses []string
 	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronStateSenderAddress)
 	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronChainAddress)
-	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronStakeInfoAddress)
+	tronContractAddresses = append(tronContractAddresses, chainManagerParams.ChainParams.TronStakingInfoAddress)
 	// current public key
 	pubkeyBytes := helper.GetPubKey().Bytes()
 	logs, err := tl.contractConnector.GetTronEventsByContractAddress(tronContractAddresses, fromBlock.Int64(), toBlock.Int64())

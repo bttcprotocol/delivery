@@ -2,17 +2,18 @@ package clerk
 
 import (
 	"bytes"
-	ethTypes "github.com/maticnetwork/bor/core/types"
-	"github.com/maticnetwork/heimdall/contracts/statesender"
 	"math/big"
 	"strconv"
 
+	ethTypes "github.com/maticnetwork/bor/core/types"
+	"github.com/maticnetwork/heimdall/contracts/statesender"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	borCommon "github.com/maticnetwork/bor/common"
 	"github.com/maticnetwork/heimdall/clerk/types"
 	"github.com/maticnetwork/heimdall/common"
 	hmCommon "github.com/maticnetwork/heimdall/common"
-	borCommon "github.com/maticnetwork/bor/common"
 	"github.com/maticnetwork/heimdall/helper"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -66,21 +67,28 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	var eventLog *statesender.StatesenderStateSynced
 	var contractAddress borCommon.Address
 	// get main tx receipt
-	if msg.RootChainType == hmTypes.RootChainTypeEth {
-		// get event log for topup on eth
-		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations)
+	switch msg.RootChainType {
+	case hmTypes.RootChainTypeEth:
+		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations,
+			hmTypes.RootChainTypeEth)
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
 		contractAddress = chainParams.StateSenderAddress.EthAddress()
-	} else if msg.RootChainType == hmTypes.RootChainTypeTron {
-		// get event log for topup on  tron
+	case hmTypes.RootChainTypeBsc:
+		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.BscChainTxConfirmations,
+			hmTypes.RootChainTypeBsc)
+		if err != nil || receipt == nil {
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+		}
+		contractAddress = chainParams.BscStateSenderAddress.EthAddress()
+	case hmTypes.RootChainTypeTron:
 		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
 		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress)
-	} else {
+	default:
 		k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, "does not  match ETH or TRON ")
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
 	}

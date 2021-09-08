@@ -79,7 +79,7 @@ func (AppModuleBasic) VerifyGenesis(bz map[string]json.RawMessage) error {
 	}
 
 	stakingInfoAddress := chainManagertData.Params.ChainParams.StakingInfoAddress.EthAddress()
-	stakingInfoInstance, _ := contractCaller.GetStakingInfoInstance(stakingInfoAddress)
+	stakingInfoInstance, _ := contractCaller.GetStakingInfoInstance(stakingInfoAddress, hmTypes.RootChainTypeEth)
 
 	// validate validators
 	validators := data.Validators

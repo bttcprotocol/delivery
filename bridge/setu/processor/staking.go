@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	ethCommon "github.com/maticnetwork/bor/common"
+
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
 
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
@@ -492,7 +494,11 @@ func (sp *StakingProcessor) getNonceFromRootChain(stakingContext *StakingContext
 	switch rootChain {
 	case hmTypes.RootChainTypeEth:
 		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.StakingManagerAddress.EthAddress()
-		stakingManagerInstance, _ := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress)
+		stakingManagerInstance, _ := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress, rootChain)
+		return sp.contractConnector.GetMainStakingSyncNonce(validatorID, stakingManagerInstance)
+	case hmTypes.RootChainTypeBsc:
+		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.BscStakingManagerAddress.EthAddress()
+		stakingManagerInstance, _ := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress, rootChain)
 		return sp.contractConnector.GetMainStakingSyncNonce(validatorID, stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:
 		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.TronStakingManagerAddress
@@ -552,26 +558,24 @@ func (sp *StakingProcessor) createAndSendStakingSyncToRootChain(stakingContext *
 	}
 	// chain manager params
 	chainParams := stakingContext.ChainmanagerParams.ChainParams
-	if rootChain == hmTypes.RootChainTypeTron {
+	var stakingManagerAddress ethCommon.Address
+	switch rootChain {
+	case hmTypes.RootChainTypeEth:
 		// staking manager address
-		stakingManagerAddress := chainParams.TronStakingManagerAddress
-		if err := sp.contractConnector.SendTronStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress); err != nil {
-			sp.Logger.Error("Error submitting staking sync to tron", "error", err)
-			return
-		}
-	} else if rootChain == hmTypes.RootChainTypeEth {
+		stakingManagerAddress = chainParams.StakingManagerAddress.EthAddress()
+	case hmTypes.RootChainTypeBsc:
 		// staking manager address
-		stakingManagerAddress := chainParams.StakingManagerAddress.EthAddress()
-		// staking manager instance
-		stakingManagerInstance, err := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress)
-		if err != nil {
-			sp.Logger.Error("Error while creating staking instance", "error", err)
-			return
-		}
-		if err := sp.contractConnector.SendMainStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress, stakingManagerInstance); err != nil {
-			sp.Logger.Error("Error submitting staking sync to rootchain", "error", err)
-			return
-		}
+		stakingManagerAddress = chainParams.BscStakingManagerAddress.EthAddress()
+	}
+	// staking manager instance
+	stakingManagerInstance, err := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress, rootChain)
+	if err != nil {
+		sp.Logger.Error("Error while creating staking instance", "error", err)
+		return
+	}
+	if err := sp.contractConnector.SendMainStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress, stakingManagerInstance); err != nil {
+		sp.Logger.Error("Error submitting staking sync to rootchain", "error", err)
+		return
 	}
 }
 

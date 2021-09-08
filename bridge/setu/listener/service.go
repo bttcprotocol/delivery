@@ -5,6 +5,7 @@ import (
 	"github.com/maticnetwork/heimdall/bridge/setu/queue"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	"github.com/maticnetwork/heimdall/helper"
+	"github.com/maticnetwork/heimdall/types"
 	"github.com/tendermint/tendermint/libs/common"
 	httpClient "github.com/tendermint/tendermint/rpc/client"
 )
@@ -13,6 +14,7 @@ const (
 	ListenerServiceStr = "listener"
 
 	RootChainListenerStr  = "rootchain"
+	BscChainListenerStr   = "bsc"
 	TronChainListenerStr  = "tron"
 	HeimdallListenerStr   = "heimdall"
 	MaticChainListenerStr = "maticchain"
@@ -37,9 +39,13 @@ func NewListenerService(cdc *codec.Codec, queueConnector *queue.QueueConnector, 
 
 	listenerService.BaseService = *common.NewBaseService(logger, ListenerServiceStr, listenerService)
 
-	rootchainListener := NewRootChainListener()
+	rootchainListener := NewRootChainListener(types.RootChainTypeEth)
 	rootchainListener.BaseListener = *NewBaseListener(cdc, queueConnector, httpClient, helper.GetMainClient(), RootChainListenerStr, rootchainListener)
 	listenerService.listeners = append(listenerService.listeners, rootchainListener)
+
+	bscchainListener := NewRootChainListener(types.RootChainTypeBsc)
+	bscchainListener.BaseListener = *NewBaseListener(cdc, queueConnector, httpClient, helper.GetBscClient(), BscChainListenerStr, bscchainListener)
+	listenerService.listeners = append(listenerService.listeners, bscchainListener)
 
 	tronChainListener := NewTronListener()
 	tronChainListener.BaseListener = *NewBaseListener(cdc, queueConnector, httpClient, nil, TronChainListenerStr, tronChainListener)

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	ethCommon "github.com/maticnetwork/bor/common"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 
@@ -70,11 +71,17 @@ func SideHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 
 // SideHandleMsgCheckpointAck handles MsgCheckpointAck message for external call
 func SideHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointAck, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		return SideHandleMsgOtherCheckpointAck(ctx, k, msg, contractCaller)
+	if msg.RootChainType == hmTypes.RootChainTypeTron {
+		return SideHandleMsgTronCheckpointAck(ctx, k, msg, contractCaller)
 	}
 
 	logger := k.Logger(ctx)
+	logger.Debug("✅ Validating External call for checkpoint ack msg",
+		"root", msg.RootChainType,
+		"start", msg.StartBlock,
+		"end", msg.EndBlock,
+		"number", msg.Number,
+	)
 
 	params := k.GetParams(ctx)
 	chainParams := k.ck.GetParams(ctx).ChainParams
@@ -82,8 +89,14 @@ func SideHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	//
 	// Validate data from root chain
 	//
-
-	rootChainInstance, err := contractCaller.GetRootChainInstance(chainParams.RootChainAddress.EthAddress())
+	var rootChainAddress ethCommon.Address
+	switch msg.RootChainType {
+	case hmTypes.RootChainTypeEth:
+		rootChainAddress = chainParams.RootChainAddress.EthAddress()
+	case hmTypes.RootChainTypeBsc:
+		rootChainAddress = chainParams.BscChainAddress.EthAddress()
+	}
+	rootChainInstance, err := contractCaller.GetRootChainInstance(rootChainAddress, msg.RootChainType)
 	if err != nil {
 		logger.Error("Unable to fetch rootchain contract instance", "error", err)
 		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
@@ -111,8 +124,8 @@ func SideHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	return
 }
 
-// SideHandleMsgOtherCheckpointAck handles MsgCheckpointAck message for external call
-func SideHandleMsgOtherCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointAck, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
+// SideHandleMsgTronCheckpointAck handles MsgCheckpointAck message for external call
+func SideHandleMsgTronCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpointAck, contractCaller helper.IContractCaller) (result abci.ResponseDeliverSideTx) {
 	logger := k.Logger(ctx)
 
 	params := k.GetParams(ctx)
@@ -165,26 +178,26 @@ func SideHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpo
 		proposer   hmTypes.HeimdallAddress
 		err        error
 	)
-	if msg.RootChainType == hmTypes.RootChainTypeEth {
-		rootChainInstance, err := contractCaller.GetRootChainInstance(chainParams.RootChainAddress.EthAddress())
-		if err != nil {
-			logger.Error("Unable to fetch rootchain contract instance", "root", msg.RootChainType, "error", err)
-			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
-		}
-		_, start, end, _, proposer, err = contractCaller.GetHeaderInfo(msg.Number, rootChainInstance, params.ChildBlockInterval)
-		if err != nil {
-			logger.Error("Unable to fetch checkpoint from rootchain",
-				"root", msg.RootChainType, "error", err, "checkpointNumber", msg.Number)
-			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
-		}
-	} else if msg.RootChainType == hmTypes.RootChainTypeTron {
-		_, start, end, _, proposer, err = contractCaller.GetTronHeaderInfo(msg.Number, chainParams.TronChainAddress, params.ChildBlockInterval)
-		if err != nil {
-			logger.Error("Unable to fetch checkpoint from rootchain",
-				"root", msg.RootChainType, "error", err, "checkpointNumber", msg.Number)
-			return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
-		}
+
+	var rootChainAddress ethCommon.Address
+	switch msg.RootChainType {
+	case hmTypes.RootChainTypeEth:
+		rootChainAddress = chainParams.RootChainAddress.EthAddress()
+	case hmTypes.RootChainTypeBsc:
+		rootChainAddress = chainParams.BscChainAddress.EthAddress()
 	}
+	rootChainInstance, err := contractCaller.GetRootChainInstance(rootChainAddress, msg.RootChainType)
+	if err != nil {
+		logger.Error("Unable to fetch rootchain contract instance", "root", msg.RootChainType, "error", err)
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+	}
+	_, start, end, _, proposer, err = contractCaller.GetHeaderInfo(msg.Number, rootChainInstance, params.ChildBlockInterval)
+	if err != nil {
+		logger.Error("Unable to fetch checkpoint from rootchain",
+			"root", msg.RootChainType, "error", err, "checkpointNumber", msg.Number)
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidACK)
+	}
+
 	// check if message data matches with contract data
 	if msg.StartBlock != start ||
 		msg.EndBlock != end ||
@@ -267,13 +280,8 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 	//
 	// Validate last checkpoint
 	//
-	var lastCheckpoint hmTypes.Checkpoint
-	var err error
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		lastCheckpoint, err = k.GetLastOtherCheckpoint(ctx, msg.RootChainType)
-	} else {
-		lastCheckpoint, err = k.GetLastCheckpoint(ctx)
-	}
+	lastCheckpoint, err := k.GetLastCheckpoint(ctx, msg.RootChainType)
+
 	// fetch last checkpoint from store
 	if err == nil {
 		// make sure new checkpoint is after tip
@@ -302,13 +310,7 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 	//
 	// Save checkpoint to buffer store
 	//
-	var checkpointBuffer *hmTypes.Checkpoint
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		checkpointBuffer, err = k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
-	} else {
-		checkpointBuffer, err = k.GetCheckpointFromBuffer(ctx)
-	}
-
+	checkpointBuffer, err := k.GetCheckpointFromBuffer(ctx, msg.RootChainType)
 	if err == nil && checkpointBuffer != nil {
 		logger.Debug("Checkpoint already exists in buffer")
 
@@ -323,25 +325,14 @@ func PostHandleMsgCheckpoint(ctx sdk.Context, k Keeper, msg types.MsgCheckpoint,
 	timeStamp := uint64(ctx.BlockTime().Unix())
 
 	// Add checkpoint to buffer with root hash and account hash
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		k.SetOtherCheckpointBuffer(ctx, hmTypes.Checkpoint{
-			StartBlock: msg.StartBlock,
-			EndBlock:   msg.EndBlock,
-			RootHash:   msg.RootHash,
-			Proposer:   msg.Proposer,
-			BorChainID: msg.BorChainID,
-			TimeStamp:  timeStamp,
-		}, msg.RootChainType)
-	} else {
-		k.SetCheckpointBuffer(ctx, hmTypes.Checkpoint{
-			StartBlock: msg.StartBlock,
-			EndBlock:   msg.EndBlock,
-			RootHash:   msg.RootHash,
-			Proposer:   msg.Proposer,
-			BorChainID: msg.BorChainID,
-			TimeStamp:  timeStamp,
-		})
-	}
+	k.SetCheckpointBuffer(ctx, hmTypes.Checkpoint{
+		StartBlock: msg.StartBlock,
+		EndBlock:   msg.EndBlock,
+		RootHash:   msg.RootHash,
+		Proposer:   msg.Proposer,
+		BorChainID: msg.BorChainID,
+		TimeStamp:  timeStamp,
+	}, msg.RootChainType)
 
 	logger.Debug("New checkpoint into buffer stored",
 		"startBlock", msg.StartBlock,
@@ -388,13 +379,7 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	}
 
 	// get last checkpoint from buffer
-	var checkpointObj *hmTypes.Checkpoint
-	var err error
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		checkpointObj, err = k.GetOtherCheckpointFromBuffer(ctx, msg.RootChainType)
-	} else {
-		checkpointObj, err = k.GetCheckpointFromBuffer(ctx)
-	}
+	checkpointObj, err := k.GetCheckpointFromBuffer(ctx, msg.RootChainType)
 	if err != nil {
 		logger.Error("Unable to get checkpoint buffer", "error", err, "root", msg.RootChainType)
 		return common.ErrBadAck(k.Codespace()).Result()
@@ -435,12 +420,8 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	//
 	// Update checkpoint state
 	//
+	err = k.AddCheckpoint(ctx, msg.Number, *checkpointObj, msg.RootChainType)
 
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		err = k.AddOtherCheckpoint(ctx, msg.Number, *checkpointObj, msg.RootChainType)
-	} else {
-		err = k.AddCheckpoint(ctx, msg.Number, *checkpointObj)
-	}
 	// Add checkpoint to store
 	if err != nil {
 		logger.Error("Error while adding checkpoint into store", "checkpointNumber", msg.Number)
@@ -449,20 +430,15 @@ func PostHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	logger.Debug("Checkpoint added to store", "checkpointNumber", msg.Number, "root", msg.RootChainType)
 
 	// Flush buffer
-	if msg.RootChainType != hmTypes.RootChainTypeEth {
-		k.FlushOtherCheckpointBuffer(ctx, msg.RootChainType)
-		k.UpdateOtherACKCount(ctx, msg.RootChainType)
-	} else {
-		k.FlushCheckpointBuffer(ctx)
-		k.UpdateACKCount(ctx)
-	}
+	k.UpdateACKCount(ctx, msg.RootChainType)
+	k.FlushCheckpointBuffer(ctx, msg.RootChainType)
 
 	logger.Debug("Checkpoint buffer flushed after receiving checkpoint ack", "root", msg.RootChainType)
 
 	// Update ack count in staking module
 	logger.Info("Valid ack received",
-		"CurrentACKCount", k.GetACKCount(ctx)-1,
-		"UpdatedACKCount", k.GetACKCount(ctx),
+		"CurrentACKCount", k.GetACKCount(ctx, msg.RootChainType)-1,
+		"UpdatedACKCount", k.GetACKCount(ctx, msg.RootChainType),
 		"root", msg.RootChainType)
 
 	if msg.RootChainType == hmTypes.RootChainTypeStake {

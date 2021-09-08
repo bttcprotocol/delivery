@@ -45,7 +45,7 @@ func (cp *CheckpointProcessor) sendTronCheckpointToHeimdall(checkpointContext *C
 	}
 }
 
-// nextExpectedCheckpoint - fetched contract checkpoint state and returns the next probable checkpoint that needs to be sent
+// nextExpectedTronCheckpoint - fetched contract checkpoint state and returns the next probable checkpoint that needs to be sent
 func (cp *CheckpointProcessor) nextExpectedTronCheckpoint(checkpointContext *CheckpointContext, latestChildBlock uint64) (*ContractCheckpoint, error) {
 	chainManagerParams := checkpointContext.ChainmanagerParams
 	checkpointParams := checkpointContext.CheckpointParams
@@ -161,7 +161,7 @@ func (cp *CheckpointProcessor) createAndSendTronCheckpointToHeimdall(checkpointC
 	chainParams := checkpointContext.ChainmanagerParams.ChainParams
 
 	// create and send checkpoint message
-	msg := checkpointTypes.NewMsgOtherCheckpointBlock(
+	msg := checkpointTypes.NewMsgCheckpointBlock(
 		hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
 		start,
 		end,

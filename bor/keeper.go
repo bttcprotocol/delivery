@@ -297,7 +297,7 @@ func (k Keeper) GetNextSpanSeed(ctx sdk.Context) (common.Hash, error) {
 	k.Logger(ctx).Debug("newEthBlock to generate seed", "newEthBlock", newEthBlock)
 
 	// fetch block header from mainchain
-	blockHeader, err := k.contractCaller.GetMainChainBlock(newEthBlock)
+	blockHeader, err := k.contractCaller.GetMainChainBlock(newEthBlock, hmTypes.RootChainTypeEth)
 	if err != nil {
 		k.Logger(ctx).Error("Error fetching block header from mainchain while calculating next span seed", "error", err)
 		return common.Hash{}, err

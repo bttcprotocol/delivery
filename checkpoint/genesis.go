@@ -29,7 +29,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 		// load checkpoints to state
 		for i, checkpoint := range data.Checkpoints {
 			checkpointIndex := uint64(i) + 1
-			if err := keeper.AddCheckpoint(ctx, checkpointIndex, checkpoint); err != nil {
+			if err := keeper.AddCheckpoint(ctx, checkpointIndex, checkpoint, hmTypes.RootChainTypeStake); err != nil {
 				keeper.Logger(ctx).Error("InitGenesis | AddCheckpoint", "error", err)
 			}
 		}
@@ -37,7 +37,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 
 	// Add checkpoint in buffer
 	if data.BufferedCheckpoint != nil {
-		if err := keeper.SetCheckpointBuffer(ctx, *data.BufferedCheckpoint); err != nil {
+		if err := keeper.SetCheckpointBuffer(ctx, *data.BufferedCheckpoint, hmTypes.RootChainTypeStake); err != nil {
 			keeper.Logger(ctx).Error("InitGenesis | SetCheckpointBuffer", "error", err)
 		}
 	}
@@ -68,12 +68,12 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 	params := keeper.GetParams(ctx)
 
-	bufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx)
+	bufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeStake)
 	return types.NewGenesisState(
 		params,
 		bufferedCheckpoint,
 		keeper.GetLastNoAck(ctx),
-		keeper.GetACKCount(ctx),
+		keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake),
 		hmTypes.SortHeaders(keeper.GetCheckpoints(ctx)),
 		keeper.GetOtherACKCount(ctx, hmTypes.RootChainTypeTron),
 		hmTypes.SortHeaders(keeper.GetOtherCheckpoints(ctx, hmTypes.RootChainTypeTron)),

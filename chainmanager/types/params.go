@@ -34,18 +34,27 @@ var _ subspace.ParamSet = &Params{}
 
 // ChainParams chain related params
 type ChainParams struct {
-	BorChainID            string                  `json:"bor_chain_id" yaml:"bor_chain_id"`
-	MaticTokenAddress     hmTypes.HeimdallAddress `json:"matic_token_address" yaml:"matic_token_address"`
+	BorChainID        string                  `json:"bor_chain_id" yaml:"bor_chain_id"`
+	MaticTokenAddress hmTypes.HeimdallAddress `json:"matic_token_address" yaml:"matic_token_address"`
+
+	// eth
 	StakingManagerAddress hmTypes.HeimdallAddress `json:"staking_manager_address" yaml:"staking_manager_address"`
 	SlashManagerAddress   hmTypes.HeimdallAddress `json:"slash_manager_address" yaml:"slash_manager_address"`
 	RootChainAddress      hmTypes.HeimdallAddress `json:"root_chain_address" yaml:"root_chain_address"`
 	StakingInfoAddress    hmTypes.HeimdallAddress `json:"staking_info_address" yaml:"staking_info_address"`
 	StateSenderAddress    hmTypes.HeimdallAddress `json:"state_sender_address" yaml:"state_sender_address"`
 
+	// tron
 	TronChainAddress          string `json:"tron_chain_address" yaml:"tron_chain_address"`
 	TronStateSenderAddress    string `json:"tron_state_sender_address" yaml:"tron_state_sender_address"`
 	TronStakingManagerAddress string `json:"tron_staking_manager_address" yaml:"tron_staking_manager_address"`
-	TronStakeInfoAddress      string `json:"tron_state_info_address" yaml:"tron_state_info_address"`
+	TronStakingInfoAddress    string `json:"tron_state_info_address" yaml:"tron_state_info_address"`
+
+	// bsc
+	BscChainAddress          hmTypes.HeimdallAddress `json:"bsc_chain_address" yaml:"bsc_chain_address"`
+	BscStateSenderAddress    hmTypes.HeimdallAddress `json:"bsc_state_sender_address" yaml:"bsc_state_sender_address"`
+	BscStakingManagerAddress hmTypes.HeimdallAddress `json:"bsc_staking_manager_address" yaml:"bsc_staking_manager_address"`
+	BscStakingInfoAddress    hmTypes.HeimdallAddress `json:"bsc_staking_info_address" yaml:"bsc_staking_info_address"`
 
 	// Bor Chain Contracts
 	StateReceiverAddress hmTypes.HeimdallAddress `json:"state_receiver_address" yaml:"state_receiver_address"`
@@ -71,15 +80,17 @@ type Params struct {
 	MainchainTxConfirmations  uint64      `json:"mainchain_tx_confirmations" yaml:"mainchain_tx_confirmations"`
 	MaticchainTxConfirmations uint64      `json:"maticchain_tx_confirmations" yaml:"maticchain_tx_confirmations"`
 	TronchainTxConfirmations  uint64      `json:"tronchain_tx_confirmations" yaml:"tronchain_tx_confirmations"`
+	BscChainTxConfirmations   uint64      `json:"bscchain_tx_confirmations" yaml:"bscchain_tx_confirmations"`
 	ChainParams               ChainParams `json:"chain_params" yaml:"chain_params"`
 }
 
 // NewParams creates a new Params object
-func NewParams(mainchainTxConfirmations, tronchainTxConfirmation, maticchainTxConfirmations uint64, chainParams ChainParams) Params {
+func NewParams(mainchainTxConfirmations, tronchainTxConfirmation, maticchainTxConfirmations, bscTxConfirmations uint64, chainParams ChainParams) Params {
 	return Params{
 		MainchainTxConfirmations:  mainchainTxConfirmations,
 		MaticchainTxConfirmations: maticchainTxConfirmations,
 		TronchainTxConfirmations:  tronchainTxConfirmation,
+		BscChainTxConfirmations:   bscTxConfirmations,
 		ChainParams:               chainParams,
 	}
 }

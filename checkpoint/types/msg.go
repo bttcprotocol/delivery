@@ -39,28 +39,6 @@ func NewMsgCheckpointBlock(
 	accountRootHash types.HeimdallHash,
 	borChainID string,
 	epoch uint64,
-) MsgCheckpoint {
-	return MsgCheckpoint{
-		Proposer:        proposer,
-		StartBlock:      startBlock,
-		EndBlock:        endBlock,
-		RootHash:        roothash,
-		AccountRootHash: accountRootHash,
-		BorChainID:      borChainID,
-		Epoch:           epoch,
-		RootChainType:   types.RootChainTypeEth,
-	}
-}
-
-// NewMsgOtherCheckpointBlock creates new checkpoint message using mentioned arguments
-func NewMsgOtherCheckpointBlock(
-	proposer types.HeimdallAddress,
-	startBlock uint64,
-	endBlock uint64,
-	roothash types.HeimdallHash,
-	accountRootHash types.HeimdallHash,
-	borChainID string,
-	epoch uint64,
 	rootChain string,
 ) MsgCheckpoint {
 	return MsgCheckpoint{
@@ -148,30 +126,6 @@ type MsgCheckpointAck struct {
 }
 
 func NewMsgCheckpointAck(
-	from types.HeimdallAddress,
-	number uint64,
-	proposer types.HeimdallAddress,
-	startBlock uint64,
-	endBlock uint64,
-	rootHash types.HeimdallHash,
-	txHash types.HeimdallHash,
-	logIndex uint64,
-) MsgCheckpointAck {
-
-	return MsgCheckpointAck{
-		From:          from,
-		Number:        number,
-		Proposer:      proposer,
-		StartBlock:    startBlock,
-		EndBlock:      endBlock,
-		RootHash:      rootHash,
-		TxHash:        txHash,
-		LogIndex:      logIndex,
-		RootChainType: types.RootChainTypeEth,
-	}
-}
-
-func NewMsgOtherCheckpointAck(
 	from types.HeimdallAddress,
 	number uint64,
 	proposer types.HeimdallAddress,

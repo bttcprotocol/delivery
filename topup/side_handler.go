@@ -65,7 +65,8 @@ func SideHandleMsgTopup(ctx sdk.Context, k Keeper, msg types.MsgTopup, contractC
 	}
 
 	// get event log for topup
-	eventLog, err := contractCaller.DecodeValidatorTopupFeesEvent(hmTypes.HexToTronAddress(chainParams.TronStakeInfoAddress), receipt, msg.LogIndex)
+	contractAddress := hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
+	eventLog, err := contractCaller.DecodeValidatorTopupFeesEvent(contractAddress, receipt, msg.LogIndex)
 	if err != nil || eventLog == nil {
 		k.Logger(ctx).Error("Error fetching log from txhash")
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)

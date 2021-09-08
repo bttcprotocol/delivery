@@ -18,6 +18,7 @@ const (
 	MainchainTxConfirmations  = "mainchain_tx_confirmations"
 	TronchainTxConfirmations  = "tronchain_tx_confirmations"
 	MaticchainTxConfirmations = "maticchain_tx_confirmations"
+	BscchainTxConfirmations   = "bscchain_tx_confirmations"
 
 	BorChainID            = "bor_chain_id"
 	MaticTokenAddress     = "matic_token_address"
@@ -69,6 +70,11 @@ func RandomizedGenState(simState *module.SimulationState) {
 		func(r *rand.Rand) { maticchainTxConfirmations = GenMaticchainTxConfirmations(r) },
 	)
 
+	var bscTxConfirmations uint64
+	simState.AppParams.GetOrGenerate(simState.Cdc, BscchainTxConfirmations, &bscTxConfirmations, simState.Rand,
+		func(r *rand.Rand) { bscTxConfirmations = GenMainchainTxConfirmations(r) },
+	)
+
 	var borChainID string
 	simState.AppParams.GetOrGenerate(simState.Cdc, BorChainID, &borChainID, simState.Rand,
 		func(r *rand.Rand) { borChainID = GenBorChainId(r) },
@@ -83,17 +89,21 @@ func RandomizedGenState(simState *module.SimulationState) {
 	var stateReceiverAddress = GenHeimdallAddress()
 	var validatorSetAddress = GenHeimdallAddress()
 	chainParams := types.ChainParams{
-		BorChainID:            borChainID,
-		MaticTokenAddress:     maticTokenAddress,
-		StakingManagerAddress: stakingManagerAddress,
-		SlashManagerAddress:   slashManagerAddress,
-		RootChainAddress:      rootChainAddress,
-		StakingInfoAddress:    stakingInfoAddress,
-		StateSenderAddress:    stateSenderAddress,
-		StateReceiverAddress:  stateReceiverAddress,
-		ValidatorSetAddress:   validatorSetAddress,
+		BorChainID:               borChainID,
+		MaticTokenAddress:        maticTokenAddress,
+		StakingManagerAddress:    stakingManagerAddress,
+		SlashManagerAddress:      slashManagerAddress,
+		RootChainAddress:         rootChainAddress,
+		StakingInfoAddress:       stakingInfoAddress,
+		StateSenderAddress:       stateSenderAddress,
+		StateReceiverAddress:     stateReceiverAddress,
+		ValidatorSetAddress:      validatorSetAddress,
+		BscChainAddress:          GenHeimdallAddress(),
+		BscStakingInfoAddress:    GenHeimdallAddress(),
+		BscStakingManagerAddress: GenHeimdallAddress(),
+		BscStateSenderAddress:    GenHeimdallAddress(),
 	}
-	params := types.NewParams(mainchainTxConfirmations, tronchainTxConfirmations, maticchainTxConfirmations, chainParams)
+	params := types.NewParams(mainchainTxConfirmations, tronchainTxConfirmations, maticchainTxConfirmations, bscTxConfirmations, chainParams)
 	chainManagerGenesis := types.NewGenesisState(params)
 	fmt.Printf("Selected randomly generated chainmanager parameters:\n%s\n", codec.MustMarshalJSONIndent(simState.Cdc, chainManagerGenesis))
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(chainManagerGenesis)

@@ -42,10 +42,8 @@ func querySequence(ctx sdk.Context, req abci.RequestQuery, k Keeper, contractCal
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
-	chainParams := k.chainKeeper.GetParams(ctx)
-
 	// get main tx receipt
-	receipt, err := contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(), chainParams.MainchainTxConfirmations)
+	receipt, err := contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
 	if err != nil || receipt == nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("Transaction is not confirmed yet. Please wait for sometime and try again"))
 	}
@@ -112,7 +110,7 @@ func handleQueryAccountProof(ctx sdk.Context, req abci.RequestQuery, keeper Keep
 	chainParams := keeper.chainKeeper.GetParams(ctx)
 
 	stakingInfoAddress := chainParams.ChainParams.StakingInfoAddress.EthAddress()
-	stakingInfoInstance, _ := contractCallerObj.GetStakingInfoInstance(stakingInfoAddress)
+	stakingInfoInstance, _ := contractCallerObj.GetStakingInfoInstance(stakingInfoAddress, hmTypes.RootChainTypeStake)
 
 	accountRootOnChain, err := contractCallerObj.CurrentAccountStateRoot(stakingInfoInstance)
 	if err != nil {

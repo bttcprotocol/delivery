@@ -7,20 +7,19 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/maticnetwork/bor/core/types"
-
-	ethCrypto "github.com/maticnetwork/bor/crypto/secp256k1"
-	"google.golang.org/protobuf/proto"
-
 	ethereum "github.com/maticnetwork/bor"
 	"github.com/maticnetwork/bor/accounts/abi/bind"
 	"github.com/maticnetwork/bor/common"
+	"github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/bor/crypto"
+	ethCrypto "github.com/maticnetwork/bor/crypto/secp256k1"
 	"github.com/maticnetwork/bor/ethclient"
 	"github.com/maticnetwork/heimdall/contracts/erc20"
 	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/contracts/slashmanager"
 	"github.com/maticnetwork/heimdall/contracts/stakemanager"
+	hmtypes "github.com/maticnetwork/heimdall/types"
+	"google.golang.org/protobuf/proto"
 )
 
 func GenerateAuthObj(client *ethclient.Client, address common.Address, data []byte) (auth *bind.TransactOpts, err error) {
@@ -67,14 +66,22 @@ func GenerateAuthObj(client *ethclient.Client, address common.Address, data []by
 
 // SendCheckpoint sends checkpoint to rootchain contract
 // todo return err
-func (c *ContractCaller) SendCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress common.Address, rootChainInstance *rootchain.Rootchain) (er error) {
+func (c *ContractCaller) SendCheckpoint(signedData []byte, sigs [][3]*big.Int,
+	rootChainAddress common.Address, rootChainInstance *rootchain.Rootchain, rootChain string) (er error) {
 	data, err := c.RootChainABI.Pack("submitCheckpoint", signedData, sigs)
 	if err != nil {
 		Logger.Error("Unable to pack tx for submitCheckpoint", "error", err)
 		return err
 	}
 
-	auth, err := GenerateAuthObj(GetMainClient(), rootChainAddress, data)
+	var client *ethclient.Client
+	switch rootChain {
+	case hmtypes.RootChainTypeEth:
+		client = GetMainClient()
+	case hmtypes.RootChainTypeBsc:
+		client = GetBscClient()
+	}
+	auth, err := GenerateAuthObj(client, rootChainAddress, data)
 	if err != nil {
 		Logger.Error("Unable to create auth object", "error", err)
 		Logger.Info("Setting custom gaslimit", "gaslimit", GetConfig().MainchainGasLimit)

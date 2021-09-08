@@ -5,6 +5,8 @@ import (
 	"errors"
 	"math/big"
 
+	hmtypes "github.com/maticnetwork/heimdall/types"
+
 	cliContext "github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,7 +62,7 @@ func StakeCmd(cliCtx cliContext.CLIContext) *cobra.Command {
 			}
 
 			stakingManagerAddress := params.ChainParams.StakingManagerAddress.EthAddress()
-			stakeManagerInstance, err := contractCaller.GetStakeManagerInstance(stakingManagerAddress)
+			stakeManagerInstance, err := contractCaller.GetStakeManagerInstance(stakingManagerAddress, hmtypes.RootChainTypeEth)
 			if err != nil {
 				return err
 			}

@@ -3,12 +3,12 @@ package types
 const (
 	RootChainTypeEth  = "eth"
 	RootChainTypeTron = "tron"
+	RootChainTypeBsc  = "bsc"
 
-	RootChainTypeStake   = RootChainTypeTron
-	DefaultRootChainType = RootChainTypeEth
+	RootChainTypeStake = RootChainTypeTron
 )
 
-var chainIDMap = map[string]byte{RootChainTypeEth: 1, RootChainTypeTron: 2}
+var chainIDMap = map[string]byte{RootChainTypeTron: 1, RootChainTypeEth: 2, RootChainTypeBsc: 3}
 
 func GetRootChainID(rootChain string) byte {
 	return chainIDMap[rootChain]
