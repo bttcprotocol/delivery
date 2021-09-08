@@ -197,8 +197,6 @@ func (suite *QuerierTestSuite) TestHandleQueryStakingSequence() {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 
-	chainParams := app.ChainKeeper.GetParams(ctx)
-
 	txHash := hmTypes.HexToHeimdallHash("123")
 
 	txreceipt := &ethTypes.Receipt{BlockNumber: big.NewInt(10)}
@@ -212,7 +210,7 @@ func (suite *QuerierTestSuite) TestHandleQueryStakingSequence() {
 
 	app.StakingKeeper.SetStakingSequence(ctx, sequence.String())
 
-	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
+	suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
 
 	path := []string{types.QueryStakingSequence}
 

@@ -29,7 +29,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 		// load checkpoints to state
 		for i, checkpoint := range data.Checkpoints {
 			checkpointIndex := uint64(i) + 1
-			if err := keeper.AddCheckpoint(ctx, checkpointIndex, checkpoint, hmTypes.RootChainTypeStake); err != nil {
+			if err := keeper.AddCheckpoint(ctx, checkpointIndex, checkpoint, hmTypes.RootChainTypeEth); err != nil {
 				keeper.Logger(ctx).Error("InitGenesis | AddCheckpoint", "error", err)
 			}
 		}
@@ -37,13 +37,13 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 
 	// Add checkpoint in buffer
 	if data.BufferedCheckpoint != nil {
-		if err := keeper.SetCheckpointBuffer(ctx, *data.BufferedCheckpoint, hmTypes.RootChainTypeStake); err != nil {
+		if err := keeper.SetCheckpointBuffer(ctx, *data.BufferedCheckpoint, hmTypes.RootChainTypeEth); err != nil {
 			keeper.Logger(ctx).Error("InitGenesis | SetCheckpointBuffer", "error", err)
 		}
 	}
 
 	// Set initial ack count
-	keeper.UpdateACKCountWithValue(ctx, data.AckCount)
+	keeper.UpdateACKCountWithValue(ctx, data.AckCount, hmTypes.RootChainTypeEth)
 
 	// Add finalised checkpoints to state
 	if len(data.TronCheckpoints) != 0 {
@@ -56,26 +56,26 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 		// load checkpoints to state
 		for i, checkpoint := range data.TronCheckpoints {
 			checkpointIndex := uint64(i) + 1
-			if err := keeper.AddOtherCheckpoint(ctx, checkpointIndex, checkpoint, hmTypes.RootChainTypeTron); err != nil {
+			if err := keeper.AddCheckpoint(ctx, checkpointIndex, checkpoint, hmTypes.RootChainTypeTron); err != nil {
 				keeper.Logger(ctx).Error("InitGenesis | TronAddCheckpoint", "error", err)
 			}
 		}
 	}
-	keeper.UpdateOtherACKCountWithValue(ctx, data.TronAckCount, hmTypes.RootChainTypeTron)
+	keeper.UpdateACKCountWithValue(ctx, data.TronAckCount, hmTypes.RootChainTypeTron)
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
 func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 	params := keeper.GetParams(ctx)
 
-	bufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeStake)
+	bufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 	return types.NewGenesisState(
 		params,
 		bufferedCheckpoint,
 		keeper.GetLastNoAck(ctx),
-		keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake),
+		keeper.GetACKCount(ctx, hmTypes.RootChainTypeEth),
 		hmTypes.SortHeaders(keeper.GetCheckpoints(ctx)),
-		keeper.GetOtherACKCount(ctx, hmTypes.RootChainTypeTron),
+		keeper.GetACKCount(ctx, hmTypes.RootChainTypeTron),
 		hmTypes.SortHeaders(keeper.GetOtherCheckpoints(ctx, hmTypes.RootChainTypeTron)),
 	)
 }

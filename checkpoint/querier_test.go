@@ -88,16 +88,16 @@ func (suite *QuerierTestSuite) TestQueryParams() {
 
 func (suite *QuerierTestSuite) TestQueryAckCount() {
 	t, _, ctx, querier := suite.T(), suite.app, suite.ctx, suite.querier
-	path := []string{types.QueryEpoch}
+	path := []string{types.QueryAckCount}
 
-	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryEpoch)
+	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount)
 	req := abci.RequestQuery{
 		Path: route,
 		Data: []byte{},
 	}
 
 	ackCount := uint64(1)
-	suite.app.CheckpointKeeper.UpdateOtherACKCountWithValue(ctx, ackCount, hmTypes.RootChainTypeStake)
+	suite.app.CheckpointKeeper.UpdateACKCountWithValue(ctx, ackCount, hmTypes.RootChainTypeStake)
 
 	res, err := querier(ctx, path, req)
 	require.NoError(t, err)
@@ -127,7 +127,7 @@ func (suite *QuerierTestSuite) TestQueryCheckpoint() {
 		borChainId,
 		timestamp,
 	)
-	app.CheckpointKeeper.AddCheckpoint(ctx, headerNumber, checkpointBlock)
+	app.CheckpointKeeper.AddCheckpoint(ctx, headerNumber, checkpointBlock, hmTypes.RootChainTypeStake)
 
 	path := []string{types.QueryCheckpoint}
 	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpoint)
@@ -168,13 +168,12 @@ func (suite *QuerierTestSuite) TestQueryCheckpointBuffer() {
 		borChainId,
 		timestamp,
 	)
-	app.CheckpointKeeper.SetCheckpointBuffer(ctx, checkpointBlock)
+	app.CheckpointKeeper.SetCheckpointBuffer(ctx, checkpointBlock, hmTypes.RootChainTypeEth)
 
 	req := abci.RequestQuery{
 		Path: route,
-		Data: []byte{},
+		Data: app.Codec().MustMarshalJSON(types.NewQueryCheckpointParams(uint64(0), hmTypes.RootChainTypeEth)),
 	}
-
 	res, err := querier(ctx, path, req)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -238,8 +237,8 @@ func (suite *QuerierTestSuite) TestQueryCheckpointList() {
 			timestamp,
 		)
 		checkpoints[i] = checkpoint
-		keeper.AddCheckpoint(ctx, headerBlockNumber, checkpoint)
-		keeper.UpdateACKCount(ctx)
+		keeper.AddCheckpoint(ctx, headerBlockNumber, checkpoint, hmTypes.RootChainTypeStake)
+		keeper.UpdateACKCount(ctx, hmTypes.RootChainTypeStake)
 	}
 
 	path := []string{types.QueryCheckpointList}
@@ -287,7 +286,7 @@ func (suite *QuerierTestSuite) TestQueryNextCheckpoint() {
 	)
 
 	suite.contractCaller.On("GetRootHash", checkpointBlock.StartBlock, checkpointBlock.EndBlock, uint64(1024)).Return(checkpointBlock.RootHash.Bytes(), nil)
-	app.CheckpointKeeper.AddCheckpoint(ctx, headerNumber, checkpointBlock)
+	app.CheckpointKeeper.AddCheckpoint(ctx, headerNumber, checkpointBlock, hmTypes.RootChainTypeStake)
 
 	path := []string{types.QueryNextCheckpoint}
 

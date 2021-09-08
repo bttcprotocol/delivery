@@ -87,6 +87,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 			header.RootHash,
 			borChainId,
 			1,
+			hmTypes.RootChainTypeEth,
 		)
 
 		suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
@@ -95,7 +96,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 		result := suite.sideHandler(ctx, msgCheckpoint)
 		require.Equal(t, uint32(sdk.CodeOK), result.Code, "Side tx handler should be success")
 
-		bufferedHeader, _ := keeper.GetCheckpointFromBuffer(ctx)
+		bufferedHeader, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Nil(t, bufferedHeader, "Should not store state")
 	})
 
@@ -111,6 +112,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 			header.RootHash,
 			borChainId,
 			1,
+			hmTypes.RootChainTypeEth,
 		)
 
 		suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
@@ -121,7 +123,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 		require.Equal(t, abci.SideTxResultType_Skip, result.Result, "Result should be `skip`")
 		require.Equal(t, uint32(common.CodeInvalidBlockInput), result.Code)
 
-		bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx)
+		bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Error(t, err)
 		require.Nil(t, bufferedHeader, "Should not store state")
 	})
@@ -138,6 +140,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpoint() {
 			header.RootHash,
 			borChainId,
 			1,
+			hmTypes.RootChainTypeEth,
 		)
 
 		suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)
@@ -171,10 +174,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpointAck() {
 			header.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeEth,
 		)
 		rootchainInstance := &rootchain.Rootchain{}
 
-		suite.contractCaller.On("GetRootChainInstance", mock.Anything).Return(rootchainInstance, nil)
+		suite.contractCaller.On("GetRootChainInstance", mock.Anything, mock.Anything).Return(rootchainInstance, nil)
 		suite.contractCaller.On("GetHeaderInfo", headerId, rootchainInstance, params.ChildBlockInterval).Return(header.RootHash.EthHash(), header.StartBlock, header.EndBlock, header.TimeStamp, header.Proposer, nil)
 
 		result := suite.sideHandler(ctx, msgCheckpointAck)
@@ -195,10 +199,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgCheckpointAck() {
 			hmTypes.HexToHeimdallHash("123"),
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeEth,
 		)
 		rootchainInstance := &rootchain.Rootchain{}
 
-		suite.contractCaller.On("GetRootChainInstance", mock.Anything).Return(rootchainInstance, nil)
+		suite.contractCaller.On("GetRootChainInstance", mock.Anything, mock.Anything).Return(rootchainInstance, nil)
 		suite.contractCaller.On("GetHeaderInfo", headerId, rootchainInstance, params.ChildBlockInterval).Return(nil, header.StartBlock, header.EndBlock, header.TimeStamp, header.Proposer, nil)
 
 		result := suite.sideHandler(ctx, msgCheckpointAck)
@@ -235,7 +240,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
 
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeEth)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -257,12 +262,13 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 			header.RootHash,
 			borChainId,
 			epoch,
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_No)
 		require.True(t, !result.IsOK(), errs.CodeToDefaultMsg(result.Code))
 
-		bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx)
+		bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Nil(t, bufferedHeader)
 		require.Error(t, err)
 	})
@@ -277,12 +283,13 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 			header.RootHash,
 			borChainId,
 			epoch,
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
 		require.True(t, result.IsOK(), "expected send-checkpoint to be ok, got %v", result)
 
-		bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx)
+		bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Equal(t, bufferedHeader.StartBlock, header.StartBlock)
 		require.Equal(t, bufferedHeader.EndBlock, header.EndBlock)
 		require.Equal(t, bufferedHeader.RootHash, header.RootHash)
@@ -301,6 +308,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpoint() {
 			header.RootHash,
 			borChainId,
 			epoch,
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
@@ -334,12 +342,13 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpointAck, abci.SideTxResultType_No)
 		require.True(t, !result.IsOK(), errs.CodeToDefaultMsg(result.Code))
 
-		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx)
+		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Nil(t, afterAckBufferedCheckpoint)
 	})
 
@@ -352,6 +361,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header.RootHash,
 			"1234",
 			1,
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
@@ -366,12 +376,13 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeEth,
 		)
 
 		result = suite.postHandler(ctx, msgCheckpointAck, abci.SideTxResultType_Yes)
 		require.True(t, result.IsOK(), "expected send-ack to be ok, got %v", result)
 
-		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx)
+		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Nil(t, afterAckBufferedCheckpoint)
 	})
 
@@ -385,13 +396,14 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpointAck, abci.SideTxResultType_Yes)
 		require.False(t, result.IsOK())
 		require.Equal(t, common.CodeInvalidACK, result.Code)
 
-		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx)
+		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Nil(t, afterAckBufferedCheckpoint)
 	})
 
@@ -406,6 +418,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header2.RootHash,
 			"1234",
 			1,
+			hmTypes.RootChainTypeEth,
 		)
 
 		result := suite.postHandler(ctx, msgCheckpoint, abci.SideTxResultType_Yes)
@@ -420,12 +433,13 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgCheckpointAck() {
 			header2.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeEth,
 		)
 
 		result = suite.postHandler(ctx, msgCheckpointAck, abci.SideTxResultType_Yes)
 		require.True(t, result.IsOK(), "expected send-ack to be ok, got %v", result)
 
-		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx)
+		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeEth)
 		require.Nil(t, afterAckBufferedCheckpoint)
 	})
 }

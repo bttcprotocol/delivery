@@ -53,7 +53,7 @@ func (suite *GenesisTestSuite) TestInitExportGenesis() {
 		hAddr := hmTypes.BytesToHeimdallAddress([]byte(strconv.Itoa(simulation.RandIntBetween(r1, 1000, 100000))))
 		hHash := hmTypes.BytesToHeimdallHash([]byte(strconv.Itoa(simulation.RandIntBetween(r1, 1000, 100000))))
 		testEventRecord := types.NewEventRecord(hHash, uint64(i), uint64(i), hAddr, make([]byte, 0),
-			strconv.Itoa(simulation.RandIntBetween(r1, 1000, 100000)), time.Now(), hmTypes.DefaultRootChainType)
+			strconv.Itoa(simulation.RandIntBetween(r1, 1000, 100000)), time.Now(), hmTypes.RootChainTypeStake)
 		eventRecords[i] = &testEventRecord
 	}
 	genesisState := types.GenesisState{

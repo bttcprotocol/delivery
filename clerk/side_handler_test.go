@@ -1,11 +1,12 @@
 package clerk_test
 
 import (
-	"github.com/maticnetwork/heimdall/helper"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/maticnetwork/heimdall/helper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkAuth "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -100,11 +101,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
-			hmTypes.DefaultRootChainType,
+			hmTypes.RootChainTypeEth,
 		)
 
 		// mock external calls
-		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txReceipt, nil)
+		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth).Return(txReceipt, nil)
 		event := &statesender.StatesenderStateSynced{
 			Id:              new(big.Int).SetUint64(msg.ID),
 			ContractAddress: msg.ContractAddress.EthAddress(),
@@ -181,11 +182,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
-			hmTypes.DefaultRootChainType,
+			hmTypes.RootChainTypeEth,
 		)
 
 		// mock external calls -- no receipt
-		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(nil, nil)
+		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth).Return(nil, nil)
 		suite.contractCaller.On("DecodeStateSyncedEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), nil, logIndex).Return(nil, nil)
 
 		// execute handler
@@ -213,11 +214,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
-			hmTypes.DefaultRootChainType,
+			hmTypes.RootChainTypeEth,
 		)
 
 		// mock external calls -- no receipt
-		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txReceipt, nil)
+		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth).Return(txReceipt, nil)
 		suite.contractCaller.On("DecodeStateSyncedEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(nil, nil)
 
 		// execute handler
@@ -245,7 +246,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgEventRecord() {
 	logIndex := r.Uint64()
 	blockNumber := r.Uint64()
 	txHash := hmTypes.HexToHeimdallHash("no log hash")
-	rootChainType := hmTypes.DefaultRootChainType
+	rootChainType := hmTypes.RootChainTypeStake
 	msg := types.NewMsgEventRecord(
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		txHash,
@@ -312,7 +313,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgEventRecord() {
 			hmTypes.BytesToHeimdallAddress(addr2.Bytes()),
 			make([]byte, 0),
 			suite.chainID,
-			hmTypes.DefaultRootChainType,
+			hmTypes.RootChainTypeStake,
 		)
 		// set latest msg ID
 		app.ClerkKeeper.SetLatestID(ctx, msg.ID)

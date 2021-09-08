@@ -74,7 +74,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
 
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -97,12 +97,13 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 			accountRoot,
 			borChainId,
 			1,
+			hmTypes.RootChainTypeStake,
 		)
 
 		// send checkpoint to handler
 		got := suite.handler(ctx, msgCheckpoint)
 		require.True(t, got.IsOK(), "expected send-checkpoint to be ok, got %v", got)
-		bufferedHeader, _ := keeper.GetCheckpointFromBuffer(ctx)
+		bufferedHeader, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeStake)
 		require.Empty(t, bufferedHeader, "Should not store state")
 	})
 
@@ -116,6 +117,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 			accountRoot,
 			borChainId,
 			1,
+			hmTypes.RootChainTypeStake,
 		)
 
 		// send checkpoint to handler
@@ -126,10 +128,10 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 	suite.Run("Checkpoint not in countinuity", func() {
 		headerId := uint64(10000)
 
-		keeper.AddCheckpoint(ctx, headerId, header)
-		keeper.GetCheckpointByNumber(ctx, headerId)
-		keeper.UpdateACKCount(ctx)
-		lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+		keeper.AddCheckpoint(ctx, headerId, header, hmTypes.RootChainTypeStake)
+		keeper.GetCheckpointByNumber(ctx, headerId, hmTypes.RootChainTypeStake)
+		keeper.UpdateACKCount(ctx, hmTypes.RootChainTypeStake)
+		lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 		if err == nil {
 			// pass wrong start
 			start = start + lastCheckpoint.EndBlock + 2
@@ -143,6 +145,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpoint() {
 			accountRoot,
 			borChainId,
 			1,
+			hmTypes.RootChainTypeStake,
 		)
 
 		// send checkpoint to handler
@@ -169,7 +172,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAfterBufferTimeOut() {
 	// generate proposer for validator set
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -183,7 +186,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAfterBufferTimeOut() {
 	res := suite.SendCheckpoint(header)
 	require.True(t, res.IsOK(), "expected send-checkpoint to be  ok, got %v", res)
 
-	checkpointBuffer, err := keeper.GetCheckpointFromBuffer(ctx)
+	checkpointBuffer, err := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeStake)
 
 	// set time buffered checkpoint timestamp + checkpointBufferTime
 	newTime := checkpointBuffer.TimeStamp + uint64(checkpointBufferTime)
@@ -210,7 +213,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointExistInBuffer() {
 
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -249,7 +252,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAck() {
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
 
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -262,7 +265,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAck() {
 	got := suite.SendCheckpoint(header)
 	require.True(t, got.IsOK(), "expected send-checkpoint to be ok, got %v", got)
 
-	bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx)
+	bufferedHeader, err := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeStake)
 	require.NotNil(t, bufferedHeader)
 
 	// send ack
@@ -277,10 +280,11 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAck() {
 			header.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeStake,
 		)
 		result := suite.handler(ctx, msgCheckpointAck)
 		require.True(t, result.IsOK(), "expected send-ack to be ok, got %v", result)
-		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx)
+		afterAckBufferedCheckpoint, _ := keeper.GetCheckpointFromBuffer(ctx, hmTypes.RootChainTypeStake)
 		require.NotNil(t, afterAckBufferedCheckpoint, "should not remove from buffer")
 	})
 
@@ -294,6 +298,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAck() {
 			header.RootHash,
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeStake,
 		)
 
 		got := suite.handler(ctx, msgCheckpointAck)
@@ -310,6 +315,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointAck() {
 			hmTypes.HexToHeimdallHash("9887"),
 			hmTypes.HexToHeimdallHash("123123"),
 			uint64(1),
+			hmTypes.RootChainTypeStake,
 		)
 
 		got := suite.handler(ctx, msgCheckpointAck)
@@ -338,7 +344,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAck() {
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
 
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -356,7 +362,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAck() {
 	suite.ctx = ctx.WithBlockTime(time.Unix(0, int64(newTime)))
 	result := suite.SendNoAck()
 	require.True(t, result.IsOK(), "expected send-NoAck to be ok, got %v", got)
-	ackCount := keeper.GetACKCount(ctx)
+	ackCount := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)
 	require.Equal(t, uint64(0), uint64(ackCount), "Should not update state")
 }
 
@@ -379,7 +385,7 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAckBeforeBufferTimeout()
 	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
 	stakingKeeper.IncrementAccum(ctx, 1)
 
-	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx)
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	if err == nil {
 		start = start + lastCheckpoint.EndBlock + 1
 	}
@@ -416,6 +422,7 @@ func (suite *HandlerTestSuite) SendCheckpoint(header hmTypes.Checkpoint) (res sd
 		accountRoot,
 		borChainId,
 		1,
+		hmTypes.RootChainTypeStake,
 	)
 
 	suite.contractCaller.On("CheckIfBlocksExist", header.EndBlock).Return(true)

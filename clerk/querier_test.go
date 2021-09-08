@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maticnetwork/heimdall/helper"
+
 	ethTypes "github.com/maticnetwork/bor/core/types"
 	"github.com/maticnetwork/heimdall/app"
 	"github.com/maticnetwork/heimdall/clerk"
@@ -200,12 +202,13 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	txHash := hmTypes.HexToHeimdallHash("123")
 	index := simulation.RandIntBetween(r1, 0, 100)
 	logIndex := uint64(index)
-	rootChainType := hmTypes.DefaultRootChainType
+	rootChainType := hmTypes.RootChainTypeEth
 	chainParams := app.ChainKeeper.GetParams(ctx)
 	txreceipt := &ethTypes.Receipt{
 		BlockNumber: big.NewInt(1),
 	}
-	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(nil, errors.New("err confirmed txn receipt"))
+	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, rootChainType).
+		Return(nil, errors.New("err confirmed txn receipt"))
 
 	req = abci.RequestQuery{
 		Path: route,
@@ -217,7 +220,7 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	index = simulation.RandIntBetween(r1, 0, 100)
 	logIndex = uint64(index)
 	txHash = hmTypes.HexToHeimdallHash("1234")
-	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
+	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, rootChainType).Return(txreceipt, nil)
 	req = abci.RequestQuery{
 		Path: route,
 		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("1234", logIndex, rootChainType)),
@@ -226,12 +229,12 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	require.Nil(t, err)
 	require.Nil(t, resp)
 
-	testSeq := "10000101"
+	testSeq := helper.CalculateSequence(big.NewInt(1), 1, rootChainType).String()
 	ck := app.ClerkKeeper
 	ck.SetRecordSequence(ctx, testSeq)
 	logIndex = uint64(1)
 	txHash = hmTypes.HexToHeimdallHash("12345")
-	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
+	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, rootChainType).Return(txreceipt, nil)
 	req = abci.RequestQuery{
 		Path: route,
 		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("12345", logIndex, rootChainType)),
@@ -241,7 +244,7 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	require.NotNil(t, resp)
 
 	// tron
-	testSeq = "10000102"
+	testSeq = helper.CalculateSequence(big.NewInt(1), 1, hmTypes.RootChainTypeTron).String()
 	ck.SetRecordSequence(ctx, testSeq)
 	suite.contractCaller.On("GetTronTransactionReceipt", txHash.TronHash().String()).Return(txreceipt, nil)
 	req = abci.RequestQuery{

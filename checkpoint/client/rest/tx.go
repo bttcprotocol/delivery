@@ -103,7 +103,7 @@ func newCheckpointACKHandler(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		// draft a message and send response
-		msg := types.NewMsgOtherCheckpointAck(
+		msg := types.NewMsgCheckpointAck(
 			req.From,
 			req.HeaderBlock,
 			req.Proposer,

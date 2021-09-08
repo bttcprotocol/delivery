@@ -363,14 +363,14 @@ func (k *Keeper) GetOtherCheckpoints(ctx sdk.Context, rootChain string) []hmType
 // Ack count
 //
 
-func getAckCountKey(rootID byte) []byte {
+func GetAckCountKey(rootID byte) []byte {
 	return append(ACKCountKey, rootID)
 }
 
 // GetACKCount returns current ACK count
 func (k Keeper) GetACKCount(ctx sdk.Context, rootChain string) uint64 {
 	store := ctx.KVStore(k.storeKey)
-	key := getAckCountKey(hmTypes.GetRootChainID(rootChain))
+	key := GetAckCountKey(hmTypes.GetRootChainID(rootChain))
 	// checkpoint block header
 	if store.Has(key) {
 		// check if ack count is there
@@ -386,29 +386,15 @@ func (k Keeper) GetACKCount(ctx sdk.Context, rootChain string) uint64 {
 }
 
 // UpdateACKCountWithValue updates ACK with value
-func (k Keeper) UpdateACKCountWithValue(ctx sdk.Context, value uint64) {
+func (k Keeper) UpdateACKCountWithValue(ctx sdk.Context, value uint64, rootChain string) {
 	store := ctx.KVStore(k.storeKey)
 
 	// convert
 	ackCount := []byte(strconv.FormatUint(value, 10))
 
 	// update
-	key := getAckCountKey(hmTypes.GetRootChainID(hmTypes.RootChainTypeStake))
+	key := GetAckCountKey(hmTypes.GetRootChainID(rootChain))
 	store.Set(key, ackCount)
-}
-
-// UpdateOtherACKCountWithValue updates ACK with value
-func (k Keeper) UpdateOtherACKCountWithValue(ctx sdk.Context, value uint64, rootChain string) {
-	store := ctx.KVStore(k.storeKey)
-
-	// convert
-	ackCount := []byte(strconv.FormatUint(value, 10))
-
-	// update
-	if rootChain == hmTypes.RootChainTypeTron {
-		key := getAckCountKey(hmTypes.GetRootChainID(rootChain))
-		store.Set(key, ackCount)
-	}
 }
 
 // UpdateACKCount updates ACK count by 1
@@ -421,7 +407,7 @@ func (k Keeper) UpdateACKCount(ctx sdk.Context, rootChain string) {
 	// increment by 1
 	ACKs := []byte(strconv.FormatUint(ACKCount+1, 10))
 	// update
-	key := getAckCountKey(hmTypes.GetRootChainID(rootChain))
+	key := GetAckCountKey(hmTypes.GetRootChainID(rootChain))
 	store.Set(key, ACKs)
 
 }

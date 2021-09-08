@@ -48,10 +48,10 @@ func (suite *KeeperTestSuite) TestAddCheckpoint() {
 		borChainId,
 		timestamp,
 	)
-	err := keeper.AddCheckpoint(ctx, headerBlockNumber, Checkpoint)
+	err := keeper.AddCheckpoint(ctx, headerBlockNumber, Checkpoint, hmTypes.RootChainTypeStake)
 	require.NoError(t, err)
 
-	result, err := keeper.GetCheckpointByNumber(ctx, headerBlockNumber)
+	result, err := keeper.GetCheckpointByNumber(ctx, headerBlockNumber, hmTypes.RootChainTypeStake)
 	require.NoError(t, err)
 	require.Equal(t, startBlock, result.StartBlock)
 	require.Equal(t, endBlock, result.EndBlock)
@@ -89,8 +89,8 @@ func (suite *KeeperTestSuite) TestGetCheckpointList() {
 			timestamp,
 		)
 
-		keeper.AddCheckpoint(ctx, headerBlockNumber, Checkpoint)
-		keeper.UpdateACKCount(ctx)
+		keeper.AddCheckpoint(ctx, headerBlockNumber, Checkpoint, hmTypes.RootChainTypeStake)
+		keeper.UpdateACKCount(ctx, hmTypes.RootChainTypeStake)
 	}
 
 	result, err := keeper.GetCheckpointList(ctx, uint64(1), uint64(20), hmTypes.RootChainTypeEth)
@@ -101,7 +101,7 @@ func (suite *KeeperTestSuite) TestGetCheckpointList() {
 func (suite *KeeperTestSuite) TestHasStoreValue() {
 	t, app, ctx := suite.T(), suite.app, suite.ctx
 	keeper := app.CheckpointKeeper
-	key := checkpoint.ACKCountKey
+	key := checkpoint.GetAckCountKey(hmTypes.GetRootChainID(hmTypes.RootChainTypeStake))
 	result := keeper.HasStoreValue(ctx, key)
 	require.True(t, result)
 }
@@ -109,8 +109,8 @@ func (suite *KeeperTestSuite) TestHasStoreValue() {
 func (suite *KeeperTestSuite) TestFlushCheckpointBuffer() {
 	t, app, ctx := suite.T(), suite.app, suite.ctx
 	keeper := app.CheckpointKeeper
-	key := checkpoint.BufferCheckpointKey
-	keeper.FlushCheckpointBuffer(ctx)
+	key := append(checkpoint.BufferCheckpointKey, hmTypes.GetRootChainID(hmTypes.RootChainTypeStake))
+	keeper.FlushCheckpointBuffer(ctx, hmTypes.RootChainTypeStake)
 	result := keeper.HasStoreValue(ctx, key)
 	require.False(t, result)
 }

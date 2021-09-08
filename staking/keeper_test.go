@@ -194,7 +194,7 @@ func (suite *KeeperTestSuite) TestCurrentValidator() {
 			}
 			// check current validator
 			stakingKeeper.AddValidator(ctx, newVal)
-			checkpointKeeper.UpdateACKCountWithValue(ctx, item.ackcount)
+			checkpointKeeper.UpdateACKCountWithValue(ctx, item.ackcount, hmTypes.RootChainTypeStake)
 
 			isCurrentVal := stakingKeeper.IsCurrentValidatorByAddress(ctx, newVal.Signer.Bytes())
 			require.Equal(t, item.result, isCurrentVal, item.resultmsg)
@@ -358,12 +358,12 @@ func (suite *KeeperTestSuite) TestGetSpanEligibleValidators() {
 	chSim.LoadValidatorSet(4, t, keeper, ctx, false, 0)
 
 	// Test ActCount = 0
-	app.CheckpointKeeper.UpdateACKCountWithValue(ctx, 0)
+	app.CheckpointKeeper.UpdateACKCountWithValue(ctx, 0, hmTypes.RootChainTypeStake)
 
 	valActCount0 := keeper.GetSpanEligibleValidators(ctx)
 	require.LessOrEqual(t, len(valActCount0), 4)
 
-	app.CheckpointKeeper.UpdateACKCountWithValue(ctx, 20)
+	app.CheckpointKeeper.UpdateACKCountWithValue(ctx, 20, hmTypes.RootChainTypeStake)
 
 	validators := keeper.GetSpanEligibleValidators(ctx)
 	require.LessOrEqual(t, len(validators), 4)

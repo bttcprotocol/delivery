@@ -74,22 +74,21 @@ func (suite *QuerierTestSuite) TestInvalidQuery() {
 // TestQuerySequence queries sequence data
 func (suite *QuerierTestSuite) TestQuerySequence() {
 	t, app, ctx, querier := suite.T(), suite.app, suite.ctx, suite.querier
-	chainParams := app.ChainKeeper.GetParams(ctx)
 
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 
 	txHash := hmTypes.HexToHeimdallHash("123")
 	logIndex := uint64(simulation.RandIntBetween(r1, 0, 100))
-	txreceipt := &ethTypes.Receipt{BlockNumber: big.NewInt(10)}
+	txReceipt := &ethTypes.Receipt{BlockNumber: big.NewInt(10)}
 
 	// set topup sequence
-	sequence := new(big.Int).Mul(txreceipt.BlockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
+	sequence := new(big.Int).Mul(txReceipt.BlockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
 	sequence.Add(sequence, new(big.Int).SetUint64(logIndex))
 	app.TopupKeeper.SetTopupSequence(ctx, sequence.String())
 
 	// mock external calls
-	suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
+	suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
 
 	path := []string{types.QuerySequence}
 	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QuerySequence)
@@ -169,7 +168,7 @@ func (suite *QuerierTestSuite) TestHandleQueryAccountProof() {
 	copy(accountRoot[:], accRoot)
 
 	// mock contracts
-	suite.contractCaller.On("GetStakingInfoInstance", mock.Anything).Return(stakingInfo, nil)
+	suite.contractCaller.On("GetStakingInfoInstance", mock.Anything, hmTypes.RootChainTypeStake).Return(stakingInfo, nil)
 	suite.contractCaller.On("CurrentAccountStateRoot", stakingInfo).Return(accountRoot, nil)
 
 	req := abci.RequestQuery{

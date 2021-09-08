@@ -109,7 +109,7 @@ func (suite *KeeperTestSuite) TestGetEventRecordList() {
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
 	ck := app.ClerkKeeper
 	for i = 0; i < 60; i++ {
-		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.DefaultRootChainType)
+		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeStake)
 		ck.SetEventRecord(ctx, testRecord)
 	}
 
@@ -137,7 +137,7 @@ func (suite *KeeperTestSuite) TestGetEventRecordListTime() {
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
 	ck := app.ClerkKeeper
 	for i = 0; i < 30; i++ {
-		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Unix(int64(i), 0), hmTypes.DefaultRootChainType)
+		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Unix(int64(i), 0), hmTypes.RootChainTypeStake)
 		ck.SetEventRecord(ctx, testRecord)
 	}
 
@@ -162,7 +162,7 @@ func (suite *KeeperTestSuite) TestGetEventRecordKey() {
 
 	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
 	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
-	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.DefaultRootChainType)
+	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeStake)
 
 	respKey := clerk.GetEventRecordKey(testRecord1.ID)
 	require.Equal(t, respKey, []byte{17, 49})

@@ -1,11 +1,12 @@
 package clerk_test
 
 import (
-	"github.com/maticnetwork/heimdall/helper"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/maticnetwork/heimdall/helper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -49,7 +50,7 @@ func (suite *HandlerTestSuite) SetupTest() {
 	// random generator
 	s1 := rand.NewSource(time.Now().UnixNano())
 	suite.r = rand.New(s1)
-	suite.rootChainType = hmTypes.DefaultRootChainType
+	suite.rootChainType = hmTypes.RootChainTypeStake
 
 }
 
@@ -105,7 +106,7 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecord() {
 				msg.Data,
 				msg.ChainID,
 				time.Now(),
-				hmTypes.DefaultRootChainType,
+				hmTypes.RootChainTypeStake,
 			),
 		)
 
@@ -122,7 +123,7 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecord() {
 				msg.Data,
 				msg.ChainID,
 				time.Now(),
-				hmTypes.RootChainTypeTron,
+				hmTypes.RootChainTypeStake,
 			),
 		)
 		result = suite.handler(ctx, msg)
@@ -157,7 +158,7 @@ func (suite *HandlerTestSuite) TestHandleMsgEventRecordSequence() {
 	result := suite.handler(ctx, msg)
 	require.False(t, result.IsOK(), "should fail due to existent sequence but succeeded")
 	require.Equal(t, common.CodeOldTx, result.Code)
-    // tron chain
+	// tron chain
 	msg = types.NewMsgEventRecord(
 		hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
 		hmTypes.HexToHeimdallHash("123"),

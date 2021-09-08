@@ -1311,7 +1311,7 @@ func (suite *SideHandlerTestSuite) TestPostHandleMsgValidatorExit() {
 		currentVals := keeper.GetCurrentValidators(ctx)
 		require.Equal(t, 4, len(currentVals), "No of current validators should exist before epoch passes")
 
-		app.CheckpointKeeper.UpdateACKCountWithValue(ctx, 20)
+		app.CheckpointKeeper.UpdateACKCountWithValue(ctx, 20, hmTypes.RootChainTypeStake)
 		currentVals = keeper.GetCurrentValidators(ctx)
 		require.Equal(t, 3, len(currentVals), "No of current validators should reduce after epoch passes")
 	})
