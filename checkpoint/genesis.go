@@ -44,6 +44,24 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 
 	// Set initial ack count
 	keeper.UpdateACKCountWithValue(ctx, data.AckCount)
+
+	// Add finalised checkpoints to state
+	if len(data.TronCheckpoints) != 0 {
+		// check if we are provided all the headers
+		if int(data.TronAckCount) != len(data.TronCheckpoints) {
+			panic(errors.New("Incorrect state in state-dump , Please Check "))
+		}
+		// sort headers before loading to state
+		data.TronCheckpoints = hmTypes.SortHeaders(data.TronCheckpoints)
+		// load checkpoints to state
+		for i, checkpoint := range data.TronCheckpoints {
+			checkpointIndex := uint64(i) + 1
+			if err := keeper.AddOtherCheckpoint(ctx, checkpointIndex, checkpoint, hmTypes.RootChainTypeTron); err != nil {
+				keeper.Logger(ctx).Error("InitGenesis | TronAddCheckpoint", "error", err)
+			}
+		}
+	}
+	keeper.UpdateOtherACKCountWithValue(ctx, data.TronAckCount, hmTypes.RootChainTypeTron)
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
@@ -57,5 +75,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 		keeper.GetLastNoAck(ctx),
 		keeper.GetACKCount(ctx),
 		hmTypes.SortHeaders(keeper.GetCheckpoints(ctx)),
+		keeper.GetOtherACKCount(ctx, hmTypes.RootChainTypeTron),
+		hmTypes.SortHeaders(keeper.GetOtherCheckpoints(ctx, hmTypes.RootChainTypeTron)),
 	)
 }

@@ -18,6 +18,7 @@ import (
 func createTestApp(isCheckTx bool) (*app.HeimdallApp, sdk.Context, context.CLIContext) {
 	genesisState := app.NewDefaultGenesisState()
 	stakingGenesis := stakingTypes.NewGenesisState(
+		stakingTypes.DefaultGenesisState().Params,
 		stakingTypes.DefaultGenesisState().Validators,
 		stakingTypes.DefaultGenesisState().CurrentValSet,
 		stakingTypes.DefaultGenesisState().StakingSequences)

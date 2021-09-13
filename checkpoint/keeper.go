@@ -414,6 +414,28 @@ func (k *Keeper) GetCheckpoints(ctx sdk.Context) []hmTypes.Checkpoint {
 	return headers
 }
 
+// GetOtherCheckpoints get checkpoint all checkpoints
+func (k *Keeper) GetOtherCheckpoints(ctx sdk.Context, rootChain string) []hmTypes.Checkpoint {
+	store := ctx.KVStore(k.storeKey)
+	// get checkpoint header iterator
+	var iterator sdk.Iterator
+	if hmTypes.RootChainTypeTron == rootChain {
+		iterator = sdk.KVStorePrefixIterator(store, TronCheckpointKey)
+		defer iterator.Close()
+	}
+	// create headers
+	var headers []hmTypes.Checkpoint
+
+	// loop through validators to get valid validators
+	for ; iterator.Valid(); iterator.Next() {
+		var checkpoint hmTypes.Checkpoint
+		if err := k.cdc.UnmarshalBinaryBare(iterator.Value(), &checkpoint); err == nil {
+			headers = append(headers, checkpoint)
+		}
+	}
+	return headers
+}
+
 //
 // Ack count
 //
@@ -463,6 +485,19 @@ func (k Keeper) UpdateACKCountWithValue(ctx sdk.Context, value uint64) {
 
 	// update
 	store.Set(ACKCountKey, ackCount)
+}
+
+// UpdateOtherACKCountWithValue updates ACK with value
+func (k Keeper) UpdateOtherACKCountWithValue(ctx sdk.Context, value uint64, rootChain string) {
+	store := ctx.KVStore(k.storeKey)
+
+	// convert
+	ackCount := []byte(strconv.FormatUint(value, 10))
+
+	// update
+	if rootChain == hmTypes.RootChainTypeTron {
+		store.Set(TronACKCountKey, ackCount)
+	}
 }
 
 // UpdateACKCount updates ACK count by 1

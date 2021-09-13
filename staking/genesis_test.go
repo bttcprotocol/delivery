@@ -61,11 +61,14 @@ func (suite *GenesisTestSuite) TestInitExportGenesis() {
 			accounts[i].Address,
 		)
 	}
+	param := types.Params{
+		StakingBufferTime: time.Duration(simulation.RandIntBetween(r1, 1, 10)) * time.Minute,
+	}
 
 	// validator set
 	validatorSet := hmTypes.NewValidatorSet(validators)
 
-	genesisState := types.NewGenesisState(validators, *validatorSet, stakingSequence)
+	genesisState := types.NewGenesisState(param, validators, *validatorSet, stakingSequence)
 	staking.InitGenesis(ctx, app.StakingKeeper, genesisState)
 
 	actualParams := staking.ExportGenesis(ctx, app.StakingKeeper)

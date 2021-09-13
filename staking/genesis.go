@@ -49,6 +49,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 	// return new genesis state
 	return types.NewGenesisState(
+		keeper.GetParams(ctx),
 		keeper.GetAllValidators(ctx),
 		keeper.GetValidatorSet(ctx),
 		keeper.GetStakingSequences(ctx),

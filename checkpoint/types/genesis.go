@@ -16,6 +16,8 @@ type GenesisState struct {
 	LastNoACK          uint64               `json:"last_no_ack" yaml:"last_no_ack"`
 	AckCount           uint64               `json:"ack_count" yaml:"ack_count"`
 	Checkpoints        []hmTypes.Checkpoint `json:"checkpoints" yaml:"checkpoints"`
+	TronAckCount       uint64               `json:"tron_ack_count" yaml:"tron_ack_count"`
+	TronCheckpoints    []hmTypes.Checkpoint `json:"tron_checkpoints" yaml:"tron_checkpoints"`
 }
 
 // NewGenesisState creates a new genesis state.
@@ -25,6 +27,8 @@ func NewGenesisState(
 	lastNoACK uint64,
 	ackCount uint64,
 	checkpoints []hmTypes.Checkpoint,
+	tronAckCount uint64,
+	tronCheckpoints []hmTypes.Checkpoint,
 ) GenesisState {
 	return GenesisState{
 		Params:             params,
@@ -32,6 +36,8 @@ func NewGenesisState(
 		LastNoACK:          lastNoACK,
 		AckCount:           ackCount,
 		Checkpoints:        checkpoints,
+		TronAckCount:       tronAckCount,
+		TronCheckpoints:    tronCheckpoints,
 	}
 }
 

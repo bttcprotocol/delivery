@@ -69,6 +69,8 @@ func (suite *GenesisTestSuite) TestInitExportGenesis() {
 		uint64(lastNoACK),
 		uint64(ackCount),
 		checkpoints,
+		uint64(ackCount),
+		checkpoints,
 	)
 
 	checkpoint.InitGenesis(ctx, app.CheckpointKeeper, genesisState)

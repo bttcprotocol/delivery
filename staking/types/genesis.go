@@ -42,11 +42,13 @@ type GenesisState struct {
 
 // NewGenesisState creates a new genesis state.
 func NewGenesisState(
+	params Params,
 	validators []*hmTypes.Validator,
 	currentValSet hmTypes.ValidatorSet,
 	stakingSequences []string,
 ) GenesisState {
 	return GenesisState{
+		Params:           params,
 		Validators:       validators,
 		CurrentValSet:    currentValSet,
 		StakingSequences: stakingSequences,
@@ -55,7 +57,7 @@ func NewGenesisState(
 
 // DefaultGenesisState returns a default genesis state
 func DefaultGenesisState() GenesisState {
-	return NewGenesisState(nil, hmTypes.ValidatorSet{}, nil)
+	return NewGenesisState(Params{}, nil, hmTypes.ValidatorSet{}, nil)
 }
 
 // ValidateGenesis performs basic validation of bor genesis data returning an

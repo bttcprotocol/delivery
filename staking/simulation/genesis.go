@@ -39,7 +39,9 @@ func RandomizedGenState(simState *module.SimulationState) {
 
 	// validator set
 	validatorSet := hmTypes.NewValidatorSet(validators)
-
-	genesisState := types.NewGenesisState(validators, *validatorSet, stakingSequence)
+	param := types.Params{
+		StakingBufferTime: time.Duration(simulation.RandIntBetween(r1, 1, 10)) * time.Minute,
+	}
+	genesisState := types.NewGenesisState(param, validators, *validatorSet, stakingSequence)
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(genesisState)
 }
