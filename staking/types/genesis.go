@@ -57,7 +57,7 @@ func NewGenesisState(
 
 // DefaultGenesisState returns a default genesis state
 func DefaultGenesisState() GenesisState {
-	return NewGenesisState(Params{}, nil, hmTypes.ValidatorSet{}, nil)
+	return NewGenesisState(DefaultParams(), nil, hmTypes.ValidatorSet{}, nil)
 }
 
 // ValidateGenesis performs basic validation of bor genesis data returning an

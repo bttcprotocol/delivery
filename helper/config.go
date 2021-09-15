@@ -67,6 +67,7 @@ const (
 	DefaultNoACKPollInterval        = 1010 * time.Second
 	DefaultClerkPollInterval        = 10 * time.Second
 	DefaultSpanPollInterval         = 1 * time.Minute
+	DefaultStakingPollInterval      = 1 * time.Minute
 	DefaultStartListenBlock         = 0
 
 	DefaultMainchainGasLimit = uint64(5000000)
@@ -242,12 +243,13 @@ func GetDefaultHeimdallConfig() Configuration {
 		NoACKPollInterval:        DefaultNoACKPollInterval,
 		ClerkPollInterval:        DefaultClerkPollInterval,
 		SpanPollInterval:         DefaultSpanPollInterval,
+		StakingPollInterval:      DefaultStakingPollInterval,
 
 		NoACKWaitTime: NoACKWaitTime,
 
-		TronGridApiKey: DefaultTronGridApiKey,
+		TronGridApiKey:       DefaultTronGridApiKey,
 		TronStartListenBlock: DefaultStartListenBlock,
-		EthStartListenBlock: DefaultStartListenBlock,
+		EthStartListenBlock:  DefaultStartListenBlock,
 	}
 }
 

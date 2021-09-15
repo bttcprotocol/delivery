@@ -38,6 +38,7 @@ syncer_poll_interval = "{{ .SyncerPollInterval }}"
 noack_poll_interval = "{{ .NoACKPollInterval }}"
 clerk_poll_interval = "{{ .ClerkPollInterval }}"
 span_poll_interval = "{{ .SpanPollInterval }}"
+staking_poll_interval = "{{ .StakingPollInterval }}"
 
 #### gas limits ####
 main_chain_gas_limit = "{{ .MainchainGasLimit }}"
