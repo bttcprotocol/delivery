@@ -202,6 +202,7 @@ func (c *ContractCaller) SendTronCheckpoint(signedData []byte, sigs [][3]*big.In
 	if err != nil {
 		return err
 	}
+	trx.RawData.FeeLimit = int64(GetConfig().TronchainFeeLimit)
 	rawData, _ := proto.Marshal(trx.GetRawData())
 	hash, err := Hash(rawData)
 	if err != nil {
@@ -234,6 +235,7 @@ func (c *ContractCaller) SendCheckpointSyncToTron(signedData []byte, sigs [][3]*
 	if err != nil {
 		return err
 	}
+	trx.RawData.FeeLimit = int64(GetConfig().TronchainFeeLimit)
 	rawData, _ := proto.Marshal(trx.GetRawData())
 	hash, err := Hash(rawData)
 	if err != nil {
@@ -312,6 +314,7 @@ func (c *ContractCaller) SendTronStakingSync(syncMethod string, signedData []byt
 	if err != nil {
 		return err
 	}
+	trx.RawData.FeeLimit = int64(GetConfig().TronchainFeeLimit)
 	rawData, _ := proto.Marshal(trx.GetRawData())
 	hash, err := Hash(rawData)
 	if err != nil {

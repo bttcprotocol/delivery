@@ -71,6 +71,7 @@ const (
 	DefaultStartListenBlock         = 0
 
 	DefaultMainchainGasLimit = uint64(5000000)
+	DefaultTronFeeLimit      = uint64(5000000000)
 
 	DefaultBorChainID string = "15001"
 
@@ -107,6 +108,7 @@ type Configuration struct {
 	TronGridApiKey string `mapstructure:"tron_grid_api_key"` // tron api key
 
 	MainchainGasLimit uint64 `mapstructure:"main_chain_gas_limit"` // gas limit to mainchain transaction. eg....submit checkpoint.
+	TronchainFeeLimit uint64 `mapstructure:"tron_chain_fee_limit"` // gas limit to tron transaction. eg....submit checkpoint.
 
 	// config related to bridge
 	CheckpointerPollInterval time.Duration `mapstructure:"checkpoint_poll_interval"` // Poll interval for checkpointer service to send new checkpoints or missing ACK
@@ -237,6 +239,7 @@ func GetDefaultHeimdallConfig() Configuration {
 		HeimdallServerURL: DefaultHeimdallServerURL,
 
 		MainchainGasLimit: DefaultMainchainGasLimit,
+		TronchainFeeLimit: DefaultTronFeeLimit,
 
 		CheckpointerPollInterval: DefaultCheckpointerPollInterval,
 		SyncerPollInterval:       DefaultSyncerPollInterval,
