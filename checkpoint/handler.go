@@ -159,7 +159,7 @@ func handleMsgCheckpoint(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper, con
 	//
 	// Validate epoch
 	//
-	epoch := k.GetACKCount(ctx) + 1
+	epoch := k.GetOtherACKCount(ctx, hmTypes.RootChainTypeStake) + 1
 	if epoch != msg.Epoch {
 		logger.Error("Current epoch does not match msg", "msg.epoch", msg.Epoch, "current", epoch)
 		return common.ErrInvalidMsg(k.Codespace(), "No proposer in stored validator set").Result()

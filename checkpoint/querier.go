@@ -22,6 +22,8 @@ func NewQuerier(keeper Keeper, stakingKeeper staking.Keeper, topupKeeper topup.K
 			return handleQueryParams(ctx, req, keeper)
 		case types.QueryAckCount:
 			return handleQueryAckCount(ctx, req, keeper)
+		case types.QueryEpoch:
+			return handleQueryEpoch(ctx, req, keeper)
 		case types.QueryCheckpoint:
 			return handleQueryCheckpoint(ctx, req, keeper)
 		case types.QueryCheckpointBuffer:
@@ -62,6 +64,21 @@ func handleQueryAckCount(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) 
 		res = keeper.GetACKCount(ctx)
 	}
 
+	bz, err := json.Marshal(res)
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+	return bz, nil
+}
+
+func handleQueryEpoch(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryCheckpointParams
+
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
+	}
+
+	res := keeper.GetOtherACKCount(ctx, hmTypes.RootChainTypeStake)
 	bz, err := json.Marshal(res)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))

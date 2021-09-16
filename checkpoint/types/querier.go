@@ -4,6 +4,7 @@ package types
 const (
 	QueryParams               = "params"
 	QueryAckCount             = "ack-count"
+	QueryEpoch                = "epoch"
 	QueryCheckpoint           = "checkpoint"
 	QueryCheckpointBuffer     = "checkpoint-buffer"
 	QueryCheckpointSyncBuffer = "checkpoint-sync"

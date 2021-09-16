@@ -88,16 +88,16 @@ func (suite *QuerierTestSuite) TestQueryParams() {
 
 func (suite *QuerierTestSuite) TestQueryAckCount() {
 	t, _, ctx, querier := suite.T(), suite.app, suite.ctx, suite.querier
-	path := []string{types.QueryAckCount}
+	path := []string{types.QueryEpoch}
 
-	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount)
+	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryEpoch)
 	req := abci.RequestQuery{
 		Path: route,
 		Data: []byte{},
 	}
 
 	ackCount := uint64(1)
-	suite.app.CheckpointKeeper.UpdateACKCountWithValue(ctx, ackCount)
+	suite.app.CheckpointKeeper.UpdateOtherACKCountWithValue(ctx, ackCount, hmTypes.RootChainTypeStake)
 
 	res, err := querier(ctx, path, req)
 	require.NoError(t, err)
