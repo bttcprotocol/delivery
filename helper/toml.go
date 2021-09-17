@@ -27,6 +27,11 @@ tendermint_rpc_url = "{{ .TendermintRPCUrl }}"
 # Heimdall REST server endpoint
 heimdall_rest_server = "{{ .HeimdallServerURL }}"
 
+# RPC endpoint for tron
+tron_rpc_url = "{{ .TronRPCUrl }}"
+tron_grid_url = "{{ .TronGridUrl }}"
+tron_grid_api_key = "{{ .TronGridApiKey }}"
+
 #### Bridge configs ####
 
 # AMQP endpoint
@@ -42,6 +47,7 @@ staking_poll_interval = "{{ .StakingPollInterval }}"
 
 #### gas limits ####
 main_chain_gas_limit = "{{ .MainchainGasLimit }}"
+tron_chain_fee_limit = "{{ .TronchainFeeLimit }}"
 
 ##### Timeout Config #####
 no_ack_wait_time = "{{ .NoACKWaitTime }}"
