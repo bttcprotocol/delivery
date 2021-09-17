@@ -166,7 +166,7 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordList() {
 
 	req = abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(hmTypes.NewQueryPaginationParams(1, 4)),
+		Data: app.Codec().MustMarshalJSON(hmTypes.NewQueryPaginationParams(1, 4, "")),
 	}
 	record, err := querier(ctx, path, req)
 	require.NoError(t, err)

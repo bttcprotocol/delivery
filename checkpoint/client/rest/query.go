@@ -42,7 +42,7 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 
 	r.HandleFunc("/checkpoints/epoch", currentEpochHandlerFunc(cliCtx)).Methods("GET")
 
-	r.HandleFunc("/checkpoints/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
+	r.HandleFunc("/checkpoints/{root}/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
 
 }
 
@@ -516,8 +516,14 @@ func checkpointByNumberHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		rootChain, ok := vars["root"]
+		if !ok {
+			err := fmt.Errorf("'%s' is not a valid rootChain", vars["root"])
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		// get query params
-		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(number, ""))
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(number, rootChain))
 		if err != nil {
 			return
 		}
@@ -550,6 +556,14 @@ func checkpointListhandlerFn(
 		}
 
 		// get page
+		root := vars.Get("root")
+		if hmTypes.GetRootChainID(root) == 0 {
+			err := fmt.Errorf("valid root chain %v", root)
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// get page
 		page, ok := rest.ParseUint64OrReturnBadRequest(w, vars.Get("page"))
 		if !ok {
 			return
@@ -562,7 +576,7 @@ func checkpointListhandlerFn(
 		}
 
 		// get query params
-		queryParams, err := cliCtx.Codec.MarshalJSON(hmTypes.NewQueryPaginationParams(page, limit))
+		queryParams, err := cliCtx.Codec.MarshalJSON(hmTypes.NewQueryPaginationParams(page, limit, root))
 		if err != nil {
 			return
 		}

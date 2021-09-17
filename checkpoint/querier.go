@@ -180,7 +180,7 @@ func handleQueryCheckpointList(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
-	res, err := keeper.GetCheckpointList(ctx, params.Page, params.Limit)
+	res, err := keeper.GetCheckpointList(ctx, params.Page, params.Limit, params.RootChain)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(fmt.Sprintf("could not fetch checkpoint list with page %v and limit %v", params.Page, params.Limit), err.Error()))
 	}

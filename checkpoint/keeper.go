@@ -182,7 +182,7 @@ func (k *Keeper) GetOtherCheckpointByNumber(ctx sdk.Context, number uint64, root
 }
 
 // GetCheckpointList returns all checkpoints with params like page and limit
-func (k *Keeper) GetCheckpointList(ctx sdk.Context, page uint64, limit uint64) ([]hmTypes.Checkpoint, error) {
+func (k *Keeper) GetCheckpointList(ctx sdk.Context, page uint64, limit uint64, rootChain string) ([]hmTypes.Checkpoint, error) {
 	store := ctx.KVStore(k.storeKey)
 
 	// create headers
@@ -195,6 +195,9 @@ func (k *Keeper) GetCheckpointList(ctx sdk.Context, page uint64, limit uint64) (
 
 	// get paginated iterator
 	iterator := hmTypes.KVStorePrefixIteratorPaginated(store, CheckpointKey, uint(page), uint(limit))
+	if rootChain == hmTypes.RootChainTypeTron {
+		iterator = hmTypes.KVStorePrefixIteratorPaginated(store, TronCheckpointKey, uint(page), uint(limit))
+	}
 
 	// loop through validators to get valid validators
 	for ; iterator.Valid(); iterator.Next() {

@@ -245,7 +245,7 @@ func timeRangeQuery(cliCtx context.CLIContext, fromTime int64, toTime int64, pag
 
 func rangeQuery(cliCtx context.CLIContext, page uint64, limit uint64) ([]byte, error) {
 	// get query params
-	queryParams, err := cliCtx.Codec.MarshalJSON(hmTypes.NewQueryPaginationParams(page, limit))
+	queryParams, err := cliCtx.Codec.MarshalJSON(hmTypes.NewQueryPaginationParams(page, limit, ""))
 	if err != nil {
 		return nil, err
 	}
