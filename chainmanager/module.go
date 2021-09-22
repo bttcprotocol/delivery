@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/gorilla/mux"
+	hmTypes "github.com/maticnetwork/heimdall/types"
 	"github.com/spf13/cobra"
 	abci "github.com/tendermint/tendermint/abci/types"
 
@@ -111,7 +112,7 @@ func (AppModule) Route() string {
 
 // NewHandler returns an sdk.Handler for the module.
 func (am AppModule) NewHandler() sdk.Handler {
-	return nil
+	return NewHandler(am.keeper, am.contractCaller)
 }
 
 // QuerierRoute returns the auth module's querier route name.
@@ -147,6 +148,15 @@ func (AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 // updates.
 func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
+}
+
+func (am AppModule) NewSideTxHandler() hmTypes.SideTxHandler {
+	return NewSideTxHandler(am.keeper, am.contractCaller)
+}
+
+// NewPostTxHandler side tx handler
+func (am AppModule) NewPostTxHandler() hmTypes.PostTxHandler {
+	return NewPostTxHandler(am.keeper, am.contractCaller)
 }
 
 // GenerateGenesisState creates a randomized GenState of the chainManager module

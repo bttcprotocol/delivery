@@ -44,6 +44,8 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 
 	r.HandleFunc("/checkpoints/{root}/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
 
+	r.HandleFunc("/checkpoints/activation-height/{root}", checkpointActivationHeightHandlerFunc(cliCtx)).Methods("GET")
+
 }
 
 // HTTP request handler to query the auth params values
@@ -628,6 +630,54 @@ func currentEpochHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, result)
+	}
+}
+
+// checkpointActivationHeightHandlerFunc get activation height from store
+func checkpointActivationHeightHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+		rootChain, ok := vars["root"]
+		if !ok {
+			err := fmt.Errorf("'%s' is not a valid rootChain", vars["root"])
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		// get query params
+		queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(0, rootChain))
+		if err != nil {
+			return
+		}
+
+		// query checkpoint
+		activationHeightBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointActivation), queryParams)
+		if err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		var activationHeight uint64
+		if err := json.Unmarshal(activationHeightBytes, &activationHeight); err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		result, err := json.Marshal(map[string]interface{}{"result": activationHeight})
+		if err != nil {
+			RestLogger.Error("Error while marshalling resposne to Json", "error", err)
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		// check content
+		if ok := hmRest.ReturnNotFoundIfNoContent(w, result, "No activation height found"); !ok {
+			return
+		}
+
 		rest.PostProcessResponse(w, cliCtx, result)
 	}
 }

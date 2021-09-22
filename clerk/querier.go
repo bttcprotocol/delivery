@@ -107,12 +107,16 @@ func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
 			chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth)
 	case hmTypes.RootChainTypeBsc:
+		bscChain, err := keeper.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
+		if err != nil {
+			return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "plealse pass correct chainType like bsc"))
+		}
 		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
-			chainParams.BscChainTxConfirmations, hmTypes.RootChainTypeEth)
+			bscChain.TxConfirmations, hmTypes.RootChainTypeBsc)
 	case hmTypes.RootChainTypeTron:
 		receipt, err = contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
 	default:
-		return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "please pass correct chainType like ETH or TRON"))
+		return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "please pass correct chainType like eth or tron"))
 	}
 	if err != nil || receipt == nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("Transaction is not confirmed yet. Please wait for sometime and try again"))

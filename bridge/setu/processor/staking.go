@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	ethCommon "github.com/maticnetwork/bor/common"
-
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
 
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
@@ -422,17 +420,16 @@ func (sp *StakingProcessor) checkStakingSyncAck() {
 		sp.Logger.Info("I am not the current proposer. Ignoring")
 		return
 	}
-	// fetch fresh staking context
-	stakingContext, err := sp.getStakingContext()
-	if err != nil {
-		return
-	}
 
 	for rootChain := range hmTypes.GetRootChainIDMap() {
 		if rootChain == hmTypes.RootChainTypeStake {
 			continue
 		}
-
+		// fetch fresh staking context
+		stakingContext, err := sp.getStakingContext(rootChain)
+		if err != nil {
+			return
+		}
 		// fetch next staking record from queue
 		res, err := util.GetNextStakingRecord(sp.cliCtx, rootChain)
 		if err != nil || res.Nonce == 0 {
@@ -464,7 +461,7 @@ func (sp *StakingProcessor) checkStakingSyncAck() {
 // 3. Send staking sync to root if required.
 func (sp *StakingProcessor) checkAndSendStakingSync(rootChain string, toRootChain bool) {
 	// fetch fresh staking context
-	stakingContext, err := sp.getStakingContext()
+	stakingContext, err := sp.getStakingContext(rootChain)
 	if err != nil {
 		return
 	}
@@ -492,12 +489,8 @@ func (sp *StakingProcessor) checkAndSendStakingSync(rootChain string, toRootChai
 
 func (sp *StakingProcessor) getNonceFromRootChain(stakingContext *StakingContext, rootChain string, validatorID uint64) uint64 {
 	switch rootChain {
-	case hmTypes.RootChainTypeEth:
+	case hmTypes.RootChainTypeEth, hmTypes.RootChainTypeBsc:
 		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.StakingManagerAddress.EthAddress()
-		stakingManagerInstance, _ := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress, rootChain)
-		return sp.contractConnector.GetMainStakingSyncNonce(validatorID, stakingManagerInstance)
-	case hmTypes.RootChainTypeBsc:
-		stakingManagerAddress := stakingContext.ChainmanagerParams.ChainParams.BscStakingManagerAddress.EthAddress()
 		stakingManagerInstance, _ := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress, rootChain)
 		return sp.contractConnector.GetMainStakingSyncNonce(validatorID, stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:
@@ -558,15 +551,7 @@ func (sp *StakingProcessor) createAndSendStakingSyncToRootChain(stakingContext *
 	}
 	// chain manager params
 	chainParams := stakingContext.ChainmanagerParams.ChainParams
-	var stakingManagerAddress ethCommon.Address
-	switch rootChain {
-	case hmTypes.RootChainTypeEth:
-		// staking manager address
-		stakingManagerAddress = chainParams.StakingManagerAddress.EthAddress()
-	case hmTypes.RootChainTypeBsc:
-		// staking manager address
-		stakingManagerAddress = chainParams.BscStakingManagerAddress.EthAddress()
-	}
+	stakingManagerAddress := chainParams.StakingManagerAddress.EthAddress()
 	// staking manager instance
 	stakingManagerInstance, err := sp.contractConnector.GetStakeManagerInstance(stakingManagerAddress, rootChain)
 	if err != nil {
@@ -685,8 +670,8 @@ func (sp *StakingProcessor) sendStakingAckToHeimdall(eventName string, StakingAc
 // utils
 //
 
-func (sp *StakingProcessor) getStakingContext() (*StakingContext, error) {
-	chainmanagerParams, err := util.GetChainmanagerParams(sp.cliCtx)
+func (sp *StakingProcessor) getStakingContext(rootChain string) (*StakingContext, error) {
+	chainmanagerParams, err := util.GetNewChainParams(sp.cliCtx, rootChain)
 	if err != nil {
 		sp.Logger.Error("Error while fetching chain manager params", "error", err)
 		return nil, err

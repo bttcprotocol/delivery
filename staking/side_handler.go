@@ -351,7 +351,12 @@ func SideHandleMsgStakingSync(ctx sdk.Context, msg types.MsgStakingSync, k Keepe
 		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
 		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
 	case hmTypes.RootChainTypeBsc:
-		stakingManagerAddress := chainParams.BscStakingManagerAddress.EthAddress()
+		bscChain, err := k.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
+		if err != nil {
+			k.Logger(ctx).Error("RootChain type: ", msg.RootChain, " does not  match bsc")
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+		}
+		stakingManagerAddress := bscChain.StakingManagerAddress.EthAddress()
 		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
 		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:
@@ -389,7 +394,12 @@ func SideHandleMsgStakingSyncAck(ctx sdk.Context, msg types.MsgStakingSyncAck, k
 		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
 		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
 	case hmTypes.RootChainTypeBsc:
-		stakingManagerAddress := chainParams.BscStakingManagerAddress.EthAddress()
+		bscChain, err := k.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
+		if err != nil {
+			k.Logger(ctx).Error("RootChain type: ", msg.RootChain, "does not match bsc")
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+		}
+		stakingManagerAddress := bscChain.StakingManagerAddress.EthAddress()
 		stakingManagerInstance, _ := contractCaller.GetStakeManagerInstance(stakingManagerAddress, msg.RootChain)
 		nonce = contractCaller.GetMainStakingSyncNonce(msg.ValidatorID.Uint64(), stakingManagerInstance)
 	case hmTypes.RootChainTypeTron:

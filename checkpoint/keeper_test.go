@@ -93,7 +93,7 @@ func (suite *KeeperTestSuite) TestGetCheckpointList() {
 		keeper.UpdateACKCount(ctx, hmTypes.RootChainTypeStake)
 	}
 
-	result, err := keeper.GetCheckpointList(ctx, uint64(1), uint64(20), hmTypes.RootChainTypeEth)
+	result, err := keeper.GetCheckpointList(ctx, uint64(1), uint64(20), hmTypes.RootChainTypeStake)
 	require.NoError(t, err)
 	require.LessOrEqual(t, count, len(result))
 }

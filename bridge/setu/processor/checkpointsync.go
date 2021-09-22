@@ -21,18 +21,18 @@ import (
 // 2. check if elapsed.
 // 3. Send CheckpointSync to heimdall if required.
 func (cp *CheckpointProcessor) handleCheckpointSync() {
-	// fetch fresh checkpoint context
-	checkpointContext, err := cp.getCheckpointContext()
-	if err != nil {
-		return
-	}
-	checkpointParams := checkpointContext.CheckpointParams
 	currentTime := time.Now().UTC()
 
 	for rootChain := range hmTypes.GetRootChainIDMap() {
 		if rootChain == hmTypes.RootChainTypeStake {
 			continue
 		}
+		// fetch fresh checkpoint context
+		checkpointContext, err := cp.getCheckpointContext(rootChain)
+		if err != nil {
+			return
+		}
+		checkpointParams := checkpointContext.CheckpointParams
 		bufferedCheckpoint, err := util.GetBufferedCheckpointSync(cp.cliCtx, rootChain)
 		if err == nil {
 			bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
@@ -119,7 +119,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncToStakeChain(eventBytes string,
 	}
 	cp.Logger.Info("Received sendCheckpointSyncToStakeChain request", "number", number, "root", rootChain)
 
-	checkpointContext, err := cp.getCheckpointContext()
+	checkpointContext, err := cp.getCheckpointContext(rootChain)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncToStakeChain(eventBytes string,
 // 1. create and broadcast checkpointSyncAck msg to heimdall.
 func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string, checkpointSyncAckStr string, rootChain string) error {
 	// fetch fresh checkpoint context
-	checkpointContext, err := cp.getCheckpointContext()
+	checkpointContext, err := cp.getCheckpointContext(rootChain)
 	checkpointParams := checkpointContext.CheckpointParams
 	if err != nil {
 		return err
@@ -213,7 +213,7 @@ func (cp *CheckpointProcessor) getHeaderBlock(checkpointContext *CheckpointConte
 	checkpointParams := checkpointContext.CheckpointParams
 
 	switch rootChain {
-	case hmTypes.RootChainTypeEth:
+	case hmTypes.RootChainTypeEth, hmTypes.RootChainTypeBsc:
 		rootChainInstance, err := cp.contractConnector.GetRootChainInstance(chainParams.RootChainAddress.EthAddress(), rootChain)
 		if err != nil {
 			return 0, 0, hmTypes.ZeroHeimdallAddress, err
@@ -227,17 +227,6 @@ func (cp *CheckpointProcessor) getHeaderBlock(checkpointContext *CheckpointConte
 	case hmTypes.RootChainTypeTron:
 		_, start, end, _, proposer, err := cp.contractConnector.GetTronHeaderInfo(headerNumber, chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
 
-		if err != nil {
-			cp.Logger.Error("Error while fetching header block", "root", rootChain, "error", err)
-			return 0, 0, hmTypes.ZeroHeimdallAddress, err
-		}
-		return start, end, proposer, nil
-	case hmTypes.RootChainTypeBsc:
-		rootChainInstance, err := cp.contractConnector.GetRootChainInstance(chainParams.BscChainAddress.EthAddress(), rootChain)
-		if err != nil {
-			return 0, 0, hmTypes.ZeroHeimdallAddress, err
-		}
-		_, start, end, _, proposer, err := cp.contractConnector.GetHeaderInfo(headerNumber, rootChainInstance, checkpointParams.ChildBlockInterval)
 		if err != nil {
 			cp.Logger.Error("Error while fetching header block", "root", rootChain, "error", err)
 			return 0, 0, hmTypes.ZeroHeimdallAddress, err

@@ -36,6 +36,8 @@ func NewQuerier(keeper Keeper, stakingKeeper staking.Keeper, topupKeeper topup.K
 			return handleQueryCheckpointList(ctx, req, keeper)
 		case types.QueryNextCheckpoint:
 			return handleQueryNextCheckpoint(ctx, req, keeper, stakingKeeper, topupKeeper, contractCaller)
+		case types.QueryCheckpointActivation:
+			return handleQueryCheckpointActivation(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown auth query endpoint")
 		}
@@ -77,7 +79,7 @@ func handleQueryEpoch(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
-	res := keeper.GetOtherACKCount(ctx, hmTypes.RootChainTypeStake)
+	res := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)
 	bz, err := json.Marshal(res)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
@@ -235,6 +237,29 @@ func handleQueryNextCheckpoint(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 	bz, err := json.Marshal(checkpointMsg)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr(fmt.Sprintf("could not marshall checkpoint msg. Error:%v", err), err.Error()))
+	}
+	return bz, nil
+}
+
+func handleQueryCheckpointActivation(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryCheckpointParams
+
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
+	}
+	var res uint64
+	if params.RootChain == hmTypes.RootChainTypeEth {
+		res = 1
+	} else {
+		chainParams, err := keeper.ck.GetChainParams(ctx, params.RootChain)
+		if err != nil {
+			return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not get chain params", err.Error()))
+		}
+		res = chainParams.ActivationHeight
+	}
+	bz, err := json.Marshal(res)
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
 	return bz, nil
 }

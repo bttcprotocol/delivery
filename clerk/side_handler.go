@@ -76,12 +76,17 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		}
 		contractAddress = chainParams.StateSenderAddress.EthAddress()
 	case hmTypes.RootChainTypeBsc:
-		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.BscChainTxConfirmations,
+		bscChain, err := k.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
+		if err != nil {
+			k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, " does not  match bsc")
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+		}
+		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), bscChain.TxConfirmations,
 			hmTypes.RootChainTypeBsc)
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
-		contractAddress = chainParams.BscStateSenderAddress.EthAddress()
+		contractAddress = bscChain.StateSenderAddress.EthAddress()
 	case hmTypes.RootChainTypeTron:
 		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
 		if err != nil || receipt == nil {
@@ -89,7 +94,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		}
 		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress)
 	default:
-		k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, "does not  match ETH or TRON ")
+		k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, " does not  match eth or tron")
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
 	}
 	eventLog, err = contractCaller.DecodeStateSyncedEvent(contractAddress, receipt, msg.LogIndex)

@@ -246,7 +246,7 @@ func (suite *QuerierTestSuite) TestQueryCheckpointList() {
 	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointList)
 	req := abci.RequestQuery{
 		Path: route,
-		Data: app.Codec().MustMarshalJSON(hmTypes.NewQueryPaginationParams(uint64(1), uint64(10), hmTypes.RootChainTypeEth)),
+		Data: app.Codec().MustMarshalJSON(hmTypes.NewQueryPaginationParams(uint64(1), uint64(10), hmTypes.RootChainTypeStake)),
 	}
 	res, err := querier(ctx, path, req)
 	require.NoError(t, err)

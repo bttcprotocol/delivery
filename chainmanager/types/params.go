@@ -50,12 +50,6 @@ type ChainParams struct {
 	TronStakingManagerAddress string `json:"tron_staking_manager_address" yaml:"tron_staking_manager_address"`
 	TronStakingInfoAddress    string `json:"tron_state_info_address" yaml:"tron_state_info_address"`
 
-	// bsc
-	BscChainAddress          hmTypes.HeimdallAddress `json:"bsc_chain_address" yaml:"bsc_chain_address"`
-	BscStateSenderAddress    hmTypes.HeimdallAddress `json:"bsc_state_sender_address" yaml:"bsc_state_sender_address"`
-	BscStakingManagerAddress hmTypes.HeimdallAddress `json:"bsc_staking_manager_address" yaml:"bsc_staking_manager_address"`
-	BscStakingInfoAddress    hmTypes.HeimdallAddress `json:"bsc_staking_info_address" yaml:"bsc_staking_info_address"`
-
 	// Bor Chain Contracts
 	StateReceiverAddress hmTypes.HeimdallAddress `json:"state_receiver_address" yaml:"state_receiver_address"`
 	ValidatorSetAddress  hmTypes.HeimdallAddress `json:"validator_set_address" yaml:"validator_set_address"`
@@ -80,17 +74,15 @@ type Params struct {
 	MainchainTxConfirmations  uint64      `json:"mainchain_tx_confirmations" yaml:"mainchain_tx_confirmations"`
 	MaticchainTxConfirmations uint64      `json:"maticchain_tx_confirmations" yaml:"maticchain_tx_confirmations"`
 	TronchainTxConfirmations  uint64      `json:"tronchain_tx_confirmations" yaml:"tronchain_tx_confirmations"`
-	BscChainTxConfirmations   uint64      `json:"bscchain_tx_confirmations" yaml:"bscchain_tx_confirmations"`
 	ChainParams               ChainParams `json:"chain_params" yaml:"chain_params"`
 }
 
 // NewParams creates a new Params object
-func NewParams(mainchainTxConfirmations, tronchainTxConfirmation, maticchainTxConfirmations, bscTxConfirmations uint64, chainParams ChainParams) Params {
+func NewParams(mainchainTxConfirmations, tronchainTxConfirmation, maticchainTxConfirmations uint64, chainParams ChainParams) Params {
 	return Params{
 		MainchainTxConfirmations:  mainchainTxConfirmations,
 		MaticchainTxConfirmations: maticchainTxConfirmations,
 		TronchainTxConfirmations:  tronchainTxConfirmation,
-		BscChainTxConfirmations:   bscTxConfirmations,
 		ChainParams:               chainParams,
 	}
 }

@@ -18,6 +18,9 @@ const defaultConfigTemplate = `# This is a TOML config file.
 # RPC endpoint for ethereum chain
 eth_rpc_url = "{{ .EthRPCUrl }}"
 
+# RPC endpoint for bsc chain
+bsc_rpc_url = "{{ .BscRPCUrl }}"
+
 # RPC endpoint for bor chain
 bor_rpc_url = "{{ .BorRPCUrl }}"
 

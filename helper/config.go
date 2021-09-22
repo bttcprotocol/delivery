@@ -47,10 +47,12 @@ const (
 
 	DefaultMainRPCUrl = "http://localhost:9545"
 	DefaultBorRPCUrl  = "http://localhost:8545"
+	DefaultBscRPCUrl  = "http://localhost:7545"
 
 	// tron
-	DefaultTronRPCUrl     = "http://localhost:50051"
-	DefaultTronGridUrl    = "http://localhost:30080" // get log host
+	DefaultTronRPCUrl  = "http://localhost:50051"
+	DefaultTronGridUrl = "http://localhost:30080" // get log host
+
 	DefaultTronGridApiKey = "xxxxxxxx"
 	// Services
 
@@ -241,6 +243,7 @@ func GetDefaultHeimdallConfig() Configuration {
 		EthRPCUrl:        DefaultMainRPCUrl,
 		TronRPCUrl:       DefaultTronRPCUrl,
 		BorRPCUrl:        DefaultBorRPCUrl,
+		BscRPCUrl:        DefaultBscRPCUrl,
 		TendermintRPCUrl: DefaultTendermintNodeURL,
 
 		TronGridURL:       DefaultTronGridUrl,

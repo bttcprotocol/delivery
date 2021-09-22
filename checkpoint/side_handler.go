@@ -94,7 +94,12 @@ func SideHandleMsgCheckpointAck(ctx sdk.Context, k Keeper, msg types.MsgCheckpoi
 	case hmTypes.RootChainTypeEth:
 		rootChainAddress = chainParams.RootChainAddress.EthAddress()
 	case hmTypes.RootChainTypeBsc:
-		rootChainAddress = chainParams.BscChainAddress.EthAddress()
+		bscChain, err := k.ck.GetChainParams(ctx, msg.RootChainType)
+		if err != nil {
+			k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, "does not match bsc")
+			return common.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+		}
+		rootChainAddress = bscChain.RootChainAddress.EthAddress()
 	}
 	rootChainInstance, err := contractCaller.GetRootChainInstance(rootChainAddress, msg.RootChainType)
 	if err != nil {
@@ -184,7 +189,12 @@ func SideHandleMsgCheckpointSync(ctx sdk.Context, k Keeper, msg types.MsgCheckpo
 	case hmTypes.RootChainTypeEth:
 		rootChainAddress = chainParams.RootChainAddress.EthAddress()
 	case hmTypes.RootChainTypeBsc:
-		rootChainAddress = chainParams.BscChainAddress.EthAddress()
+		bscChain, err := k.ck.GetChainParams(ctx, msg.RootChainType)
+		if err != nil {
+			k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, "does not  match bsc")
+			return common.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+		}
+		rootChainAddress = bscChain.RootChainAddress.EthAddress()
 	}
 	rootChainInstance, err := contractCaller.GetRootChainInstance(rootChainAddress, msg.RootChainType)
 	if err != nil {

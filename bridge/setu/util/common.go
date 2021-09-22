@@ -35,7 +35,9 @@ const (
 	LastNoAckURL              = "/checkpoints/last-no-ack"
 	CurrentEpochURL           = "/checkpoints/epoch"
 	CheckpointParamsURL       = "/checkpoints/params"
+	CheckpointActivationURL   = "/checkpoints/activation-height/%v"
 	ChainManagerParamsURL     = "/chainmanager/params"
+	ChainNewParamsURL         = "/chainmanager/newparams/%v" //for new eth forkChain such as bsc, replace address of params
 	ProposersURL              = "/staking/proposer/%v"
 	BufferedCheckpointURL     = "/checkpoints/buffer/%v"
 	BufferedCheckpointSyncURL = "/checkpoints/sync/%v"
@@ -309,6 +311,27 @@ func GetChainmanagerParams(cliCtx cliContext.CLIContext) (*chainManagerTypes.Par
 	var params chainManagerTypes.Params
 	if err := json.Unmarshal(response.Result, &params); err != nil {
 		logger.Error("Error unmarshalling chainmanager params", "url", ChainManagerParamsURL, "err", err)
+		return nil, err
+	}
+
+	return &params, nil
+}
+
+// GetNewChainParams return new chain params
+func GetNewChainParams(cliCtx cliContext.CLIContext, rootChain string) (*chainManagerTypes.Params, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(ChainNewParamsURL, rootChain)),
+	)
+
+	if err != nil {
+		logger.Error("Error fetching chainmanager params", "root", rootChain, "err", err)
+		return nil, err
+	}
+
+	var params chainManagerTypes.Params
+	if err := json.Unmarshal(response.Result, &params); err != nil {
+		logger.Error("Error unmarshalling chainmanager params", "root", rootChain, "url", ChainNewParamsURL, "err", err)
 		return nil, err
 	}
 

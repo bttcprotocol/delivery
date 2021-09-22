@@ -29,6 +29,9 @@ const (
 	CodeOldCheckpoint            CodeType = 1509
 	CodeDisCountinuousCheckpoint CodeType = 1510
 	CodeNoCheckpointBuffer       CodeType = 1511
+	CodeWrongRootChain           CodeType = 1512
+	CodeNoChainParams            CodeType = 1513
+	CodeChainParamsExist         CodeType = 1514
 
 	CodeOldValidator        CodeType = 2500
 	CodeNoValidator         CodeType = 2501
@@ -126,8 +129,20 @@ func ErrNoCheckpointFound(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeNoCheckpoint, "Checkpoint Not Found")
 }
 
+func ErrNoChainParamsFound(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeNoChainParams, "chain params Not Found")
+}
+
 func ErrNoCheckpointBufferFound(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeNoCheckpointBuffer, "Checkpoint buffer not found")
+}
+
+func ErrWrongRootChain(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeWrongRootChain, "root chain type not found")
+}
+
+func ErrChainPamramsExist(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeChainParamsExist, "root chain chain params has exist")
 }
 
 func ErrInvalidNoACK(codespace sdk.CodespaceType) sdk.Error {

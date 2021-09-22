@@ -8,6 +8,7 @@ const (
 	QueryCheckpoint           = "checkpoint"
 	QueryCheckpointBuffer     = "checkpoint-buffer"
 	QueryCheckpointSyncBuffer = "checkpoint-sync"
+	QueryCheckpointActivation = "checkpoint-activation"
 	QueryLastNoAck            = "last-no-ack"
 	QueryCheckpointList       = "checkpoint-list"
 	QueryNextCheckpoint       = "next-checkpoint"

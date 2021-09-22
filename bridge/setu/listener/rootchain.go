@@ -26,14 +26,12 @@ type RootChainListenerContext struct {
 // RootChainListener - Listens to and process events from rootchain
 type RootChainListener struct {
 	BaseListener
-	rootChainType string
 	// ABIs
 	abis []*abi.ABI
 
 	stakingInfoAbi *abi.ABI
-
-	rootChainType string
-	blockKey      string
+	rootChainType  string
+	blockKey       string
 }
 
 const (
@@ -120,9 +118,6 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 		return
 	}
 	requiredConfirmations := rootchainContext.ChainmanagerParams.MainchainTxConfirmations
-	if rl.rootChainType == hmtypes.RootChainTypeBsc {
-		requiredConfirmations = rootchainContext.ChainmanagerParams.BscChainTxConfirmations
-	}
 	latestNumber := newHeader.Number
 
 	// confirmation
@@ -182,13 +177,7 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 		chainParams.StakingInfoAddress.EthAddress(),
 		chainParams.StateSenderAddress.EthAddress(),
 	}
-	if rl.rootChainType == hmtypes.RootChainTypeBsc {
-		queryAddresses = []ethCommon.Address{
-			chainParams.BscChainAddress.EthAddress(),
-			chainParams.BscStakingInfoAddress.EthAddress(),
-			chainParams.BscStateSenderAddress.EthAddress(),
-		}
-	}
+
 	query := ethereum.FilterQuery{FromBlock: fromBlock, ToBlock: toBlock, Addresses: queryAddresses}
 	// get logs from root chain by filter
 	logs, err := rl.chainClient.FilterLogs(context.Background(), query)
@@ -272,7 +261,7 @@ func (rl *RootChainListener) sendTaskWithDelay(taskName string, eventName string
 //
 
 func (rl *RootChainListener) getRootChainContext() (*RootChainListenerContext, error) {
-	chainmanagerParams, err := util.GetChainmanagerParams(rl.cliCtx)
+	chainmanagerParams, err := util.GetNewChainParams(rl.cliCtx, rl.rootChainType)
 	if err != nil {
 		rl.Logger.Error("Error while fetching chain manager params", "error", err)
 		return nil, err
