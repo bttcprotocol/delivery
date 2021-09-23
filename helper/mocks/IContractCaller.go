@@ -138,6 +138,29 @@ func (_m *IContractCaller) CurrentStateCounter(stateSenderInstance *statesender.
 	return r0
 }
 
+// DecodeNewChainEvent provides a mock function with given fields: _a0, _a1, _a2
+func (_m *IContractCaller) DecodeNewChainEvent(_a0 common.Address, _a1 *types.Receipt, _a2 uint64) (*rootchain.RootchainNewChain, error) {
+	ret := _m.Called(_a0, _a1, _a2)
+
+	var r0 *rootchain.RootchainNewChain
+	if rf, ok := ret.Get(0).(func(common.Address, *types.Receipt, uint64) *rootchain.RootchainNewChain); ok {
+		r0 = rf(_a0, _a1, _a2)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rootchain.RootchainNewChain)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(common.Address, *types.Receipt, uint64) error); ok {
+		r1 = rf(_a0, _a1, _a2)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DecodeNewHeaderBlockEvent provides a mock function with given fields: _a0, _a1, _a2
 func (_m *IContractCaller) DecodeNewHeaderBlockEvent(_a0 common.Address, _a1 *types.Receipt, _a2 uint64) (*rootchain.RootchainNewHeaderBlock, error) {
 	ret := _m.Called(_a0, _a1, _a2)

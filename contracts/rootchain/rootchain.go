@@ -20,6 +20,7 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
+	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -27,7 +28,7 @@ var (
 )
 
 // RootchainABI is the input ABI used to generate the binding from.
-const RootchainABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"headerBlocks\",\"outputs\":[{\"name\":\"root\",\"type\":\"bytes32\"},{\"name\":\"start\",\"type\":\"uint256\"},{\"name\":\"end\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"proposer\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\"},{\"name\":\"sigs\",\"type\":\"uint256[3][]\"}],\"name\":\"submitCheckpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\"},{\"name\":\"sigs\",\"type\":\"bytes\"}],\"name\":\"submitHeaderBlock\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getLastChildBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentHeaderBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"proposer\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"headerBlockId\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"reward\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"start\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"end\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"root\",\"type\":\"bytes32\"}],\"name\":\"NewHeaderBlock\",\"type\":\"event\"}]"
+const RootchainABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"headerBlocks\",\"outputs\":[{\"name\":\"root\",\"type\":\"bytes32\"},{\"name\":\"start\",\"type\":\"uint256\"},{\"name\":\"end\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"proposer\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\"},{\"name\":\"sigs\",\"type\":\"uint256[3][]\"}],\"name\":\"submitCheckpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\"},{\"name\":\"sigs\",\"type\":\"bytes\"}],\"name\":\"submitHeaderBlock\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getLastChildBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentHeaderBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"proposer\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"headerBlockId\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"reward\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"start\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"end\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"root\",\"type\":\"bytes32\"}],\"name\":\"NewHeaderBlock\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"rootChainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"activationHeight\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"txConfirmations\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"rootChainAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"stateSenderAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"stakingManagerAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"stakingInfoAddress\",\"type\":\"address\"}],\"name\":\"NewChain\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"chainMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"rootChainId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"activationHeight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"txConfirmations\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"rootChainAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stateSenderAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingManagerAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingInfoAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeStamp\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"rootChainId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"activationHeight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"txConfirmations\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"rootChainAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stateSenderAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingManagerAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingInfoAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeStamp\",\"type\":\"uint256\"}],\"name\":\"setChainInfo\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Rootchain is an auto generated Go binding around an Ethereum contract.
 type Rootchain struct {
@@ -171,9 +172,69 @@ func (_Rootchain *RootchainTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _Rootchain.Contract.contract.Transact(opts, method, params...)
 }
 
+// ChainMap is a free data retrieval call binding the contract method 0xdf35ce79.
+//
+// Solidity: function chainMap(uint256 ) constant returns(uint256 rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress, uint256 timeStamp)
+func (_Rootchain *RootchainCaller) ChainMap(opts *bind.CallOpts, arg0 *big.Int) (struct {
+	RootChainId           *big.Int
+	ActivationHeight      *big.Int
+	TxConfirmations       *big.Int
+	RootChainAddress      common.Address
+	StateSenderAddress    common.Address
+	StakingManagerAddress common.Address
+	StakingInfoAddress    common.Address
+	TimeStamp             *big.Int
+}, error) {
+	ret := new(struct {
+		RootChainId           *big.Int
+		ActivationHeight      *big.Int
+		TxConfirmations       *big.Int
+		RootChainAddress      common.Address
+		StateSenderAddress    common.Address
+		StakingManagerAddress common.Address
+		StakingInfoAddress    common.Address
+		TimeStamp             *big.Int
+	})
+	out := ret
+	err := _Rootchain.contract.Call(opts, out, "chainMap", arg0)
+	return *ret, err
+}
+
+// ChainMap is a free data retrieval call binding the contract method 0xdf35ce79.
+//
+// Solidity: function chainMap(uint256 ) constant returns(uint256 rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress, uint256 timeStamp)
+func (_Rootchain *RootchainSession) ChainMap(arg0 *big.Int) (struct {
+	RootChainId           *big.Int
+	ActivationHeight      *big.Int
+	TxConfirmations       *big.Int
+	RootChainAddress      common.Address
+	StateSenderAddress    common.Address
+	StakingManagerAddress common.Address
+	StakingInfoAddress    common.Address
+	TimeStamp             *big.Int
+}, error) {
+	return _Rootchain.Contract.ChainMap(&_Rootchain.CallOpts, arg0)
+}
+
+// ChainMap is a free data retrieval call binding the contract method 0xdf35ce79.
+//
+// Solidity: function chainMap(uint256 ) constant returns(uint256 rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress, uint256 timeStamp)
+func (_Rootchain *RootchainCallerSession) ChainMap(arg0 *big.Int) (struct {
+	RootChainId           *big.Int
+	ActivationHeight      *big.Int
+	TxConfirmations       *big.Int
+	RootChainAddress      common.Address
+	StateSenderAddress    common.Address
+	StakingManagerAddress common.Address
+	StakingInfoAddress    common.Address
+	TimeStamp             *big.Int
+}, error) {
+	return _Rootchain.Contract.ChainMap(&_Rootchain.CallOpts, arg0)
+}
+
 // CurrentHeaderBlock is a free data retrieval call binding the contract method 0xec7e4855.
 //
-// Solidity: function currentHeaderBlock() view returns(uint256)
+// Solidity: function currentHeaderBlock() constant returns(uint256)
 func (_Rootchain *RootchainCaller) CurrentHeaderBlock(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -185,21 +246,21 @@ func (_Rootchain *RootchainCaller) CurrentHeaderBlock(opts *bind.CallOpts) (*big
 
 // CurrentHeaderBlock is a free data retrieval call binding the contract method 0xec7e4855.
 //
-// Solidity: function currentHeaderBlock() view returns(uint256)
+// Solidity: function currentHeaderBlock() constant returns(uint256)
 func (_Rootchain *RootchainSession) CurrentHeaderBlock() (*big.Int, error) {
 	return _Rootchain.Contract.CurrentHeaderBlock(&_Rootchain.CallOpts)
 }
 
 // CurrentHeaderBlock is a free data retrieval call binding the contract method 0xec7e4855.
 //
-// Solidity: function currentHeaderBlock() view returns(uint256)
+// Solidity: function currentHeaderBlock() constant returns(uint256)
 func (_Rootchain *RootchainCallerSession) CurrentHeaderBlock() (*big.Int, error) {
 	return _Rootchain.Contract.CurrentHeaderBlock(&_Rootchain.CallOpts)
 }
 
 // GetLastChildBlock is a free data retrieval call binding the contract method 0xb87e1b66.
 //
-// Solidity: function getLastChildBlock() view returns(uint256)
+// Solidity: function getLastChildBlock() constant returns(uint256)
 func (_Rootchain *RootchainCaller) GetLastChildBlock(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -211,21 +272,21 @@ func (_Rootchain *RootchainCaller) GetLastChildBlock(opts *bind.CallOpts) (*big.
 
 // GetLastChildBlock is a free data retrieval call binding the contract method 0xb87e1b66.
 //
-// Solidity: function getLastChildBlock() view returns(uint256)
+// Solidity: function getLastChildBlock() constant returns(uint256)
 func (_Rootchain *RootchainSession) GetLastChildBlock() (*big.Int, error) {
 	return _Rootchain.Contract.GetLastChildBlock(&_Rootchain.CallOpts)
 }
 
 // GetLastChildBlock is a free data retrieval call binding the contract method 0xb87e1b66.
 //
-// Solidity: function getLastChildBlock() view returns(uint256)
+// Solidity: function getLastChildBlock() constant returns(uint256)
 func (_Rootchain *RootchainCallerSession) GetLastChildBlock() (*big.Int, error) {
 	return _Rootchain.Contract.GetLastChildBlock(&_Rootchain.CallOpts)
 }
 
 // HeaderBlocks is a free data retrieval call binding the contract method 0x41539d4a.
 //
-// Solidity: function headerBlocks(uint256 ) view returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
+// Solidity: function headerBlocks(uint256 ) constant returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
 func (_Rootchain *RootchainCaller) HeaderBlocks(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Root      [32]byte
 	Start     *big.Int
@@ -247,7 +308,7 @@ func (_Rootchain *RootchainCaller) HeaderBlocks(opts *bind.CallOpts, arg0 *big.I
 
 // HeaderBlocks is a free data retrieval call binding the contract method 0x41539d4a.
 //
-// Solidity: function headerBlocks(uint256 ) view returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
+// Solidity: function headerBlocks(uint256 ) constant returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
 func (_Rootchain *RootchainSession) HeaderBlocks(arg0 *big.Int) (struct {
 	Root      [32]byte
 	Start     *big.Int
@@ -260,7 +321,7 @@ func (_Rootchain *RootchainSession) HeaderBlocks(arg0 *big.Int) (struct {
 
 // HeaderBlocks is a free data retrieval call binding the contract method 0x41539d4a.
 //
-// Solidity: function headerBlocks(uint256 ) view returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
+// Solidity: function headerBlocks(uint256 ) constant returns(bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer)
 func (_Rootchain *RootchainCallerSession) HeaderBlocks(arg0 *big.Int) (struct {
 	Root      [32]byte
 	Start     *big.Int
@@ -269,6 +330,27 @@ func (_Rootchain *RootchainCallerSession) HeaderBlocks(arg0 *big.Int) (struct {
 	Proposer  common.Address
 }, error) {
 	return _Rootchain.Contract.HeaderBlocks(&_Rootchain.CallOpts, arg0)
+}
+
+// SetChainInfo is a paid mutator transaction binding the contract method 0x139073e8.
+//
+// Solidity: function setChainInfo(uint256 rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress, uint256 timeStamp) returns()
+func (_Rootchain *RootchainTransactor) SetChainInfo(opts *bind.TransactOpts, rootChainId *big.Int, activationHeight *big.Int, txConfirmations *big.Int, rootChainAddress common.Address, stateSenderAddress common.Address, stakingManagerAddress common.Address, stakingInfoAddress common.Address, timeStamp *big.Int) (*types.Transaction, error) {
+	return _Rootchain.contract.Transact(opts, "setChainInfo", rootChainId, activationHeight, txConfirmations, rootChainAddress, stateSenderAddress, stakingManagerAddress, stakingInfoAddress, timeStamp)
+}
+
+// SetChainInfo is a paid mutator transaction binding the contract method 0x139073e8.
+//
+// Solidity: function setChainInfo(uint256 rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress, uint256 timeStamp) returns()
+func (_Rootchain *RootchainSession) SetChainInfo(rootChainId *big.Int, activationHeight *big.Int, txConfirmations *big.Int, rootChainAddress common.Address, stateSenderAddress common.Address, stakingManagerAddress common.Address, stakingInfoAddress common.Address, timeStamp *big.Int) (*types.Transaction, error) {
+	return _Rootchain.Contract.SetChainInfo(&_Rootchain.TransactOpts, rootChainId, activationHeight, txConfirmations, rootChainAddress, stateSenderAddress, stakingManagerAddress, stakingInfoAddress, timeStamp)
+}
+
+// SetChainInfo is a paid mutator transaction binding the contract method 0x139073e8.
+//
+// Solidity: function setChainInfo(uint256 rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress, uint256 timeStamp) returns()
+func (_Rootchain *RootchainTransactorSession) SetChainInfo(rootChainId *big.Int, activationHeight *big.Int, txConfirmations *big.Int, rootChainAddress common.Address, stateSenderAddress common.Address, stakingManagerAddress common.Address, stakingInfoAddress common.Address, timeStamp *big.Int) (*types.Transaction, error) {
+	return _Rootchain.Contract.SetChainInfo(&_Rootchain.TransactOpts, rootChainId, activationHeight, txConfirmations, rootChainAddress, stateSenderAddress, stakingManagerAddress, stakingInfoAddress, timeStamp)
 }
 
 // SubmitCheckpoint is a paid mutator transaction binding the contract method 0x4e43e495.
@@ -311,6 +393,155 @@ func (_Rootchain *RootchainSession) SubmitHeaderBlock(data []byte, sigs []byte) 
 // Solidity: function submitHeaderBlock(bytes data, bytes sigs) returns()
 func (_Rootchain *RootchainTransactorSession) SubmitHeaderBlock(data []byte, sigs []byte) (*types.Transaction, error) {
 	return _Rootchain.Contract.SubmitHeaderBlock(&_Rootchain.TransactOpts, data, sigs)
+}
+
+// RootchainNewChainIterator is returned from FilterNewChain and is used to iterate over the raw logs and unpacked data for NewChain events raised by the Rootchain contract.
+type RootchainNewChainIterator struct {
+	Event *RootchainNewChain // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RootchainNewChainIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RootchainNewChain)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RootchainNewChain)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RootchainNewChainIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RootchainNewChainIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RootchainNewChain represents a NewChain event raised by the Rootchain contract.
+type RootchainNewChain struct {
+	RootChainId           *big.Int
+	ActivationHeight      *big.Int
+	TxConfirmations       *big.Int
+	RootChainAddress      common.Address
+	StateSenderAddress    common.Address
+	StakingManagerAddress common.Address
+	StakingInfoAddress    common.Address
+	Raw                   types.Log // Blockchain specific contextual infos
+}
+
+// FilterNewChain is a free log retrieval operation binding the contract event 0x46d8e11a9f6eb349dbb840ef59be3b9f104a0ec5ef156698d105d99a2a33c00c.
+//
+// Solidity: event NewChain(uint256 indexed rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress)
+func (_Rootchain *RootchainFilterer) FilterNewChain(opts *bind.FilterOpts, rootChainId []*big.Int) (*RootchainNewChainIterator, error) {
+
+	var rootChainIdRule []interface{}
+	for _, rootChainIdItem := range rootChainId {
+		rootChainIdRule = append(rootChainIdRule, rootChainIdItem)
+	}
+
+	logs, sub, err := _Rootchain.contract.FilterLogs(opts, "NewChain", rootChainIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &RootchainNewChainIterator{contract: _Rootchain.contract, event: "NewChain", logs: logs, sub: sub}, nil
+}
+
+// WatchNewChain is a free log subscription operation binding the contract event 0x46d8e11a9f6eb349dbb840ef59be3b9f104a0ec5ef156698d105d99a2a33c00c.
+//
+// Solidity: event NewChain(uint256 indexed rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress)
+func (_Rootchain *RootchainFilterer) WatchNewChain(opts *bind.WatchOpts, sink chan<- *RootchainNewChain, rootChainId []*big.Int) (event.Subscription, error) {
+
+	var rootChainIdRule []interface{}
+	for _, rootChainIdItem := range rootChainId {
+		rootChainIdRule = append(rootChainIdRule, rootChainIdItem)
+	}
+
+	logs, sub, err := _Rootchain.contract.WatchLogs(opts, "NewChain", rootChainIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RootchainNewChain)
+				if err := _Rootchain.contract.UnpackLog(event, "NewChain", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNewChain is a log parse operation binding the contract event 0x46d8e11a9f6eb349dbb840ef59be3b9f104a0ec5ef156698d105d99a2a33c00c.
+//
+// Solidity: event NewChain(uint256 indexed rootChainId, uint256 activationHeight, uint256 txConfirmations, address rootChainAddress, address stateSenderAddress, address stakingManagerAddress, address stakingInfoAddress)
+func (_Rootchain *RootchainFilterer) ParseNewChain(log types.Log) (*RootchainNewChain, error) {
+	event := new(RootchainNewChain)
+	if err := _Rootchain.contract.UnpackLog(event, "NewChain", log); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 // RootchainNewHeaderBlockIterator is returned from FilterNewHeaderBlock and is used to iterate over the raw logs and unpacked data for NewHeaderBlock events raised by the Rootchain contract.

@@ -189,11 +189,7 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 	}
 
 	// set last block to storage
-	key := lastEthBlockKey
-	if rl.rootChainType == hmtypes.RootChainTypeBsc {
-		key = lastBscBlockKey
-	}
-	if err := rl.storageClient.Put([]byte(key), []byte(toBlock.String()), nil); err != nil {
+	if err := rl.storageClient.Put([]byte(rl.blockKey), []byte(toBlock.String()), nil); err != nil {
 		rl.Logger.Error("rl.storageClient.Put", "Error", err)
 	}
 

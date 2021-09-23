@@ -1,6 +1,7 @@
 package chainmanager
 
 import (
+	"bytes"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -54,13 +55,37 @@ func SideHandleMsgNewChain(ctx sdk.Context, msg types.MsgNewChain, k Keeper, con
 	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronChainAddress)
 	// decode validator join event
-	eventLog, err := contractCaller.DecodeValidatorJoinEvent(contractAddress, receipt, msg.LogIndex)
+	eventLog, err := contractCaller.DecodeNewChainEvent(contractAddress, receipt, msg.LogIndex)
 	if err != nil || eventLog == nil {
 		return common.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
 	}
-
-	// Generate PubKey from Pubkey in message and signer
-	// todo Check contract content
+	if msg.BlockNumber != receipt.BlockNumber.Uint64() {
+		k.Logger(ctx).Error("BlockNumber in message doesn't match with receipt",
+			"MsgBlockNumber", msg.BlockNumber, "ReceiptBlockNumber", receipt.BlockNumber.Uint64())
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
+	if uint64(hmTypes.GetRootChainID(msg.RootChainType)) != eventLog.RootChainId.Uint64() {
+		k.Logger(ctx).Error("RootChainType in message doesn't match with receipt",
+			"MsgRootChainType", msg.RootChainType, "ReceiptRootChainType", eventLog.RootChainId.Uint64())
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
+	if msg.TxConfirmations != eventLog.TxConfirmations.Uint64() {
+		k.Logger(ctx).Error("TxConfirmations in message doesn't match with receipt",
+			"MsgTxConfirmations", msg.TxConfirmations, "ReceiptTxConfirmations", eventLog.TxConfirmations.Uint64())
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
+	if msg.ActivationHeight != eventLog.ActivationHeight.Uint64() {
+		k.Logger(ctx).Error("ActivationHeight in message doesn't match with receipt",
+			"MsgActivationHeight", msg.ActivationHeight, "ReceiptActivationHeight", eventLog.ActivationHeight.Uint64())
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
+	if !bytes.Equal(msg.RootChainAddress.Bytes(), eventLog.RootChainAddress.Bytes()) ||
+		!bytes.Equal(msg.StateSenderAddress.Bytes(), eventLog.StateSenderAddress.Bytes()) ||
+		!bytes.Equal(msg.StakingInfoAddress.Bytes(), eventLog.StakingInfoAddress.Bytes()) ||
+		!bytes.Equal(msg.StakingManagerAddress.Bytes(), eventLog.StakingManagerAddress.Bytes()) {
+		k.Logger(ctx).Error("ContractsAddresses in message doesn't match with receipt")
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
 
 	k.Logger(ctx).Debug("✅ Succesfully validated External call for new chain msg")
 	result.Result = abci.SideTxResultType_Yes

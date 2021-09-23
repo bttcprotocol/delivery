@@ -277,6 +277,10 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 						tl.sendTaskWithDelay("sendCheckpointSyncAckToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
+				case "NewChain":
+					if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+						tl.sendTaskWithDelay("sendAddNewChainToHeimdall", selectedEvent.Name, logBytes, delay)
+					}
 				}
 			}
 		}

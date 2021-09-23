@@ -98,6 +98,9 @@ type IContractCaller interface {
 	// checkpoint sync
 	GetSyncedCheckpointId(rootChain string, contractAddress string) (currentHeader uint64, err error)
 	GetStartListenBlock(rootChainType string) uint64
+
+	// new chain
+	DecodeNewChainEvent(common.Address, *ethTypes.Receipt, uint64) (*rootchain.RootchainNewChain, error)
 }
 
 // ContractCaller contract caller
@@ -1008,4 +1011,26 @@ func (c *ContractCaller) GetSyncedCheckpointId(contractAddress string, rootChain
 	}
 
 	return (*ret).Uint64(), nil
+}
+
+// DecodeNewChainEvent represents validator stake update event
+func (c *ContractCaller) DecodeNewChainEvent(contractAddress common.Address, receipt *ethTypes.Receipt, logIndex uint64) (*rootchain.RootchainNewChain, error) {
+	event := new(rootchain.RootchainNewChain)
+
+	found := false
+	for _, vLog := range receipt.Logs {
+		if uint64(vLog.Index) == logIndex && bytes.Equal(vLog.Address.Bytes(), contractAddress.Bytes()) {
+			found = true
+			if err := UnpackLog(&c.RootChainABI, event, "NewChain", vLog); err != nil {
+				return nil, err
+			}
+			break
+		}
+	}
+
+	if !found {
+		return nil, errors.New("Event not found")
+	}
+
+	return event, nil
 }

@@ -88,6 +88,9 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 	if err := cp.queueConnector.Server.RegisterTask("sendCheckpointSyncAckToHeimdall", cp.sendCheckpointSyncAckToHeimdall); err != nil {
 		cp.Logger.Error("RegisterTasks | sendCheckpointSyncAckToHeimdall", "error", err)
 	}
+	if err := cp.queueConnector.Server.RegisterTask("sendAddNewChainToHeimdall", cp.sendAddNewChainToHeimdall); err != nil {
+		cp.Logger.Error("RegisterTasks | sendAddNewChainToHeimdall", "error", err)
+	}
 }
 
 func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interval time.Duration) {
@@ -774,6 +777,72 @@ func (cp *CheckpointProcessor) shouldSendCheckpoint(checkpointContext *Checkpoin
 	}
 
 	return shouldSend, nil
+}
+
+// sendAddNewChainToHeimdall - handles new chain event from rootchain
+// 1. create and broadcast new chain msg to heimdall.
+func (cp *CheckpointProcessor) sendAddNewChainToHeimdall(eventName string, newChainStr string, _ string) error {
+	cp.Logger.Info("Received sendAddNewChainToHeimdall request", "newChainStr", newChainStr)
+
+	var log = types.Log{}
+	if err := json.Unmarshal([]byte(newChainStr), &log); err != nil {
+		cp.Logger.Error("Error while unmarshalling new chain event from tron", "error", err)
+		return err
+	}
+
+	event := new(rootchain.RootchainNewChain)
+	if err := helper.UnpackLog(cp.rootchainAbi, event, eventName, &log); err != nil {
+		cp.Logger.Error("Error while parsing event", "name", eventName, "error", err)
+	} else {
+		var rootChain string
+		switch event.RootChainId.Uint64() {
+		case uint64(hmTypes.GetRootChainID(hmTypes.RootChainTypeBsc)):
+			if cp.getCheckpointActivationHeight(cp.cliCtx, hmTypes.RootChainTypeBsc) > 0 {
+				cp.Logger.Error("bsc has been connected to the network", "root", event.RootChainId.Uint64())
+				return nil
+			}
+			rootChain = hmTypes.RootChainTypeBsc
+		default:
+			cp.Logger.Error("Error root chain ID from tron", "root", rootChain, "error", err)
+			return nil
+		}
+		cp.Logger.Info(
+			"✅ Received task to send add new chain to heimdall",
+			"event", eventName,
+			"root", rootChain,
+			"activationHeight", event.ActivationHeight.Uint64(),
+			"txConfirmations", event.TxConfirmations.Uint64(),
+			"rootAddress", "0x"+hex.EncodeToString(event.RootChainAddress[:]),
+			"stateSenderAddress", "0x"+hex.EncodeToString(event.StateSenderAddress[:]),
+			"stakingInfoAddress", "0x"+hex.EncodeToString(event.StakingInfoAddress[:]),
+			"stakingManagerAddress", "0x"+hex.EncodeToString(event.StakingManagerAddress[:]),
+			"txHash", hmTypes.BytesToHeimdallHash(log.TxHash.Bytes()),
+			"logIndex", uint64(log.Index),
+			"blockNumber", log.BlockNumber,
+		)
+
+		// create msg checkpoint ack message
+		msg := chainmanagerTypes.NewMsgNewChain(
+			helper.GetFromAddress(cp.cliCtx),
+			rootChain,
+			event.ActivationHeight.Uint64(),
+			event.TxConfirmations.Uint64(),
+			hmTypes.HeimdallAddress(event.RootChainAddress),
+			hmTypes.HeimdallAddress(event.StateSenderAddress),
+			hmTypes.HeimdallAddress(event.StakingManagerAddress),
+			hmTypes.HeimdallAddress(event.StakingInfoAddress),
+			hmTypes.HeimdallHash(log.TxHash),
+			uint64(log.Index),
+			log.BlockNumber,
+		)
+
+		// return broadcast to heimdall
+		if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+			cp.Logger.Error("Error while broadcasting checkpoint-ack to heimdall", "error", err)
+			return err
+		}
+	}
+	return nil
 }
 
 // Stop stops all necessary go routines
