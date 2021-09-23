@@ -145,11 +145,6 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 		fromBlock = toBlock
 	}
 
-	// set last block to storage
-	if err := rl.storageClient.Put([]byte(lastRootBlockKey), []byte(toBlock.String()), nil); err != nil {
-		rl.Logger.Error("rl.storageClient.Put", "Error", err)
-	}
-
 	// query events
 	rl.queryAndBroadcastEvents(rootchainContext, fromBlock, toBlock)
 }
@@ -173,6 +168,11 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 		return
 	} else if len(logs) > 0 {
 		rl.Logger.Debug("New logs found", "numberOfLogs", len(logs))
+	}
+
+	// set last block to storage
+	if err := rl.storageClient.Put([]byte(lastRootBlockKey), []byte(toBlock.String()), nil); err != nil {
+		rl.Logger.Error("rl.storageClient.Put", "Error", err)
 	}
 
 	// process filtered log

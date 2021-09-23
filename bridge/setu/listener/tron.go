@@ -20,6 +20,8 @@ import (
 
 const (
 	tronLastBlockKey = "tron-last-block" // storage key
+
+	maxTronListenBlocks = 5000
 )
 
 // TronListener - Listens to and process events from Tron
@@ -150,12 +152,9 @@ func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 	if toBlock.Cmp(fromBlock) == -1 {
 		fromBlock = toBlock
 	}
-
-	// set last block to storage
-	if err := tl.storageClient.Put([]byte(tronLastBlockKey), []byte(toBlock.String()), nil); err != nil {
-		tl.Logger.Error("tl.storageClient.Put", "Error", err)
+	if big.NewInt(0).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxTronListenBlocks)) > 0 {
+		toBlock = toBlock.Add(fromBlock, big.NewInt(maxTronListenBlocks))
 	}
-
 	// query events
 	tl.queryAndBroadcastEvents(chainManagerParams, fromBlock, toBlock)
 }
@@ -175,6 +174,11 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 		return
 	} else if len(logs) > 0 {
 		tl.Logger.Debug("New tron logs found", "numberOfLogs", len(logs))
+	}
+
+	// set last block to storage
+	if err := tl.storageClient.Put([]byte(tronLastBlockKey), []byte(toBlock.String()), nil); err != nil {
+		tl.Logger.Error("tl.storageClient.Put", "Error", err)
 	}
 	// process filtered log
 	for _, vLog := range logs {
