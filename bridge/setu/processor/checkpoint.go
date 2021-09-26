@@ -152,26 +152,30 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 
 		for _, root := range []string{hmTypes.RootChainTypeEth, hmTypes.RootChainTypeBsc} {
 			activationHeight := cp.getCheckpointActivationHeight(cp.cliCtx, root)
-			if activationHeight == 0 || latestConfirmedChildBlock < activationHeight {
-				// inactive root chain
-				continue
+			if root != hmTypes.RootChainTypeEth {
+				if activationHeight == 0 || latestConfirmedChildBlock < activationHeight {
+					// inactive root chain
+					cp.Logger.Debug("Not reaching activation height", "root", root, "activation", activationHeight, "now", latestConfirmedChildBlock)
+					continue
+				}
 			}
 			// fetch checkpoint context for different chain
 			checkpointContext, err := cp.getCheckpointContext(root)
 			if err != nil {
-				return err
+				continue
 			}
 			expectedCheckpointState, err := cp.nextExpectedCheckpoint(checkpointContext, latestConfirmedChildBlock, root)
 			if err != nil {
-				cp.Logger.Error("Error while calculate next expected checkpoint", "error", err)
-				return err
+				cp.Logger.Error("Error while calculate next expected checkpoint", "root", root, "error", err)
+				continue
 			}
 			start := expectedCheckpointState.newStart
-			if start == 0 {
-				// first checkpoint start at activationHeight
-				start = activationHeight
-			}
 			end := expectedCheckpointState.newEnd
+			if start == 0 && root != hmTypes.RootChainTypeEth {
+				// first checkpoint start at activationHeight
+				start += activationHeight
+				end += activationHeight
+			}
 
 			//
 			// Check checkpoint buffer
@@ -185,13 +189,13 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 			}
 
 			if bufferedCheckpoint != nil && !(bufferedCheckpoint.TimeStamp == 0 || ((timeStamp > bufferedCheckpoint.TimeStamp) && timeStamp-bufferedCheckpoint.TimeStamp >= checkpointBufferTime)) {
-				cp.Logger.Info("Checkpoint[eth] already exits in buffer", "Checkpoint", bufferedCheckpoint.String())
-				return nil
+				cp.Logger.Info("Checkpoint already exits in buffer", "root", root, "Checkpoint", bufferedCheckpoint.String())
+				continue
 			}
 
 			if err := cp.createAndSendCheckpointToHeimdall(checkpointContext, start, end, root); err != nil {
-				cp.Logger.Error("Error sending checkpoint to heimdall", "error", err)
-				return err
+				cp.Logger.Error("Error sending checkpoint to heimdall", "root", root, "error", err)
+				continue
 			}
 		}
 	} else {
@@ -279,11 +283,11 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 	if shouldSend && isCurrentProposer {
 		txHash := common.FromHex(txHash)
 		if err := cp.createAndSendCheckpointToRootchain(checkpointContext, startBlock, endBlock, blockHeight, txHash, rootChain); err != nil {
-			cp.Logger.Error("Error sending checkpoint to rootchain", "error", err)
+			cp.Logger.Error("Error sending checkpoint to rootchain", "root", rootChain, "error", err)
 			return err
 		}
 	} else {
-		cp.Logger.Info("I am not the current proposer or checkpoint already sent. Ignoring", "eventType", event.Type)
+		cp.Logger.Info("I am not the current proposer or checkpoint already sent. Ignoring", "root", rootChain, "eventType", event.Type)
 		return nil
 	}
 	return nil
@@ -405,7 +409,7 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	// fetch current header block from mainchain contract
 	_currentHeaderBlock, err := cp.contractConnector.CurrentHeaderBlock(rootChainInstance, checkpointParams.ChildBlockInterval)
 	if err != nil {
-		cp.Logger.Error("Error while fetching current header block number from rootchain", "error", err)
+		cp.Logger.Error("Error while fetching current header block number from rootchain", "root", rootChain, "error", err)
 		return nil, err
 	}
 
@@ -415,7 +419,7 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	// get header info
 	_, currentStart, currentEnd, lastCheckpointTime, _, err := cp.contractConnector.GetHeaderInfo(currentHeaderBlockNumber.Uint64(), rootChainInstance, checkpointParams.ChildBlockInterval)
 	if err != nil {
-		cp.Logger.Error("Error while fetching current header block object from rootchain", "error", err)
+		cp.Logger.Error("Error while fetching current header block object from rootchain", "root", rootChain, "error", err)
 		return nil, err
 	}
 
@@ -765,7 +769,10 @@ func (cp *CheckpointProcessor) shouldSendCheckpoint(checkpointContext *Checkpoin
 	// validate if checkpoint needs to be pushed to rootchain and submit
 	cp.Logger.Info("Validating if checkpoint needs to be pushed", "commitedLastBlock", currentChildBlock, "startBlock", start)
 	// check if we need to send checkpoint or not
-	if ((currentChildBlock + 1) == start) || (currentChildBlock == 0 && start == 0) {
+	if currentChildBlock == 0 && start == cp.getCheckpointActivationHeight(cp.cliCtx, rootChain) {
+		cp.Logger.Info("Checkpoint Valid", "startBlock", start)
+		shouldSend = true
+	} else if (currentChildBlock + 1) == start {
 		cp.Logger.Info("Checkpoint Valid", "startBlock", start)
 		shouldSend = true
 	} else if currentChildBlock > start {

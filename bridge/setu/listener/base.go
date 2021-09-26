@@ -213,7 +213,7 @@ func (bl *BaseListener) Stop() {
 	bl.cancelHeaderProcess()
 }
 
-func (bl *BaseListener) setStartListenBLock(StartBlock uint64, key string ) error {
+func (bl *BaseListener) setStartListenBLock(StartBlock uint64, key string) error {
 	// int64 is bigger enough to hold all block
 	startBlock := big.NewInt(int64(StartBlock))
 	// set last block to storage

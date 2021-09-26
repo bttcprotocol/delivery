@@ -42,10 +42,9 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 
 	r.HandleFunc("/checkpoints/epoch", currentEpochHandlerFunc(cliCtx)).Methods("GET")
 
-	r.HandleFunc("/checkpoints/{root}/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
-
 	r.HandleFunc("/checkpoints/activation-height/{root}", checkpointActivationHeightHandlerFunc(cliCtx)).Methods("GET")
 
+	r.HandleFunc("/checkpoints/{root}/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
 }
 
 // HTTP request handler to query the auth params values

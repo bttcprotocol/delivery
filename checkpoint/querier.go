@@ -247,16 +247,7 @@ func handleQueryCheckpointActivation(ctx sdk.Context, req abci.RequestQuery, kee
 	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
-	var res uint64
-	if params.RootChain == hmTypes.RootChainTypeEth {
-		res = 1
-	} else {
-		chainParams, err := keeper.ck.GetChainParams(ctx, params.RootChain)
-		if err != nil {
-			return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not get chain params", err.Error()))
-		}
-		res = chainParams.ActivationHeight
-	}
+	res := keeper.ck.GetChainActivationHeight(ctx, params.RootChain)
 	bz, err := json.Marshal(res)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))

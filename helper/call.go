@@ -953,7 +953,6 @@ func (c *ContractCaller) GetStartListenBlock(rootChainType string) uint64 {
 	} else if rootChainType == hmTypes.RootChainTypeEth {
 		return GetConfig().EthStartListenBlock
 	} else {
-		Logger.Error("Wrong rootType ", "root", rootChainType)
 		return 0
 	}
 }

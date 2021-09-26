@@ -83,10 +83,13 @@ func handleMsgCheckpoint(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper, con
 				"startBlock", msg.StartBlock, "root", msg.RootChainType)
 			return common.ErrDisCountinuousCheckpoint(k.Codespace()).Result()
 		}
-	} else if err.Error() == common.ErrNoCheckpointFound(k.Codespace()).Error() && msg.StartBlock != 0 {
-		logger.Error("First checkpoint to start from block 0",
-			"Error", err, "root", msg.RootChainType)
-		return common.ErrBadBlockDetails(k.Codespace()).Result()
+	} else if err.Error() == common.ErrNoCheckpointFound(k.Codespace()).Error() {
+		activation := k.ck.GetChainActivationHeight(ctx, msg.RootChainType)
+		if activation != msg.StartBlock {
+			logger.Error("First checkpoint to start from block active height",
+				"activation", activation, "start", msg.StartBlock, "root", msg.RootChainType)
+			return common.ErrBadBlockDetails(k.Codespace()).Result()
+		}
 	}
 
 	//

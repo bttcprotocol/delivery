@@ -94,7 +94,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 		ValidatorSetAddress:   validatorSetAddress,
 	}
 	params := types.NewParams(mainchainTxConfirmations, tronchainTxConfirmations, maticchainTxConfirmations, chainParams)
-	chainManagerGenesis := types.NewGenesisState(params)
+	chainManagerGenesis := types.NewGenesisState(params, []types.ChainInfo{})
 	fmt.Printf("Selected randomly generated chainmanager parameters:\n%s\n", codec.MustMarshalJSONIndent(simState.Cdc, chainManagerGenesis))
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(chainManagerGenesis)
 }

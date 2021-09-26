@@ -92,6 +92,26 @@ func (k *Keeper) AddNewChainParams(ctx sdk.Context, chainInfo types.ChainInfo) e
 	return nil
 }
 
+// GetNewChainParamsList get new chain into chain list
+func (k *Keeper) GetNewChainParamsList(ctx sdk.Context) []types.ChainInfo {
+	store := ctx.KVStore(k.storeKey)
+	// get checkpoint header iterator
+	iterator := sdk.KVStorePrefixIterator(store, NewChainParamsKey)
+	defer iterator.Close()
+
+	// create headers
+	var chainInfos []types.ChainInfo
+
+	// loop through validators to get valid validators
+	for ; iterator.Valid(); iterator.Next() {
+		var chainInfo types.ChainInfo
+		if err := k.cdc.UnmarshalBinaryBare(iterator.Value(), &chainInfo); err == nil {
+			chainInfos = append(chainInfos, chainInfo)
+		}
+	}
+	return chainInfos
+}
+
 // setEventRecordStore adds value to store by key
 func (k *Keeper) setChainInfoStore(ctx sdk.Context, key, value []byte) error {
 	store := ctx.KVStore(k.storeKey)
@@ -104,6 +124,16 @@ func (k *Keeper) setChainInfoStore(ctx sdk.Context, key, value []byte) error {
 	store.Set(key, value)
 	// return
 	return nil
+}
+
+// GetChainActivationHeight get new chain Params
+func (k *Keeper) GetChainActivationHeight(ctx sdk.Context, rootChain string) uint64 {
+	chainParams, err := k.GetChainParams(ctx, rootChain)
+	if err != nil {
+		return 0
+	}
+	res := chainParams.ActivationHeight
+	return res
 }
 
 // -----------------------------------------------------------------------------

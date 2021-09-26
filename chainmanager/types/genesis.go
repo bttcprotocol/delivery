@@ -11,18 +11,21 @@ import (
 // GenesisState - all chainmanager state that must be provided at genesis
 type GenesisState struct {
 	Params Params `json:"params" yaml:"params"`
+
+	ChainInfos []ChainInfo `json:"chain_infos" yaml:"chain_infos"`
 }
 
 // NewGenesisState - Create a new genesis state
-func NewGenesisState(params Params) GenesisState {
+func NewGenesisState(params Params, chainInfos []ChainInfo) GenesisState {
 	return GenesisState{
-		Params: params,
+		Params:     params,
+		ChainInfos: chainInfos,
 	}
 }
 
 // DefaultGenesisState - Return a default genesis state
 func DefaultGenesisState() GenesisState {
-	return NewGenesisState(DefaultParams())
+	return NewGenesisState(DefaultParams(), []ChainInfo{})
 }
 
 // ValidateGenesis performs basic validation of auth genesis data returning an
