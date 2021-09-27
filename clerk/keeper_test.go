@@ -168,21 +168,6 @@ func (suite *KeeperTestSuite) TestGetEventRecordKey() {
 	require.Equal(t, respKey, []byte{17, 49})
 }
 
-func (suite *KeeperTestSuite) TestGetRootChainEventRecordKey() {
-	t, _, _ := suite.T(), suite.app, suite.ctx
-
-	hAddr := hmTypes.BytesToHeimdallAddress([]byte("some-address"))
-	hHash := hmTypes.BytesToHeimdallHash([]byte("some-address"))
-	testRecord1 := types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeEth)
-
-	respKey := clerk.GetRootChainEventRecordKey(testRecord1.RootChainType, testRecord1.ID)
-	require.Equal(t, respKey, []byte{23, 49})
-
-	testRecord1 = types.NewEventRecord(hHash, 1, 1, hAddr, make([]byte, 0), "1", time.Now(), hmTypes.RootChainTypeTron)
-	respKey = clerk.GetRootChainEventRecordKey(testRecord1.RootChainType, testRecord1.ID)
-	require.Equal(t, respKey, []byte{22, 49})
-}
-
 func (suite *KeeperTestSuite) TestGetRootToHeimdallIdKey() {
 	t, _, _ := suite.T(), suite.app, suite.ctx
 

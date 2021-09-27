@@ -1110,13 +1110,13 @@ func (_m *IContractCaller) SendCheckpoint(sigedData []byte, sigs [][3]*big.Int, 
 	return r0
 }
 
-// SendMainStakingSync provides a mock function with given fields: stakingType, sigedData, sigs, stakingManagerAddress, stakingManagerInstance
-func (_m *IContractCaller) SendMainStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress common.Address, stakingManagerInstance *stakemanager.Stakemanager) error {
-	ret := _m.Called(stakingType, sigedData, sigs, stakingManagerAddress, stakingManagerInstance)
+// SendMainStakingSync provides a mock function with given fields: stakingType, sigedData, sigs, stakingManagerAddress, stakingManagerInstance, rootChain
+func (_m *IContractCaller) SendMainStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress common.Address, stakingManagerInstance *stakemanager.Stakemanager, rootChain string) error {
+	ret := _m.Called(stakingType, sigedData, sigs, stakingManagerAddress, stakingManagerInstance, rootChain)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, []byte, [][3]*big.Int, common.Address, *stakemanager.Stakemanager) error); ok {
-		r0 = rf(stakingType, sigedData, sigs, stakingManagerAddress, stakingManagerInstance)
+	if rf, ok := ret.Get(0).(func(string, []byte, [][3]*big.Int, common.Address, *stakemanager.Stakemanager, string) error); ok {
+		r0 = rf(stakingType, sigedData, sigs, stakingManagerAddress, stakingManagerInstance, rootChain)
 	} else {
 		r0 = ret.Error(0)
 	}

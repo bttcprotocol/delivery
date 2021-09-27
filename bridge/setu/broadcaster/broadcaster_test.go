@@ -45,6 +45,7 @@ func TestBroadcastToHeimdall(t *testing.T) {
 				test.AccountRootHash,
 				test.BorChainID,
 				test.Epoch,
+				test.RootChainType,
 			)
 
 			err := _txBroadcaster.BroadcastToHeimdall(msg)

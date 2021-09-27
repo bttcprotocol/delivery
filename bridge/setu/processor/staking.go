@@ -558,7 +558,7 @@ func (sp *StakingProcessor) createAndSendStakingSyncToRootChain(stakingContext *
 		sp.Logger.Error("Error while creating staking instance", "error", err)
 		return
 	}
-	if err := sp.contractConnector.SendMainStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress, stakingManagerInstance); err != nil {
+	if err := sp.contractConnector.SendMainStakingSync(stakingInfo.Type, sideTxData, sigs, stakingManagerAddress, stakingManagerInstance, rootChain); err != nil {
 		sp.Logger.Error("Error submitting staking sync to rootchain", "error", err)
 		return
 	}

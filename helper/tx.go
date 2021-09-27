@@ -264,13 +264,20 @@ func (c *ContractCaller) SendCheckpointSyncToTron(signedData []byte, sigs [][3]*
 }
 
 // SendMainStakingSync sends staking sync to rootchain contract
-func (c *ContractCaller) SendMainStakingSync(syncMethod string, signedData []byte, sigs [][3]*big.Int, stakingManager common.Address, stakingManagerInstance *stakemanager.Stakemanager) (er error) {
+func (c *ContractCaller) SendMainStakingSync(syncMethod string, signedData []byte, sigs [][3]*big.Int, stakingManager common.Address, stakingManagerInstance *stakemanager.Stakemanager, rootChain string) (er error) {
 	data, err := c.StakeManagerABI.Pack(syncMethod, signedData, sigs)
 	if err != nil {
 		Logger.Error("Unable to pack tx for submitStakingSync", "error", err, "syncMethod", syncMethod)
 		return err
 	}
-	auth, err := GenerateAuthObj(GetMainClient(), stakingManager, data)
+	var client *ethclient.Client
+	switch rootChain {
+	case hmtypes.RootChainTypeEth:
+		client = GetMainClient()
+	case hmtypes.RootChainTypeBsc:
+		client = GetBscClient()
+	}
+	auth, err := GenerateAuthObj(client, stakingManager, data)
 	if err != nil {
 		Logger.Error("Unable to create auth object", "error", err)
 		Logger.Info("Setting custom gaslimit", "gaslimit", GetConfig().MainchainGasLimit)
@@ -285,6 +292,7 @@ func (c *ContractCaller) SendMainStakingSync(syncMethod string, signedData []byt
 	Logger.Debug("Sending new staking sync",
 		"sigs", strings.Join(s, ","),
 		"data", hex.EncodeToString(signedData),
+		"address", stakingManager.Hex(),
 	)
 
 	var tx *types.Transaction

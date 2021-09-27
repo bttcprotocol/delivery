@@ -78,7 +78,7 @@ type IContractCaller interface {
 	// staking sync
 	GetMainStakingSyncNonce(validatorID uint64, stakingManagerInstance *stakemanager.Stakemanager) (nonce uint64)
 	GetTronStakingSyncNonce(validatorID uint64, stakingManagerAddress string) (nonce uint64)
-	SendMainStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress common.Address, stakingManagerInstance *stakemanager.Stakemanager) (err error)
+	SendMainStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress common.Address, stakingManagerInstance *stakemanager.Stakemanager, rootChain string) (err error)
 	SendTronStakingSync(stakingType string, sigedData []byte, sigs [][3]*big.Int, stakingManagerAddress string) (err error)
 
 	GetRootChainInstance(rootchainAddress common.Address, rootChain string) (*rootchain.Rootchain, error)

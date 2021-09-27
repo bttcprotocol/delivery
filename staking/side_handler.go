@@ -902,10 +902,19 @@ func PostHandleMsgStakingSync(ctx sdk.Context, k Keeper, msg types.MsgStakingSyn
 		logger.Error("Staking sync is in buffer time",
 			"stakingID", msg.ValidatorID,
 			"nonce", msg.Nonce,
-			"bufferTime", stakingBufferTime,
+			"bufferAt", stakingRecord.TimeStamp,
 			"now", now,
+			"bufferTime", stakingBufferTime,
 		)
 		return common.ErrBadAck(k.Codespace()).Result()
+	} else {
+		logger.Debug("Staking sync buffer status",
+			"stakingID", msg.ValidatorID,
+			"nonce", msg.Nonce,
+			"bufferAt", stakingRecord.TimeStamp,
+			"now", now,
+			"bufferTime", stakingBufferTime,
+		)
 	}
 
 	if msg.ValidatorID != stakingRecord.ValidatorID || msg.Nonce != stakingRecord.Nonce {

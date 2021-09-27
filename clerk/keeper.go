@@ -30,9 +30,7 @@ var (
 
 	EthStateRecordPrefixKeyWithTime = []byte{0x15} // eth prefix key for when storing state with time
 
-	TronStateRecordPrefixKey = []byte{0x16} // tron prefix key for when storing state
-
-	EthStateRecordPrefixKey = []byte{0x17} // eth prefix key for when storing state
+	BscStateRecordPrefixKeyWithTime = []byte{0x16} // bsc prefix key for when storing state with time
 
 	LatestMsgIDPrefixKey = []byte{0x18} // eth prefix key for when storing state
 
@@ -228,9 +226,9 @@ func (k *Keeper) GetEventRecord(ctx sdk.Context, stateID uint64) (*types.EventRe
 func (k *Keeper) GetRootChainEventRecord(ctx sdk.Context, stateID uint64, rootChainType string) (*types.EventRecord, error) {
 	store := ctx.KVStore(k.storeKey)
 
-	heimdallId, err := k.GetHeimdallIDByRootID(ctx,rootChainType,stateID)
-	if err != nil{
-		return nil,err
+	heimdallId, err := k.GetHeimdallIDByRootID(ctx, rootChainType, stateID)
+	if err != nil {
+		return nil, err
 	}
 	rootChainKey := GetEventRecordKey(*heimdallId)
 	// check store has data
@@ -240,7 +238,7 @@ func (k *Keeper) GetRootChainEventRecord(ctx sdk.Context, stateID uint64, rootCh
 		if err != nil {
 			return nil, err
 		}
-		_record.ID = stateID   // reset root msg id
+		_record.ID = stateID // reset root msg id
 		return &_record, nil
 	}
 
@@ -258,8 +256,8 @@ func (k *Keeper) HasEventRecord(ctx sdk.Context, stateID uint64) bool {
 // root chain msg id   check if msg have been processed
 func (k *Keeper) HasRootChainEventRecord(ctx sdk.Context, rootChainType string, stateID uint64) bool {
 	store := ctx.KVStore(k.storeKey)
-	heimdallId, err := k.GetHeimdallIDByRootID(ctx,rootChainType,stateID)
-	if err != nil{
+	heimdallId, err := k.GetHeimdallIDByRootID(ctx, rootChainType, stateID)
+	if err != nil {
 		return false
 	}
 	key := GetEventRecordKey(*heimdallId)
@@ -354,17 +352,6 @@ func GetEventRecordKey(stateID uint64) []byte {
 	return GetRecordKey(StateRecordPrefixKey, stateID)
 }
 
-// GetRootChainEventRecordKey appends prefix to state id
-func GetRootChainEventRecordKey(rootChainType string, stateID uint64) []byte {
-	if rootChainType == hmTypes.RootChainTypeEth {
-		return GetRecordKey(EthStateRecordPrefixKey, stateID)
-	} else if rootChainType == hmTypes.RootChainTypeTron {
-		return GetRecordKey(TronStateRecordPrefixKey, stateID)
-	} else {
-		return nil
-	}
-}
-
 // GetEventRecordKeyWithTime appends prefix to state id and record time
 func GetEventRecordKeyWithTime(stateID uint64, recordTime time.Time) []byte {
 	return GetRecordKey(GetEventRecordKeyWithTimePrefix(recordTime), stateID)
@@ -383,13 +370,19 @@ func GetEventRecordKeyWithTimePrefix(recordTime time.Time) []byte {
 
 // GetRootChainEventRecordKeyWithTimePrefix gives prefix for record time key
 func GetRootChainEventRecordKeyWithTimePrefix(rootChainType string, id uint64, recordTime time.Time) []byte {
-	if rootChainType == hmTypes.RootChainTypeEth {
-		return GetRecordKey(GetRecordKeyWithTimePrefix(EthStateRecordPrefixKeyWithTime, recordTime), id)
-	} else if rootChainType == hmTypes.RootChainTypeTron {
-		return GetRecordKey(GetRecordKeyWithTimePrefix(TronStateRecordPrefixKeyWithTime, recordTime), id)
-	} else {
+
+	key := DefaultValue
+	switch rootChainType {
+	case hmTypes.RootChainTypeEth:
+		key = EthStateRecordPrefixKeyWithTime
+	case hmTypes.RootChainTypeTron:
+		key = TronStateRecordPrefixKeyWithTime
+	case hmTypes.RootChainTypeBsc:
+		key = BscStateRecordPrefixKeyWithTime
+	default:
 		return nil
 	}
+	return GetRecordKey(GetRecordKeyWithTimePrefix(key, recordTime), id)
 }
 
 func GetRecordKeyWithTimePrefix(prefix []byte, recordTime time.Time) []byte {

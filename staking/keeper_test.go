@@ -1,9 +1,12 @@
 package staking_test
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
+
+	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/maticnetwork/heimdall/app"
@@ -367,4 +370,38 @@ func (suite *KeeperTestSuite) TestGetSpanEligibleValidators() {
 
 	validators := keeper.GetSpanEligibleValidators(ctx)
 	require.LessOrEqual(t, len(validators), 4)
+}
+
+func (suite *KeeperTestSuite) TestUpdateStakingSync() {
+	// create sub test to check if validator remove
+	t, app, ctx := suite.T(), suite.app, suite.ctx
+	k := app.StakingKeeper
+
+	stakingRecord := stakingTypes.StakingRecord{
+		Type:        "validatorJoin",
+		ValidatorID: 111,
+		Nonce:       222,
+		Height:      ctx.BlockHeight(),
+		TxHash:      hmTypes.ZeroHeimdallHash,
+	}
+	rootChainID := hmTypes.GetRootChainID(hmTypes.RootChainTypeEth)
+	k.AddStakingRecordToQueue(ctx, rootChainID, stakingRecord)
+	// get last staking from buffer
+	result, _ := k.GetNextStakingRecordFromQueue(ctx, rootChainID)
+	require.Equal(t, stakingRecord, *result)
+
+	now := uint64(ctx.BlockTime().Unix())
+	stakingBufferTime := uint64(k.GetParams(ctx).StakingBufferTime.Seconds())
+
+	if stakingRecord.TimeStamp > now && stakingRecord.TimeStamp-now < stakingBufferTime {
+		return
+	}
+
+	// update state sync timestamp
+	k.UpdateStakingRecordTimestamp(ctx, rootChainID, stakingRecord.ValidatorID, stakingRecord.Nonce, now)
+	result, _ = k.GetNextStakingRecordFromQueue(ctx, rootChainID)
+	fmt.Println(result.TimeStamp)
+	fmt.Println(now)
+	fmt.Println(stakingBufferTime)
+	require.Equal(t, result.TimeStamp >= now && result.TimeStamp-now < stakingBufferTime, true)
 }

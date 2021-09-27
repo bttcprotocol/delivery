@@ -37,6 +37,8 @@ type RootChainListener struct {
 const (
 	lastEthBlockKey = "eth-last-block" // storage key
 	lastBscBlockKey = "bsc-last-block"
+
+	maxRootListenBlocks = 3000
 )
 
 // NewRootChainListener - constructor func
@@ -159,7 +161,9 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	if toBlock.Cmp(fromBlock) == -1 {
 		fromBlock = toBlock
 	}
-
+	if big.NewInt(0).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxRootListenBlocks)) > 0 {
+		toBlock = toBlock.Add(fromBlock, big.NewInt(maxRootListenBlocks))
+	}
 	// query events
 	rl.queryAndBroadcastEvents(rootchainContext, fromBlock, toBlock)
 }
