@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -226,16 +227,12 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 	// }
 
 	cp.Logger.Info("processing checkpoint confirmation event", "eventtype", event.Type)
-	isCurrentProposer, err := util.IsCurrentProposer(cp.cliCtx)
-	if err != nil {
-		cp.Logger.Error("Error checking isCurrentProposer in CheckpointConfirmation handler", "error", err)
-		return err
-	}
 
 	var startBlock uint64
 	var endBlock uint64
 	var txHash string
 	var rootChain string
+	var proposer string
 
 	for _, attr := range event.Attributes {
 		if attr.Key == checkpointTypes.AttributeKeyStartBlock {
@@ -250,6 +247,15 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 		if attr.Key == checkpointTypes.AttributeKeyRootChain {
 			rootChain = attr.Value
 		}
+		if attr.Key == checkpointTypes.AttributeKeyProposer {
+			proposer = attr.Value
+		}
+	}
+
+	isCurrentProposer := bytes.Equal(common.FromHex(proposer), helper.GetAddress())
+	if !isCurrentProposer {
+		cp.Logger.Info("I am not the current proposer. Ignoring", "root", rootChain, "eventType", event.Type)
+		return nil
 	}
 
 	checkpointContext, err := cp.getCheckpointContext(rootChain)
