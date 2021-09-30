@@ -2,7 +2,6 @@ package staking
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"strconv"
 
@@ -446,19 +445,13 @@ func PostHandleMsgValidatorJoin(ctx sdk.Context, k Keeper, msg types.MsgValidato
 	pubkey := msg.SignerPubKey
 	signer := pubkey.Address()
 
-	// get voting power from amount
-	votingPower, err := helper.GetPowerFromAmount(msg.Amount.BigInt())
-	if err != nil {
-		return hmCommon.ErrInvalidMsg(k.Codespace(), fmt.Sprintf("Invalid amount %v for validator %v", msg.Amount, msg.ID)).Result()
-	}
-
 	// create new validator
 	newValidator := hmTypes.Validator{
 		ID:          msg.ID,
 		StartEpoch:  msg.ActivationEpoch,
 		EndEpoch:    0,
 		Nonce:       msg.Nonce,
-		VotingPower: votingPower.Int64(),
+		VotingPower: 1,
 		PubKey:      pubkey,
 		Signer:      hmTypes.BytesToHeimdallAddress(signer.Bytes()),
 		LastUpdated: "",
@@ -470,7 +463,7 @@ func PostHandleMsgValidatorJoin(ctx sdk.Context, k Keeper, msg types.MsgValidato
 
 	// add validator to store
 	k.Logger(ctx).Debug("Adding new validator to state", "validator", newValidator.String())
-	err = k.AddValidator(ctx, newValidator)
+	err := k.AddValidator(ctx, newValidator)
 	if err != nil {
 		k.Logger(ctx).Error("Unable to add validator to state", "error", err, "validator", newValidator.String())
 		return hmCommon.ErrValidatorSave(k.Codespace()).Result()
