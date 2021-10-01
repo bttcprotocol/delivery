@@ -110,7 +110,7 @@ func handleQueryAccountProof(ctx sdk.Context, req abci.RequestQuery, keeper Keep
 	chainParams := keeper.chainKeeper.GetParams(ctx)
 
 	stakingInfoAddress := chainParams.ChainParams.StakingInfoAddress.EthAddress()
-	stakingInfoInstance, _ := contractCallerObj.GetStakingInfoInstance(stakingInfoAddress, hmTypes.RootChainTypeStake)
+	stakingInfoInstance, _ := contractCallerObj.GetStakingInfoInstance(stakingInfoAddress, hmTypes.RootChainTypeEth)
 
 	accountRootOnChain, err := contractCallerObj.CurrentAccountStateRoot(stakingInfoInstance)
 	if err != nil {

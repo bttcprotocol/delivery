@@ -96,7 +96,7 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 
 func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
-	ticker1 := time.NewTicker(time.Minute)
+	ticker1 := time.NewTicker(helper.GetConfig().CheckpointerPollInterval)
 	// stop ticker when everything done
 	defer ticker.Stop()
 	defer ticker1.Stop()
