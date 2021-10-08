@@ -58,7 +58,8 @@ func (cp *CheckpointProcessor) handleCheckpointSync() {
 
 		if end != 0 {
 			// send checkpoint sync
-			msg := checkpointTypes.NewMsgCheckpointSync(proposer, nextCheckpointNumber, start, end, rootChain)
+			msg := checkpointTypes.NewMsgCheckpointSync(hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
+				proposer, nextCheckpointNumber, start, end, rootChain)
 			// return broadcast to heimdall
 			if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
 				cp.Logger.Error("Error while broadcasting checkpoint-sync to heimdall",
@@ -192,7 +193,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 
 		// create msg checkpoint ack message
 		msg := checkpointTypes.NewMsgCheckpointSyncAck(
-			hmTypes.HeimdallAddress(event.Proposer),
+			helper.GetFromAddress(cp.cliCtx),
 			event.CheckpointId.Uint64(),
 			event.Start.Uint64(),
 			event.End.Uint64(),
