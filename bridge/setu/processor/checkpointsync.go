@@ -181,11 +181,13 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 		)
 		// fetch checkpoint sync buffer
 		bufferedCheckpoint, err := util.GetBufferedCheckpointSync(cp.cliCtx, checkpointChain)
-		bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
-		currentTime := time.Now().UTC()
-		if err == nil && currentTime.Sub(bufferedTime).Seconds() > checkpointParams.CheckpointBufferTime.Seconds()/5 {
-			cp.Logger.Debug("checkpoint sync buffer has expired, ignore this ack")
-			return nil
+		if err == nil {
+			bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
+			currentTime := time.Now().UTC()
+			if currentTime.Sub(bufferedTime).Seconds() > checkpointParams.CheckpointBufferTime.Seconds()/5 {
+				cp.Logger.Debug("checkpoint sync buffer has expired, ignore this ack")
+				return nil
+			}
 		}
 
 		// create msg checkpoint ack message
