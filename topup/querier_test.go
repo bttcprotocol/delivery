@@ -168,7 +168,7 @@ func (suite *QuerierTestSuite) TestHandleQueryAccountProof() {
 	copy(accountRoot[:], accRoot)
 
 	// mock contracts
-	suite.contractCaller.On("GetStakingInfoInstance", mock.Anything, hmTypes.RootChainTypeStake).Return(stakingInfo, nil)
+	suite.contractCaller.On("GetStakingInfoInstance", mock.Anything, hmTypes.RootChainTypeEth).Return(stakingInfo, nil)
 	suite.contractCaller.On("CurrentAccountStateRoot", stakingInfo).Return(accountRoot, nil)
 
 	req := abci.RequestQuery{

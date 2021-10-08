@@ -58,7 +58,8 @@ func (cp *CheckpointProcessor) handleCheckpointSync() {
 
 		if end != 0 {
 			// send checkpoint sync
-			msg := checkpointTypes.NewMsgCheckpointSync(proposer, nextCheckpointNumber, start, end, rootChain)
+			msg := checkpointTypes.NewMsgCheckpointSync(hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
+				proposer, nextCheckpointNumber, start, end, rootChain)
 			// return broadcast to heimdall
 			if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
 				cp.Logger.Error("Error while broadcasting checkpoint-sync to heimdall",

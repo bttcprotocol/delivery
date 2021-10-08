@@ -255,6 +255,7 @@ func (msg MsgCheckpointNoAck) ValidateBasic() sdk.Error {
 var _ sdk.Msg = &MsgCheckpointSync{}
 
 type MsgCheckpointSync struct {
+	From          types.HeimdallAddress `json:"from"`
 	Number        uint64                `json:"Number"`
 	Proposer      types.HeimdallAddress `json:"proposer"`
 	StartBlock    uint64                `json:"start_block"`
@@ -262,8 +263,9 @@ type MsgCheckpointSync struct {
 	RootChainType string                `json:"root_chain_type"`
 }
 
-func NewMsgCheckpointSync(proposer types.HeimdallAddress, number, start, end uint64, rootChain string) MsgCheckpointSync {
+func NewMsgCheckpointSync(from, proposer types.HeimdallAddress, number, start, end uint64, rootChain string) MsgCheckpointSync {
 	return MsgCheckpointSync{
+		From:          from,
 		Number:        number,
 		Proposer:      proposer,
 		StartBlock:    start,
@@ -281,7 +283,7 @@ func (msg MsgCheckpointSync) Route() string {
 }
 
 func (msg MsgCheckpointSync) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{types.HeimdallAddressToAccAddress(msg.Proposer)}
+	return []sdk.AccAddress{types.HeimdallAddressToAccAddress(msg.From)}
 }
 
 func (msg MsgCheckpointSync) GetSignBytes() []byte {
