@@ -891,7 +891,7 @@ func PostHandleMsgStakingSync(ctx sdk.Context, k Keeper, msg types.MsgStakingSyn
 	now := uint64(ctx.BlockTime().Unix())
 	stakingBufferTime := uint64(k.GetParams(ctx).StakingBufferTime.Seconds())
 
-	if stakingRecord.TimeStamp > now && stakingRecord.TimeStamp-now < stakingBufferTime {
+	if stakingRecord.TimeStamp != 0 && now > stakingRecord.TimeStamp && now-stakingRecord.TimeStamp < stakingBufferTime {
 		logger.Error("Staking sync is in buffer time",
 			"stakingID", msg.ValidatorID,
 			"nonce", msg.Nonce,
