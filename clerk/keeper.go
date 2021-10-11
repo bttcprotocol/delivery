@@ -13,6 +13,7 @@ import (
 	"github.com/maticnetwork/heimdall/clerk/types"
 	"github.com/maticnetwork/heimdall/params/subspace"
 	hmTypes "github.com/maticnetwork/heimdall/types"
+	"github.com/patrickmn/go-cache"
 )
 
 var (
@@ -49,6 +50,8 @@ type Keeper struct {
 	paramSpace subspace.Subspace
 	// chain param keeper
 	chainKeeper chainmanager.Keeper
+
+	cache *cache.Cache
 }
 
 // NewKeeper create new keeper
@@ -65,6 +68,7 @@ func NewKeeper(
 		paramSpace:  paramSpace,
 		codespace:   codespace,
 		chainKeeper: chainKeeper,
+		cache:       cache.New(30*time.Minute, 10*time.Minute),
 	}
 	return keeper
 }
@@ -464,4 +468,18 @@ func (k *Keeper) SetRecordSequence(ctx sdk.Context, sequence string) {
 func (k *Keeper) HasRecordSequence(ctx sdk.Context, sequence string) bool {
 	store := ctx.KVStore(k.storeKey)
 	return store.Has(GetRecordSequenceKey(sequence))
+}
+
+//
+// Cache
+//
+
+func (k *Keeper) SetReceiptCache(key string, value interface{}) {
+	if len(key) != 0 {
+		k.cache.Set(key, value, cache.DefaultExpiration)
+	}
+}
+
+func (k *Keeper) GetReceiptCache(key string) (interface{}, bool) {
+	return k.cache.Get(key)
 }

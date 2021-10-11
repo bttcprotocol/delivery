@@ -133,7 +133,18 @@ func (cp *CheckpointProcessor) createAndSendTronCheckpointToHeimdall(checkpointC
 		cp.Logger.Info("Waiting[tron] for blocks or invalid start end formation", "start", start, "end", end)
 		return nil
 	}
-
+	// fetch latest checkpoint
+	latestCheckpoint, err := util.GetlastestCheckpoint(cp.cliCtx, hmTypes.RootChainTypeTron)
+	// event checkpoint is older than or equal to latest checkpoint
+	if err == nil && latestCheckpoint != nil && latestCheckpoint.EndBlock+1 < start {
+		cp.Logger.Debug("Need to resubmit Checkpoint ack first", "start", start, "last_end", latestCheckpoint.EndBlock)
+		err := cp.resubmitTronCheckpointAck(checkpointContext)
+		if err != nil {
+			cp.Logger.Info("Error while resubmit checkpoint ack", "root", hmTypes.RootChainTypeTron, "err", err)
+			return err
+		}
+		return nil
+	}
 	// get checkpoint params
 	checkpointParams := checkpointContext.CheckpointParams
 
@@ -287,4 +298,45 @@ func (cp *CheckpointProcessor) getLatestTronCheckpointTime(checkpointContext *Ch
 		return 0, err
 	}
 	return int64(createdAt), nil
+}
+
+// resubmitTronCheckpointAck - resubmit checkpoint ack of root
+func (cp *CheckpointProcessor) resubmitTronCheckpointAck(checkpointContext *CheckpointContext) error {
+	// get chain params
+	chainParams := checkpointContext.ChainmanagerParams.ChainParams
+	checkpointParams := checkpointContext.CheckpointParams
+
+	// fetch last header number
+	lastHeaderNumber, err := cp.contractConnector.TronChainRPC.CurrentHeaderBlock(chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching current header block number", "error", err)
+		return err
+	}
+
+	// header block
+	root, start, end, _, proposer, err := cp.contractConnector.GetTronHeaderInfo(lastHeaderNumber, chainParams.TronChainAddress, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching header block object", "error", err)
+		return err
+	}
+	// create msg checkpoint ack message
+	msg := checkpointTypes.NewMsgCheckpointAck(
+		helper.GetFromAddress(cp.cliCtx),
+		lastHeaderNumber,
+		proposer,
+		start,
+		end,
+		hmTypes.BytesToHeimdallHash(root.Bytes()),
+		hmTypes.ZeroHeimdallHash,
+		0,
+		hmTypes.RootChainTypeTron,
+	)
+
+	// return broadcast to heimdall
+	if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+		cp.Logger.Error("Error while broadcasting checkpoint to heimdall", "error", err)
+		return err
+	}
+
+	return nil
 }

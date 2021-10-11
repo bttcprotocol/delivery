@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	abci "github.com/tendermint/tendermint/abci/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -140,7 +142,9 @@ func (suite *KeeperTestSuite) TestGetEventRecordListTime() {
 		testRecord := types.NewEventRecord(hHash, i, i, hAddr, make([]byte, 0), "1", time.Unix(int64(i), 0), hmTypes.RootChainTypeStake)
 		ck.SetEventRecord(ctx, testRecord)
 	}
-
+	ctx = ctx.WithBlockHeader(abci.Header{
+		Time: time.Unix(20, 0),
+	})
 	recordList, err := ck.GetEventRecordListWithTime(ctx, time.Unix(1, 0), time.Unix(6, 0), 0, 0)
 	require.NoError(t, err)
 	require.Len(t, recordList, 5)
