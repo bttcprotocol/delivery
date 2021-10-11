@@ -321,6 +321,7 @@ func (c *ContractCaller) GetHeaderInfo(number uint64, rootChainInstance *rootcha
 	checkpointBigInt := big.NewInt(0).Mul(big.NewInt(0).SetUint64(number), big.NewInt(0).SetUint64(childBlockInterval))
 	headerBlock, err := rootChainInstance.HeaderBlocks(nil, checkpointBigInt)
 	if err != nil {
+		Logger.Error("Unable to fetch checkpoint block", "error", err)
 		return root, start, end, createdAt, proposer, errors.New("Unable to fetch checkpoint block")
 	}
 

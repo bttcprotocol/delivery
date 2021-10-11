@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
+	ethTypes "github.com/maticnetwork/bor/core/types"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -27,9 +29,9 @@ var logger = helper.Logger.With("module", "checkpoint/client/cli")
 // GetTxCmd returns the transaction commands for this module
 func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	txCmd := &cobra.Command{
-		Use:                        types.ModuleName,
-		Short:                      "Checkpoint transaction subcommands",
-		DisableFlagParsing:         true,
+		Use:   types.ModuleName,
+		Short: "Checkpoint transaction subcommands",
+		//DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       hmClient.ValidateCmd,
 	}
@@ -210,6 +212,8 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 
 			txHash := hmTypes.BytesToHeimdallHash(common.FromHex(txHashStr))
 
+			rootChain := viper.GetString(FlagRootChain)
+
 			//
 			// Get header details
 			//
@@ -219,25 +223,35 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			chainmanagerParams, err := util.GetChainmanagerParams(cliCtx)
+			chainmanagerParams, err := util.GetNewChainParams(cliCtx, rootChain)
 			if err != nil {
 				return err
 			}
 
 			// get main tx receipt
-			receipt, err := contractCallerObj.GetConfirmedTxReceipt(txHash.EthHash(), chainmanagerParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth)
-			if err != nil || receipt == nil {
-				return errors.New("Transaction is not confirmed yet. Please wait for sometime and try again")
+			var receipt *ethTypes.Receipt
+			var rootChainAddress common.Address
+			switch rootChain {
+			case hmTypes.RootChainTypeEth, hmTypes.RootChainTypeBsc:
+				receipt, err = contractCallerObj.GetConfirmedTxReceipt(txHash.EthHash(), chainmanagerParams.MainchainTxConfirmations, rootChain)
+				if err != nil || receipt == nil {
+					return errors.New("transaction is not confirmed yet. Please wait for sometime and try again")
+				}
+				rootChainAddress = chainmanagerParams.ChainParams.RootChainAddress.EthAddress()
+			case hmTypes.RootChainTypeTron:
+				receipt, err = contractCallerObj.GetTronTransactionReceipt(txHash.Hex())
+				if err != nil || receipt == nil {
+					return errors.New("transaction is not confirmed yet. Please wait for sometime and try again")
+				}
+				rootChainAddress = hmTypes.HexToTronAddress(chainmanagerParams.ChainParams.TronChainAddress)
+			default:
+				return fmt.Errorf("wrong root chain %v", rootChain)
 			}
 
 			// decode new header block event
-			res, err := contractCallerObj.DecodeNewHeaderBlockEvent(
-				chainmanagerParams.ChainParams.RootChainAddress.EthAddress(),
-				receipt,
-				uint64(viper.GetInt64(FlagCheckpointLogIndex)),
-			)
+			res, err := contractCallerObj.DecodeNewHeaderBlockEvent(rootChainAddress, receipt, uint64(viper.GetInt64(FlagCheckpointLogIndex)))
 			if err != nil {
-				return errors.New("Invalid transaction for header block")
+				return errors.New("invalid transaction for header block")
 			}
 
 			// draft new checkpoint no-ack msg
@@ -250,7 +264,7 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 				res.Root,
 				txHash,
 				uint64(viper.GetInt64(FlagCheckpointLogIndex)),
-				hmTypes.RootChainTypeEth,
+				rootChain,
 			)
 
 			// msg
@@ -262,6 +276,7 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(FlagHeaderNumber, "", "--header=<header-index>")
 	cmd.Flags().StringP(FlagCheckpointTxHash, "t", "", "--txhash=<checkpoint-txhash>")
 	cmd.Flags().String(FlagCheckpointLogIndex, "", "--log-index=<log-index>")
+	cmd.Flags().String(FlagRootChain, "", "--root-chain=<root-chain-type>")
 
 	if err := cmd.MarkFlagRequired(FlagHeaderNumber); err != nil {
 		logger.Error("SendCheckpointACKTx | MarkFlagRequired | FlagHeaderNumber", "Error", err)
@@ -272,7 +287,9 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 	if err := cmd.MarkFlagRequired(FlagCheckpointLogIndex); err != nil {
 		logger.Error("SendCheckpointACKTx | MarkFlagRequired | FlagCheckpointLogIndex", "Error", err)
 	}
-
+	if err := cmd.MarkFlagRequired(FlagRootChain); err != nil {
+		logger.Error("SendCheckpointACKTx | MarkFlagRequired | FlagRootChain", "Error", err)
+	}
 	return cmd
 }
 

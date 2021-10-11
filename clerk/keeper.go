@@ -315,6 +315,10 @@ func (k *Keeper) GetEventRecordListWithTime(ctx sdk.Context, fromTime, toTime ti
 		limit = 50
 	}
 
+	if ctx.BlockTime().Before(toTime) {
+		return nil, errors.New("latest block time is before toTime")
+	}
+
 	if page == 0 && limit == 0 {
 		iterator = store.Iterator(GetEventRecordKeyWithTimePrefix(fromTime), GetEventRecordKeyWithTimePrefix(toTime))
 	} else {

@@ -497,6 +497,18 @@ func (cp *CheckpointProcessor) createAndSendCheckpointToHeimdall(checkpointConte
 		cp.Logger.Info("Waiting for blocks or invalid start end formation", "start", start, "end", end)
 		return nil
 	}
+	// fetch latest checkpoint
+	latestCheckpoint, err := util.GetlastestCheckpoint(cp.cliCtx, rootChain)
+	// event checkpoint is older than or equal to latest checkpoint
+	if err == nil && latestCheckpoint != nil && latestCheckpoint.EndBlock+1 < start {
+		cp.Logger.Debug("Need to resubmit Checkpoint ack first", "start", start, "last_end", latestCheckpoint.EndBlock)
+		err := cp.resubmitCheckpointAck(checkpointContext, rootChain)
+		if err != nil {
+			cp.Logger.Info("Error while resubmit checkpoint ack", "root", rootChain, "err", err)
+			return err
+		}
+		return nil
+	}
 
 	// get checkpoint params
 	checkpointParams := checkpointContext.CheckpointParams
@@ -620,6 +632,52 @@ func (cp *CheckpointProcessor) fetchDividendAccountRoot() (accountroothash hmTyp
 		return accountroothash, err
 	}
 	return accountroothash, nil
+}
+
+// resubmitCheckpointAck - resubmit checkpoint ack of root
+func (cp *CheckpointProcessor) resubmitCheckpointAck(checkpointContext *CheckpointContext, rootChain string) error {
+	// get chain params
+	chainParams := checkpointContext.ChainmanagerParams.ChainParams
+	checkpointParams := checkpointContext.CheckpointParams
+
+	rootChainInstance, err := cp.contractConnector.GetRootChainInstance(chainParams.RootChainAddress.EthAddress(), rootChain)
+	if err != nil {
+		return err
+	}
+
+	// fetch last header number
+	lastHeaderNumber, err := cp.contractConnector.CurrentHeaderBlock(rootChainInstance, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching current header block number", "error", err)
+		return err
+	}
+
+	// header block
+	root, start, end, _, proposer, err := cp.contractConnector.GetHeaderInfo(lastHeaderNumber, rootChainInstance, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching header block object", "error", err)
+		return err
+	}
+	// create msg checkpoint ack message
+	msg := checkpointTypes.NewMsgCheckpointAck(
+		helper.GetFromAddress(cp.cliCtx),
+		lastHeaderNumber,
+		proposer,
+		start,
+		end,
+		hmTypes.BytesToHeimdallHash(root.Bytes()),
+		hmTypes.ZeroHeimdallHash,
+		0,
+		rootChain,
+	)
+
+	// return broadcast to heimdall
+	if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+		cp.Logger.Error("Error while broadcasting checkpoint to heimdall", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 //// fetchLatestCheckpointTime - get latest checkpoint time from rootchain

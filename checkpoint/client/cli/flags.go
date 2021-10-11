@@ -12,4 +12,5 @@ const (
 	FlagCheckpointLogIndex = "log-index"
 	FlagAutoConfigure      = "auto-configure"
 	FlagEpoch              = "epoch"
+	FlagRootChain          = "root-chain"
 )
