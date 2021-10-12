@@ -69,7 +69,7 @@ func (tl *TronListener) Start() error {
 	go tl.StartHeaderProcess(headerCtx)
 
 	// subscribe to new head
-	pollInterval := helper.GetConfig().SyncerPollInterval
+	pollInterval := helper.GetConfig().TronSyncerPollInterval
 
 	tl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
 	// poll for new header using client object

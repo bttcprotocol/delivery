@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	hmtypes "github.com/maticnetwork/heimdall/types"
+
 	"github.com/RichardKnop/machinery/v1/tasks"
 	ethereum "github.com/maticnetwork/bor"
 	"github.com/maticnetwork/bor/accounts/abi"
@@ -15,7 +17,6 @@ import (
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/helper"
-	hmtypes "github.com/maticnetwork/heimdall/types"
 )
 
 // RootChainListenerContext root chain listener context
@@ -32,6 +33,7 @@ type RootChainListener struct {
 	stakingInfoAbi *abi.ABI
 	rootChainType  string
 	blockKey       string
+	pollInterval   time.Duration
 }
 
 const (
@@ -52,21 +54,20 @@ func NewRootChainListener(rootChain string) *RootChainListener {
 		&contractCaller.StateSenderABI,
 		&contractCaller.StakingInfoABI,
 	}
-	blockKey := ""
-	switch rootChain {
-	case hmtypes.RootChainTypeEth:
-		blockKey = lastEthBlockKey
-	case hmtypes.RootChainTypeBsc:
-		blockKey = lastBscBlockKey
-	default:
-		panic("wrong chain type for root chain")
-	}
-
 	rootChainListener := &RootChainListener{
 		abis:           abis,
 		stakingInfoAbi: &contractCaller.StakingInfoABI,
 		rootChainType:  rootChain,
-		blockKey:       blockKey,
+	}
+	switch rootChain {
+	case hmtypes.RootChainTypeEth:
+		rootChainListener.blockKey = lastEthBlockKey
+		rootChainListener.pollInterval = helper.GetConfig().EthSyncerPollInterval
+	case hmtypes.RootChainTypeBsc:
+		rootChainListener.blockKey = lastBscBlockKey
+		rootChainListener.pollInterval = helper.GetConfig().BscSyncerPollInterval
+	default:
+		panic("wrong chain type for root chain")
 	}
 	return rootChainListener
 }
@@ -97,8 +98,8 @@ func (rl *RootChainListener) Start() error {
 	if err != nil {
 		// start go routine to poll for new header using client object
 		rl.Logger.Info("Start polling for root chain header blocks",
-			"root", rl.rootChainType, "pollInterval", helper.GetConfig().SyncerPollInterval)
-		go rl.StartPolling(ctx, helper.GetConfig().SyncerPollInterval)
+			"root", rl.rootChainType, "pollInterval", rl.pollInterval)
+		go rl.StartPolling(ctx, rl.pollInterval)
 	} else {
 		// start go routine to listen new header using subscription
 		go rl.StartSubscription(ctx, subscription)

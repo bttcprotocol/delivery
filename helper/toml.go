@@ -42,7 +42,7 @@ amqp_url = "{{ .AmqpURL }}"
 
 ## Poll intervals
 checkpoint_poll_interval = "{{ .CheckpointerPollInterval }}"
-syncer_poll_interval = "{{ .SyncerPollInterval }}"
+syncer_poll_interval = "{{ .EthSyncerPollInterval }}"
 noack_poll_interval = "{{ .NoACKPollInterval }}"
 clerk_poll_interval = "{{ .ClerkPollInterval }}"
 span_poll_interval = "{{ .SpanPollInterval }}"

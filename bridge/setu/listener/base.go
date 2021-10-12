@@ -124,7 +124,7 @@ func NewBaseListener(cdc *codec.Codec, queueConnector *queue.QueueConnector, htt
 // 	subscription, err := bl.contractConnector.MainChainClient.SubscribeNewHead(ctx, bl.HeaderChannel)
 // 	if err != nil {
 // 		// start go routine to poll for new header using client object
-// 		go bl.StartPolling(ctx, helper.GetConfig().SyncerPollInterval)
+// 		go bl.StartPolling(ctx, helper.GetConfig().EthSyncerPollInterval)
 // 	} else {
 // 		// start go routine to listen new header using subscription
 // 		go bl.StartSubscription(ctx, subscription)

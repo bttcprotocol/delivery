@@ -65,6 +65,8 @@ const (
 
 	DefaultCheckpointerPollInterval = 5 * time.Minute
 	DefaultSyncerPollInterval       = 1 * time.Minute
+	DefaultBscSyncerPollInterval    = 10 * time.Second
+	DefaultTronSyncerPollInterval   = 3 * time.Second
 	DefaultNoACKPollInterval        = 1010 * time.Second
 	DefaultClerkPollInterval        = 10 * time.Second
 	DefaultSpanPollInterval         = 1 * time.Minute
@@ -113,10 +115,12 @@ type Configuration struct {
 	TronchainFeeLimit uint64 `mapstructure:"tron_chain_fee_limit"` // gas limit to tron transaction. eg....submit checkpoint.
 
 	// config related to bridge
-	CheckpointerPollInterval time.Duration `mapstructure:"checkpoint_poll_interval"` // Poll interval for checkpointer service to send new checkpoints or missing ACK
-	SyncerPollInterval       time.Duration `mapstructure:"syncer_poll_interval"`     // Poll interval for syncher service to sync for changes on main chain
-	NoACKPollInterval        time.Duration `mapstructure:"noack_poll_interval"`      // Poll interval for ack service to send no-ack in case of no checkpoints
-	StakingPollInterval      time.Duration `mapstructure:"staking_poll_interval"`    // Poll interval for staking service
+	CheckpointerPollInterval time.Duration `mapstructure:"checkpoint_poll_interval"`  // Poll interval for checkpointer service to send new checkpoints or missing ACK
+	EthSyncerPollInterval    time.Duration `mapstructure:"eth_syncer_poll_interval"`  // Poll interval for syncher service to sync for changes on eth chain
+	BscSyncerPollInterval    time.Duration `mapstructure:"bsc_syncer_poll_interval"`  // Poll interval for syncher service to sync for changes on bsc chain
+	TronSyncerPollInterval   time.Duration `mapstructure:"tron_syncer_poll_interval"` // Poll interval for syncher service to sync for changes on tron chain
+	NoACKPollInterval        time.Duration `mapstructure:"noack_poll_interval"`       // Poll interval for ack service to send no-ack in case of no checkpoints
+	StakingPollInterval      time.Duration `mapstructure:"staking_poll_interval"`     // Poll interval for staking service
 	ClerkPollInterval        time.Duration `mapstructure:"clerk_poll_interval"`
 	SpanPollInterval         time.Duration `mapstructure:"span_poll_interval"`
 
@@ -254,7 +258,9 @@ func GetDefaultHeimdallConfig() Configuration {
 		TronchainFeeLimit: DefaultTronFeeLimit,
 
 		CheckpointerPollInterval: DefaultCheckpointerPollInterval,
-		SyncerPollInterval:       DefaultSyncerPollInterval,
+		EthSyncerPollInterval:    DefaultSyncerPollInterval,
+		BscSyncerPollInterval:    DefaultBscSyncerPollInterval,
+		TronSyncerPollInterval:   DefaultTronSyncerPollInterval,
 		NoACKPollInterval:        DefaultNoACKPollInterval,
 		ClerkPollInterval:        DefaultClerkPollInterval,
 		SpanPollInterval:         DefaultSpanPollInterval,
