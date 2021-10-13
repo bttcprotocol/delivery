@@ -4,6 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maticnetwork/bor/common"
+	ethTypes "github.com/maticnetwork/bor/core/types"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -198,4 +201,31 @@ func (suite *KeeperTestSuite) TestSetHasGetRecordSequence() {
 
 	recordSequences := ck.GetRecordSequences(ctx)
 	require.Len(t, recordSequences, 1)
+}
+
+func (suite *KeeperTestSuite) TestSetHasGetCache() {
+	t, app := suite.T(), suite.app
+
+	testSeq := "testseq"
+	ck := app.ClerkKeeper
+	receipt := ethTypes.Receipt{
+		PostState:         nil,
+		Status:            0,
+		CumulativeGasUsed: 0,
+		Bloom:             ethTypes.Bloom{},
+		Logs:              nil,
+		TxHash:            common.Hash{},
+		ContractAddress:   common.Address{},
+		GasUsed:           1000,
+		BlockHash:         common.Hash{},
+		BlockNumber:       nil,
+		TransactionIndex:  0,
+	}
+	ck.SetReceiptCache(testSeq, &receipt)
+	result, found := ck.GetReceiptCache(testSeq)
+	require.True(t, found)
+	require.Equal(t, &receipt, result.(*ethTypes.Receipt))
+
+	result, found = ck.GetReceiptCache("testSeq")
+	require.False(t, found)
 }

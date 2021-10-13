@@ -5,13 +5,12 @@ import (
 	"math/big"
 	"strconv"
 
-	ethTypes "github.com/maticnetwork/bor/core/types"
+	ethCommon "github.com/maticnetwork/bor/common"
 
-	"github.com/maticnetwork/heimdall/contracts/statesender"
+	ethTypes "github.com/maticnetwork/bor/core/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	borCommon "github.com/maticnetwork/bor/common"
 	"github.com/maticnetwork/heimdall/clerk/types"
 	"github.com/maticnetwork/heimdall/common"
 	hmCommon "github.com/maticnetwork/heimdall/common"
@@ -65,11 +64,9 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	// get confirmed tx receipt
 	var receipt *ethTypes.Receipt
 	var err error
-	var eventLog *statesender.StatesenderStateSynced
-	var contractAddress borCommon.Address
 	if receiptCache, found := k.GetReceiptCache(msg.TxHash.String()); found {
 		receipt = receiptCache.(*ethTypes.Receipt)
-		k.Logger(ctx).Debug("Cache hit")
+		k.Logger(ctx).Debug("Clerk cache hit", "TxHash", msg.TxHash.String())
 	} else {
 		// get main tx receipt
 		switch msg.RootChainType {
@@ -79,7 +76,6 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 			if err != nil || receipt == nil {
 				return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 			}
-			contractAddress = chainParams.StateSenderAddress.EthAddress()
 		case hmTypes.RootChainTypeBsc:
 			bscChain, err := k.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
 			if err != nil {
@@ -91,13 +87,11 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 			if err != nil || receipt == nil {
 				return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 			}
-			contractAddress = bscChain.StateSenderAddress.EthAddress()
 		case hmTypes.RootChainTypeTron:
 			receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
 			if err != nil || receipt == nil {
 				return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 			}
-			contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress)
 		default:
 			k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, " does not  match eth or tron")
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
@@ -105,7 +99,26 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		k.SetReceiptCache(msg.TxHash.String(), receipt)
 	}
 
-	eventLog, err = contractCaller.DecodeStateSyncedEvent(contractAddress, receipt, msg.LogIndex)
+	// get main tx receipt
+	var contractAddress ethCommon.Address
+	switch msg.RootChainType {
+	case hmTypes.RootChainTypeEth:
+		contractAddress = chainParams.StateSenderAddress.EthAddress()
+	case hmTypes.RootChainTypeBsc:
+		bscChain, err := k.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
+		if err != nil {
+			k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, " does not  match bsc")
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+		}
+		contractAddress = bscChain.StateSenderAddress.EthAddress()
+	case hmTypes.RootChainTypeTron:
+		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress)
+	default:
+		k.Logger(ctx).Error("RootChain type: ", msg.RootChainType, " does not  match eth or tron")
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
+	}
+
+	eventLog, err := contractCaller.DecodeStateSyncedEvent(contractAddress, receipt, msg.LogIndex)
 	if err != nil || eventLog == nil {
 		k.Logger(ctx).Error("Error fetching log from txhash")
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
