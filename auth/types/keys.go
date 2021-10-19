@@ -27,7 +27,7 @@ const (
 	FeeCollectorName = "fee_collector"
 
 	// FeeToken fee token name
-	FeeToken = "bttc"
+	FeeToken = "BTT"
 )
 
 var (

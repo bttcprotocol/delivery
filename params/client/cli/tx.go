@@ -58,7 +58,7 @@ Where proposal.json contains:
   ],
   "deposit": [
     {
-      "denom": "bttc",
+      "denom": "BTT",
       "amount": "1000000000000000000" 
     }
   ]
