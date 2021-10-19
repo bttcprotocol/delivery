@@ -66,7 +66,7 @@ func TestMsgDepositGetSignBytes(t *testing.T) {
 	msg := NewMsgDeposit(addr, 0, coinsPos)
 	res := msg.GetSignBytes()
 
-	expected := `{"type":"heimdall/MsgDeposit","value":{"amount":[{"amount":"1000","denom":"BTT"}],"depositor":"0x0000000000000000000000000000006164647231","proposal_id":"0"}}`
+	expected := `{"type":"heimdall/MsgDeposit","value":{"amount":[{"amount":"1000","denom":"btt"}],"depositor":"0x0000000000000000000000000000006164647231","proposal_id":"0"}}`
 	require.Equal(t, expected, string(res))
 }
 
