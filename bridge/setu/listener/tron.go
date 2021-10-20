@@ -21,7 +21,7 @@ import (
 const (
 	tronLastBlockKey = "tron-last-block" // storage key
 
-	maxTronListenBlocks = 5000
+	maxTronListenBlocks = 10
 )
 
 // TronListener - Listens to and process events from Tron
