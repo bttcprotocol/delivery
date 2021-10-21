@@ -20,8 +20,6 @@ import (
 
 const (
 	tronLastBlockKey = "tron-last-block" // storage key
-
-	maxTronListenBlocks = 10
 )
 
 // TronListener - Listens to and process events from Tron
@@ -109,6 +107,15 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 	tl.Logger.Debug("New block detected", "blockNumber", newHeader.Number)
 
+	busyLimit := helper.GetConfig().TronUnconfirmedTxsBusyLimit
+	// check if heimdall is busy
+	if busyLimit != 0 {
+		numUnconfirmedTxs, err := helper.GetNumUnconfirmedTxs(tl.cliCtx)
+		if err != nil || numUnconfirmedTxs.Total > busyLimit {
+			tl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total, "error", err)
+			return
+		}
+	}
 	// fetch context
 	chainManagerParams, err := tl.getChainManagerParams()
 	if err != nil {
@@ -152,8 +159,9 @@ func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 	if toBlock.Cmp(fromBlock) == -1 {
 		fromBlock = toBlock
 	}
-	if big.NewInt(0).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxTronListenBlocks)) > 0 {
-		toBlock = toBlock.Add(fromBlock, big.NewInt(maxTronListenBlocks))
+	maxQueryBlocks := helper.GetConfig().TronMaxQueryBlocks
+	if maxQueryBlocks != 0 && big.NewInt(0).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxQueryBlocks)) > 0 {
+		toBlock = toBlock.Add(fromBlock, big.NewInt(maxQueryBlocks))
 	}
 	// query events
 	tl.queryAndBroadcastEvents(chainManagerParams, fromBlock, toBlock)

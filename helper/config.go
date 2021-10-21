@@ -76,6 +76,14 @@ const (
 	DefaultMainchainGasLimit = uint64(5000000)
 	DefaultTronFeeLimit      = uint64(5000000000)
 
+	DefaultEthBusyLimitTxs  = 1000
+	DefaultBscBusyLimitTxs  = 1000
+	DefaultTronBusyLimitTxs = 20000
+
+	DefaultEthMaxQueryBlocks  = 100
+	DefaultBscMaxQueryBlocks  = 5
+	DefaultTronMaxQueryBlocks = 5
+
 	DefaultBorChainID string = "15001"
 
 	secretFilePerm = 0600
@@ -129,6 +137,14 @@ type Configuration struct {
 
 	TronStartListenBlock uint64 `mapstructure:"tron_start_listen_block"` // tron chain start listen block on bridge
 	EthStartListenBlock  uint64 `mapstructure:"eth_start_listen_block"`  // eth chain start listen block on bridge
+
+	EthUnconfirmedTxsBusyLimit  int `mapstructure:"eth_unconfirmed_txs_busy_limit"`  // the busy limit of unconfirmed txs on heimdall for eth
+	BscUnconfirmedTxsBusyLimit  int `mapstructure:"bsc_unconfirmed_txs_busy_limit"`  // the busy limit of unconfirmed txs on heimdall for bsc
+	TronUnconfirmedTxsBusyLimit int `mapstructure:"tron_unconfirmed_txs_busy_limit"` // the busy limit of unconfirmed txs on heimdall for tron
+
+	EthMaxQueryBlocks  int64 `mapstructure:"eth_max_query_blocks"`  // eth max number of blocks in one query logs
+	BscMaxQueryBlocks  int64 `mapstructure:"bsc_max_query_blocks"`  // bsc max number of blocks in one query logs
+	TronMaxQueryBlocks int64 `mapstructure:"tron_max_query_blocks"` // tron max number of blocks in one query logs
 }
 
 var conf Configuration
@@ -271,6 +287,14 @@ func GetDefaultHeimdallConfig() Configuration {
 		TronGridApiKey:       DefaultTronGridApiKey,
 		TronStartListenBlock: DefaultStartListenBlock,
 		EthStartListenBlock:  DefaultStartListenBlock,
+
+		EthUnconfirmedTxsBusyLimit:  DefaultEthBusyLimitTxs,
+		BscUnconfirmedTxsBusyLimit:  DefaultBscBusyLimitTxs,
+		TronUnconfirmedTxsBusyLimit: DefaultTronBusyLimitTxs,
+
+		EthMaxQueryBlocks:  DefaultEthMaxQueryBlocks,
+		BscMaxQueryBlocks:  DefaultBscMaxQueryBlocks,
+		TronMaxQueryBlocks: DefaultTronMaxQueryBlocks,
 	}
 }
 

@@ -74,11 +74,9 @@ func (tb *TxBroadcaster) BroadcastToHeimdall(msg sdk.Msg) error {
 		WithChainID(chainID)
 
 	txResponse, err := helper.BuildAndBroadcastMsgs(tb.cliCtx, txBldr, []sdk.Msg{msg})
+	tb.logger.Info("Tx sent on heimdall", "txHash", txResponse.TxHash, "accSeq", tb.lastSeqNo, "accNum", tb.accNum)
 	if err != nil || txResponse.Code != 0 {
-		tb.logger.Info("Tx sent on heimdall", "txHash", txResponse.TxHash, "accSeq", tb.lastSeqNo, "accNum", tb.accNum)
-		tb.logger.Debug("Tx successful on heimdall", "txResponse", txResponse)
-
-		tb.logger.Error("Error while broadcasting the heimdall transaction", "error", err)
+		tb.logger.Error("Error while broadcasting the heimdall transaction", "error", err, "txResponse", txResponse)
 
 		// current address
 		address := hmTypes.BytesToHeimdallAddress(helper.GetAddress())
@@ -96,7 +94,6 @@ func (tb *TxBroadcaster) BroadcastToHeimdall(msg sdk.Msg) error {
 		return err
 	}
 
-	tb.logger.Info("Tx sent on heimdall", "txHash", txResponse.TxHash, "accSeq", tb.lastSeqNo, "accNum", tb.accNum)
 	tb.logger.Debug("Tx successful on heimdall", "txResponse", txResponse)
 	// increment account sequence
 	tb.lastSeqNo += 1

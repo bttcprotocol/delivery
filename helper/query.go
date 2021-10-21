@@ -33,6 +33,16 @@ func GetNodeStatus(cliCtx cosmosContext.CLIContext) (*ctypes.ResultStatus, error
 	return node.Status()
 }
 
+// GetNumUnconfirmedTxs returns node un confirmed txs
+func GetNumUnconfirmedTxs(cliCtx cosmosContext.CLIContext) (*ctypes.ResultUnconfirmedTxs, error) {
+	node, err := cliCtx.GetNode()
+	if err != nil {
+		return nil, err
+	}
+
+	return node.NumUnconfirmedTxs()
+}
+
 // QueryTxsByEvents performs a search for transactions for a given set of tags via
 // Tendermint RPC. It returns a slice of Info object containing txs and metadata.
 // An error is returned if the query fails.

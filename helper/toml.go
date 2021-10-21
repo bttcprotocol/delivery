@@ -54,6 +54,15 @@ staking_poll_interval = "{{ .StakingPollInterval }}"
 main_chain_gas_limit = "{{ .MainchainGasLimit }}"
 tron_chain_fee_limit = "{{ .TronchainFeeLimit }}"
 
+#### busy limits ####
+eth_unconfirmed_txs_busy_limit = "{{ .EthUnconfirmedTxsBusyLimit }}"
+bsc_unconfirmed_txs_busy_limit = "{{ .BscUnconfirmedTxsBusyLimit }}"
+tron_unconfirmed_txs_busy_limit = "{{ .TronUnconfirmedTxsBusyLimit }}"
+
+eth_max_query_blocks = "{{ .EthMaxQueryBlocks }}"
+bsc_max_query_blocks = "{{ .BscMaxQueryBlocks }}"
+tron_max_query_blocks = "{{ .TronMaxQueryBlocks }}"
+
 ##### Timeout Config #####
 no_ack_wait_time = "{{ .NoACKWaitTime }}"
 

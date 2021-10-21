@@ -34,13 +34,14 @@ type RootChainListener struct {
 	rootChainType  string
 	blockKey       string
 	pollInterval   time.Duration
+
+	busyLimit      int
+	maxQueryBlocks int64
 }
 
 const (
 	lastEthBlockKey = "eth-last-block" // storage key
 	lastBscBlockKey = "bsc-last-block"
-
-	maxRootListenBlocks = 3000
 )
 
 // NewRootChainListener - constructor func
@@ -63,9 +64,13 @@ func NewRootChainListener(rootChain string) *RootChainListener {
 	case hmtypes.RootChainTypeEth:
 		rootChainListener.blockKey = lastEthBlockKey
 		rootChainListener.pollInterval = helper.GetConfig().EthSyncerPollInterval
+		rootChainListener.busyLimit = helper.GetConfig().EthUnconfirmedTxsBusyLimit
+		rootChainListener.maxQueryBlocks = helper.GetConfig().EthMaxQueryBlocks
 	case hmtypes.RootChainTypeBsc:
 		rootChainListener.blockKey = lastBscBlockKey
 		rootChainListener.pollInterval = helper.GetConfig().BscSyncerPollInterval
+		rootChainListener.busyLimit = helper.GetConfig().BscUnconfirmedTxsBusyLimit
+		rootChainListener.maxQueryBlocks = helper.GetConfig().BscMaxQueryBlocks
 	default:
 		panic("wrong chain type for root chain")
 	}
@@ -115,6 +120,14 @@ func (rl *RootChainListener) Start() error {
 func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	rl.Logger.Debug("New block detected", "root", rl.rootChainType, "blockNumber", newHeader.Number)
 
+	// check if heimdall is busy
+	if rl.busyLimit != 0 {
+		numUnconfirmedTxs, err := helper.GetNumUnconfirmedTxs(rl.cliCtx)
+		if err != nil || numUnconfirmedTxs.Total > rl.busyLimit {
+			rl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total, "error", err)
+			return
+		}
+	}
 	// fetch context
 	rootchainContext, err := rl.getRootChainContext()
 	if err != nil {
@@ -162,8 +175,8 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	if toBlock.Cmp(fromBlock) == -1 {
 		fromBlock = toBlock
 	}
-	if big.NewInt(0).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxRootListenBlocks)) > 0 {
-		toBlock = toBlock.Add(fromBlock, big.NewInt(maxRootListenBlocks))
+	if rl.maxQueryBlocks != 0 && big.NewInt(0).Sub(toBlock, fromBlock).Cmp(big.NewInt(rl.maxQueryBlocks)) > 0 {
+		toBlock = toBlock.Add(fromBlock, big.NewInt(rl.maxQueryBlocks))
 	}
 	// query events
 	rl.queryAndBroadcastEvents(rootchainContext, fromBlock, toBlock)
