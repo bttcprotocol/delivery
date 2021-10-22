@@ -319,7 +319,7 @@ func (k *Keeper) GetEventRecordListWithTime(ctx sdk.Context, fromTime, toTime ti
 		limit = 50
 	}
 
-	if ctx.BlockTime().Before(toTime) {
+	if !ctx.BlockTime().After(toTime) {
 		return nil, errors.New("latest block time is before toTime")
 	}
 
