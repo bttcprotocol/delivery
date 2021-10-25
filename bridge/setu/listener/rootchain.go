@@ -123,8 +123,12 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	// check if heimdall is busy
 	if rl.busyLimit != 0 {
 		numUnconfirmedTxs, err := helper.GetNumUnconfirmedTxs(rl.cliCtx)
-		if err != nil || numUnconfirmedTxs.Total > rl.busyLimit {
-			rl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total, "error", err)
+		if err != nil {
+			rl.Logger.Debug("heimdall is busy now", "error", err)
+			return
+		}
+		if numUnconfirmedTxs.Total > rl.busyLimit {
+			rl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total)
 			return
 		}
 	}

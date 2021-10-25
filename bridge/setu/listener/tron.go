@@ -111,8 +111,12 @@ func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 	// check if heimdall is busy
 	if busyLimit != 0 {
 		numUnconfirmedTxs, err := helper.GetNumUnconfirmedTxs(tl.cliCtx)
-		if err != nil || numUnconfirmedTxs.Total > busyLimit {
-			tl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total, "error", err)
+		if err != nil {
+			tl.Logger.Debug("heimdall is busy now", "error", err)
+			return
+		}
+		if numUnconfirmedTxs.Total > busyLimit {
+			tl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total)
 			return
 		}
 	}
