@@ -83,8 +83,13 @@ func GetCheckpointBuffer(cdc *codec.Codec) *cobra.Command {
 		Short: "show checkpoint present in buffer",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointBuffer), nil)
+			rootChain := viper.GetString(FlagRootChain)
+			// get query params
+			queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(0, rootChain))
+			if err != nil {
+				return errors.New("rootChain Error :" + rootChain)
+			}
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointBuffer), queryParams)
 			if err != nil {
 				return err
 			}
@@ -97,7 +102,10 @@ func GetCheckpointBuffer(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
-
+	cmd.Flags().String(FlagRootChain, "", "--root-chain=<root-chain>")
+	if err := cmd.MarkFlagRequired(FlagRootChain); err != nil {
+		logger.Error("GetCheckpointBuffer | MarkFlagRequired | FlagHeaderNumber", "Error", err)
+	}
 	return cmd
 }
 

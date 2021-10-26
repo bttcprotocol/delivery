@@ -117,9 +117,7 @@ func handleQueryCheckpointBuffer(ctx sdk.Context, req abci.RequestQuery, keeper 
 	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
-	if params.RootChain == "" {
-		params.RootChain = hmTypes.RootChainTypeStake
-	}
+
 	res, err := keeper.GetCheckpointFromBuffer(ctx, params.RootChain)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not fetch checkpoint buffer", err.Error()))
