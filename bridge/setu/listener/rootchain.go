@@ -37,11 +37,15 @@ type RootChainListener struct {
 
 	busyLimit      int
 	maxQueryBlocks int64
+
+	stateSyncedCountWithDecay uint64
 }
 
 const (
 	lastEthBlockKey = "eth-last-block" // storage key
 	lastBscBlockKey = "bsc-last-block"
+
+	decayPerSecond = 30
 )
 
 // NewRootChainListener - constructor func
@@ -122,13 +126,25 @@ func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 
 	// check if heimdall is busy
 	if rl.busyLimit != 0 {
+		// event decay
+		decay := decayPerSecond * uint64(rl.pollInterval.Seconds())
+		if rl.stateSyncedCountWithDecay > decay {
+			rl.stateSyncedCountWithDecay -= decay
+		} else {
+			rl.stateSyncedCountWithDecay = 0
+		}
+		if rl.stateSyncedCountWithDecay > uint64(rl.busyLimit) {
+			rl.Logger.Debug("heimdall is busy now", "busyLimit", rl.busyLimit, "stateSyncedCountWithDecay", rl.stateSyncedCountWithDecay)
+			return
+		}
+
 		numUnconfirmedTxs, err := helper.GetNumUnconfirmedTxs(rl.cliCtx)
 		if err != nil {
 			rl.Logger.Debug("heimdall is busy now", "error", err)
 			return
 		}
 		if numUnconfirmedTxs.Total > rl.busyLimit {
-			rl.Logger.Debug("heimdall is busy now", "UnconfirmedTxs", numUnconfirmedTxs.Total)
+			rl.Logger.Debug("heimdall is busy now", "busyLimit", rl.busyLimit, "UnconfirmedTxs", numUnconfirmedTxs.Total)
 			return
 		}
 	}
@@ -232,8 +248,8 @@ func (rl *RootChainListener) queryAndBroadcastEvents(rootchainContext *RootChain
 				case "StateSynced":
 					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
 						rl.sendTaskWithDelay("sendStateSyncedToHeimdall", selectedEvent.Name, logBytes, delay)
+						rl.stateSyncedCountWithDecay++
 					}
-
 				case "StakeAck":
 					if isCurrentValidator, delay := util.CalculateTaskDelay(rl.cliCtx); isCurrentValidator {
 						rl.sendTaskWithDelay("sendStakingAckToHeimdall", selectedEvent.Name, logBytes, delay)
