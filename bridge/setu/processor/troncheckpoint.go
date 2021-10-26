@@ -161,15 +161,18 @@ func (cp *CheckpointProcessor) createAndSendTronCheckpointToHeimdall(checkpointC
 		return err
 	}
 
+	chainParams := checkpointContext.ChainmanagerParams.ChainParams
+
 	cp.Logger.Info("✅ Creating and broadcasting new checkpoint",
+		"proposer", hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
 		"start", start,
 		"end", end,
 		"root", hmTypes.BytesToHeimdallHash(root),
 		"accountRoot", accountRootHash,
+		"borChainId", chainParams.BorChainID,
+		"epoch", cp.getCurrentEpoch(),
 		"rootType", hmTypes.RootChainTypeTron,
 	)
-
-	chainParams := checkpointContext.ChainmanagerParams.ChainParams
 
 	// create and send checkpoint message
 	msg := checkpointTypes.NewMsgCheckpointBlock(
