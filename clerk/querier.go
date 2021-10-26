@@ -98,7 +98,6 @@ func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 	}
 
 	chainParams := keeper.chainKeeper.GetParams(ctx)
-
 	var receipt *ethTypes.Receipt
 	var err error
 	// get main tx receipt

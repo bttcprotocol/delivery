@@ -69,10 +69,6 @@ func CreateListStartListenBlockCmd() *cobra.Command {
 		Short: "list bridge start block",
 		Run: func(cmd *cobra.Command, args []string) {
 			rootChainType := viper.GetString(rootChainTypeFlag)
-			if rootChainType != hmtypes.RootChainTypeTron && rootChainType != hmtypes.RootChainTypeEth {
-				logger.Error("-root-chain-type should be either eth or tron")
-				return
-			}
 			bridgeDB := util.GetBridgeDBInstance(viper.GetString(util.BridgeDBFlag))
 			lastBlockKey := ""
 			switch rootChainType {

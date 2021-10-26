@@ -122,7 +122,8 @@ type ContractCaller struct {
 	SlashManagerABI  abi.ABI
 	MaticTokenABI    abi.ABI
 
-	ReceiptCache *lru.Cache
+	ReceiptCache     *lru.Cache
+	LatestBlockCache map[string]uint64
 
 	ContractInstanceCache map[common.Address]interface{}
 }
@@ -146,7 +147,7 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
 	contractCallerObj.BscChainRPC = GetBscChainRPCClient()
 	contractCallerObj.MaticChainRPC = GetMaticRPCClient()
-	contractCallerObj.ReceiptCache, _ = NewLru(1000)
+	contractCallerObj.ReceiptCache, _ = NewLru(5000)
 
 	//
 	// ABIs
@@ -480,6 +481,12 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 
 	Logger.Debug("Tx included in block", "root", rootChain, "block", receipt.BlockNumber.Uint64(), "tx", tx)
 
+	latestBlkNumber := c.LatestBlockCache[rootChain]
+	if latestBlkNumber-receipt.BlockNumber.Uint64() >= requiredConfirmations {
+		Logger.Debug("receipt block is confirmed by cache",
+			"root", rootChain, "latestBlockCached", latestBlkNumber, "receiptBlock", receipt.BlockNumber.Uint64())
+		return receipt, nil
+	}
 	// get main chain block
 	latestBlk, err := c.GetMainChainBlock(nil, rootChain)
 	if err != nil {
@@ -487,10 +494,10 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 		return nil, err
 	}
 	Logger.Debug("Latest block on main chain obtained", "root", rootChain, "Block", latestBlk.Number.Uint64())
-
+	c.LatestBlockCache[rootChain] = latestBlk.Number.Uint64()
 	diff := latestBlk.Number.Uint64() - receipt.BlockNumber.Uint64()
 	if diff < requiredConfirmations {
-		return nil, errors.New("Not enough confirmations")
+		return nil, errors.New("not enough confirmations")
 	}
 
 	return receipt, nil
