@@ -124,7 +124,7 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 						0,
 						0,
 						1,
-						10000,
+						1,
 						newPubkey,
 						hmTypes.BytesToHeimdallAddress(valPubKeys[i].Address().Bytes()),
 					)
