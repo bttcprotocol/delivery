@@ -1,9 +1,9 @@
-# Heimdall
+# Delivery
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/maticnetwork/heimdall)](https://goreportcard.com/report/github.com/maticnetwork/heimdall) [![CircleCI](https://circleci.com/gh/maticnetwork/heimdall/tree/master.svg?style=shield)](https://circleci.com/gh/maticnetwork/heimdall/tree/master) [![GolangCI](https://golangci.com/badges/github.com/maticnetwork/heimdall.svg)](https://golangci.com/r/github.com/maticnetwork/heimdall)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bttcprotocol/delivery)](https://goreportcard.com/report/github.com/bttcprotocol/delivery) [![GolangCI](https://golangci.com/badges/github.com/bttcprotocol/delivery.svg)](https://golangci.com/r/github.com/bttcprotocol/delivery)
 
 
-Validator node for Matic Network. It uses peppermint, customized [Tendermint](https://github.com/tendermint/tendermint).
+Validator node for Bittorrent Chain Network. It uses peppermint, customized [Tendermint](https://github.com/tendermint/tendermint).
 
 ### Install from source 
 
@@ -14,18 +14,14 @@ Make sure your have go1.11+ already installed
 $ make install 
 ```  
 
-### Run-heimdall 
+### Run-delivery 
 ```bash 
-$ heimdalld start
+$ deliveryd start
 ```
 
 ### Run rest server
 
 ```bash 
-$ heimdalld rest-server 
+$ deliveryd rest-server 
 ```
 
-
-### Documentation 
-
-Latest docs are [here](https://docs.matic.network/) 

@@ -23,19 +23,23 @@ tests:
 	# go test  -v ./...
 
 	go test -v ./app/ ./auth/ ./clerk/ ./sidechannel/ ./bank/ ./chainmanager/ ./topup/ ./checkpoint/ ./staking/ -cover -coverprofile=cover.out
-	
+
 
 build: clean
 	mkdir -p build
 	go build -o build/heimdalld ./cmd/heimdalld
 	go build -o build/heimdallcli ./cmd/heimdallcli
 	go build -o build/bridge bridge/bridge.go
+	mv build/heimdalld build/deliveryd
+	mv build/heimdallcli build/deliverycli
 	@echo "====================================================\n==================Build Successful==================\n===================================================="
 
 install:
 	go install $(BUILD_FLAGS) ./cmd/heimdalld
 	go install $(BUILD_FLAGS) ./cmd/heimdallcli
 	go install $(BUILD_FLAGS) bridge/bridge.go
+	mv $(GOPATH)/bin/heimdalld $(GOPATH)/bin/deliveryd
+	mv $(GOPATH)/bin/heimdallcli $(GOPATH)/bin/deliverycli
 
 contracts:
 	abigen --abi=contracts/rootchain/rootchain.abi --pkg=rootchain --out=contracts/rootchain/rootchain.go
