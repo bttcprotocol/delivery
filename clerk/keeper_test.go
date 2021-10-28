@@ -143,7 +143,7 @@ func (suite *KeeperTestSuite) TestGetEventRecordListTime() {
 		ck.SetEventRecord(ctx, testRecord)
 	}
 	ctx = ctx.WithBlockHeader(abci.Header{
-		Time: time.Unix(20, 0),
+		Time: time.Unix(30, 0),
 	})
 	recordList, err := ck.GetEventRecordListWithTime(ctx, time.Unix(1, 0), time.Unix(6, 0), 0, 0)
 	require.NoError(t, err)
