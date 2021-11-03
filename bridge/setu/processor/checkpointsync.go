@@ -149,10 +149,11 @@ func (cp *CheckpointProcessor) sendCheckpointSyncToStakeChain(eventBytes string,
 func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string, checkpointSyncAckStr string, rootChain string) error {
 	// fetch fresh checkpoint context
 	checkpointContext, err := cp.getCheckpointContext(rootChain)
-	checkpointParams := checkpointContext.CheckpointParams
 	if err != nil {
 		return err
 	}
+	checkpointParams := checkpointContext.CheckpointParams
+
 	var log = types.Log{}
 	if err := json.Unmarshal([]byte(checkpointSyncAckStr), &log); err != nil {
 		cp.Logger.Error("Error while unmarshalling event from stake chain", "error", err)
