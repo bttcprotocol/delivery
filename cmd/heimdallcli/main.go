@@ -41,13 +41,13 @@ import (
 	"github.com/maticnetwork/heimdall/helper"
 )
 
-var logger = helper.Logger.With("module", "cmd/heimdallcli")
+var logger = helper.Logger.With("module", "cmd/deliverycli")
 
 // rootCmd is the entry point for this binary
 var (
 	rootCmd = &cobra.Command{
-		Use:   "heimdallcli",
-		Short: "Heimdall light-client",
+		Use:   "deliverycli",
+		Short: "Delivery light-client",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// initialise config
 			initTendermintViperConfig(cmd)
@@ -59,15 +59,15 @@ var (
 func initTendermintViperConfig(cmd *cobra.Command) {
 	tendermintNode, _ := cmd.Flags().GetString(helper.NodeFlag)
 	homeValue, _ := cmd.Flags().GetString(helper.HomeFlag)
-	withHeimdallConfigValue, _ := cmd.Flags().GetString(helper.WithHeimdallConfigFlag)
+	withDeliveryConfigValue, _ := cmd.Flags().GetString(helper.WithDeliveryConfigFlag)
 
 	// set to viper
 	viper.Set(helper.NodeFlag, tendermintNode)
 	viper.Set(helper.HomeFlag, homeValue)
-	viper.Set(helper.WithHeimdallConfigFlag, withHeimdallConfigValue)
+	viper.Set(helper.WithDeliveryConfigFlag, withDeliveryConfigValue)
 
 	// start heimdall config
-	helper.InitHeimdallConfig("")
+	helper.InitDeliveryConfig("")
 }
 
 func main() {
@@ -112,12 +112,12 @@ func main() {
 	)
 
 	// bind with-heimdall-config config with root cmd
-	if err := viper.BindPFlag(helper.WithHeimdallConfigFlag, rootCmd.Flags().Lookup(helper.WithHeimdallConfigFlag)); err != nil {
-		logger.Error("main | BindPFlag | helper.WithHeimdallConfigFlag", "Error", err)
+	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.Flags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
+		logger.Error("main | BindPFlag | helper.WithDeliveryConfigFlag", "Error", err)
 	}
 
 	// prepare and add flags
-	executor := cli.PrepareMainCmd(rootCmd, "HD", os.ExpandEnv("$HOME/.heimdalld"))
+	executor := cli.PrepareMainCmd(rootCmd, "HD", os.ExpandEnv("$HOME/.deliveryd"))
 	err := executor.Execute()
 	if err != nil {
 		// Note: Handle with #870

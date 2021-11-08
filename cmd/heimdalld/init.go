@@ -48,7 +48,7 @@ func initCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			WriteDefaultHeimdallConfig(filepath.Join(config.RootDir, "config/heimdall-config.toml"), helper.GetDefaultHeimdallConfig())
+			WriteDefaultHeimdallConfig(filepath.Join(config.RootDir, "config/delivery-config.toml"), helper.GetDefaultHeimdallConfig())
 
 			// get pubkey
 			newPubkey := CryptoKeyToPubkey(valPubKey)
