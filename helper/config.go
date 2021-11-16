@@ -27,7 +27,7 @@ import (
 
 const (
 	NodeFlag               = "node"
-	WithHeimdallConfigFlag = "with-heimdall-config"
+	WithDeliveryConfigFlag = "with-delivery-config"
 	HomeFlag               = "home"
 	FlagClientHome         = "home-client"
 
@@ -46,7 +46,7 @@ const (
 	BroadcastAsync = "async"
 
 	DefaultMainRPCUrl = "http://localhost:9545"
-	DefaultBorRPCUrl  = "http://localhost:8545"
+	DefaultBttcRPCUrl = "http://localhost:8545"
 	DefaultBscRPCUrl  = "http://localhost:7545"
 
 	// tron
@@ -58,7 +58,7 @@ const (
 
 	// DefaultAmqpURL represents default AMQP url
 	DefaultAmqpURL           = "amqp://guest:guest@localhost:5672/"
-	DefaultHeimdallServerURL = "http://0.0.0.0:1317"
+	DefaultDeliveryServerURL = "http://0.0.0.0:1317"
 	DefaultTendermintNodeURL = "http://0.0.0.0:26657"
 
 	NoACKWaitTime = 1800 * time.Second // Time ack service waits to clear buffer and elect new proposer (1800 seconds ~ 30 mins)
@@ -74,7 +74,7 @@ const (
 	DefaultStartListenBlock         = 0
 
 	DefaultMainchainGasLimit = uint64(5000000)
-	DefaultTronFeeLimit      = uint64(5000000000)
+	DefaultTronFeeLimit      = uint64(1000000000)
 
 	DefaultEthBusyLimitTxs  = 1000
 	DefaultBscBusyLimitTxs  = 1000
@@ -84,14 +84,14 @@ const (
 	DefaultBscMaxQueryBlocks  = 5
 	DefaultTronMaxQueryBlocks = 5
 
-	DefaultBorChainID string = "15001"
+	DefaultBttcChainID string = "15001"
 
 	secretFilePerm = 0600
 )
 
 var (
-	DefaultCLIHome  = os.ExpandEnv("$HOME/.heimdallcli")
-	DefaultNodeHome = os.ExpandEnv("$HOME/.heimdalld")
+	DefaultCLIHome  = os.ExpandEnv("$HOME/.deliverycli")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.deliveryd")
 	MinBalance      = big.NewInt(100000000000000000) // aka 0.1 Ether
 )
 
@@ -108,12 +108,12 @@ type Configuration struct {
 	EthRPCUrl        string `mapstructure:"eth_rpc_url"`        // RPC endpoint for main chain
 	TronRPCUrl       string `mapstructure:"tron_rpc_url"`       // RPC endpoint for tron chain
 	BscRPCUrl        string `mapstructure:"bsc_rpc_url"`        // RPC endpoint for bsc chain
-	BorRPCUrl        string `mapstructure:"bor_rpc_url"`        // RPC endpoint for bor chain
+	BttcRPCUrl       string `mapstructure:"bttc_rpc_url"`       // RPC endpoint for bttc chain
 	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
 	TronGridURL       string `mapstructure:"tron_grid_url"`        // tron grid url
 	AmqpURL           string `mapstructure:"amqp_url"`             // amqp url
-	HeimdallServerURL string `mapstructure:"heimdall_rest_server"` // heimdall server url
+	DeliveryServerURL string `mapstructure:"delivery_rest_server"` // delivery server url
 
 	// tron
 	TronGridUrl    string `mapstructure:"tron_grid_url"`     // tron server url
@@ -180,38 +180,38 @@ var GenesisDoc tmTypes.GenesisDoc
 // var RootChain types.Contract
 // var DepositManager types.Contract
 
-// InitHeimdallConfig initializes with viper config (from heimdall configuration)
-func InitHeimdallConfig(homeDir string) {
+// InitDeliveryConfig initializes with viper config (from heimdall configuration)
+func InitDeliveryConfig(homeDir string) {
 	if strings.Compare(homeDir, "") == 0 {
 		// get home dir from viper
 		homeDir = viper.GetString(HomeFlag)
 	}
 
 	// get heimdall config filepath from viper/cobra flag
-	heimdallConfigFilePath := viper.GetString(WithHeimdallConfigFlag)
+	deliveryConfigFilePath := viper.GetString(WithDeliveryConfigFlag)
 
 	// init heimdall with changed config files
-	InitHeimdallConfigWith(homeDir, heimdallConfigFilePath)
+	InitDeliveryConfigWith(homeDir, deliveryConfigFilePath)
 }
 
-// InitHeimdallConfigWith initializes passed heimdall/tendermint config files
-func InitHeimdallConfigWith(homeDir string, heimdallConfigFilePath string) {
+// InitDeliveryConfigWith initializes passed delivery/tendermint config files
+func InitDeliveryConfigWith(homeDir string, deliveryConfigFilePath string) {
 	if strings.Compare(homeDir, "") == 0 {
 		return
 	}
 
-	if strings.Compare(conf.BorRPCUrl, "") != 0 {
+	if strings.Compare(conf.BttcRPCUrl, "") != 0 {
 		return
 	}
 
 	configDir := filepath.Join(homeDir, "config")
 
 	heimdallViper := viper.New()
-	if heimdallConfigFilePath == "" {
-		heimdallViper.SetConfigName("heimdall-config") // name of config file (without extension)
+	if deliveryConfigFilePath == "" {
+		heimdallViper.SetConfigName("delivery-config") // name of config file (without extension)
 		heimdallViper.AddConfigPath(configDir)         // call multiple times to add many search paths
 	} else {
-		heimdallViper.SetConfigFile(heimdallConfigFilePath) // set config file explicitly
+		heimdallViper.SetConfigFile(deliveryConfigFilePath) // set config file explicitly
 	}
 
 	err := heimdallViper.ReadInConfig()
@@ -228,7 +228,7 @@ func InitHeimdallConfigWith(homeDir string, heimdallConfigFilePath string) {
 	}
 
 	mainChainClient = ethclient.NewClient(mainRPCClient)
-	if maticRPCClient, err = rpc.Dial(conf.BorRPCUrl); err != nil {
+	if maticRPCClient, err = rpc.Dial(conf.BttcRPCUrl); err != nil {
 		log.Fatal(err)
 	}
 
@@ -262,13 +262,13 @@ func GetDefaultHeimdallConfig() Configuration {
 	return Configuration{
 		EthRPCUrl:        DefaultMainRPCUrl,
 		TronRPCUrl:       DefaultTronRPCUrl,
-		BorRPCUrl:        DefaultBorRPCUrl,
+		BttcRPCUrl:       DefaultBttcRPCUrl,
 		BscRPCUrl:        DefaultBscRPCUrl,
 		TendermintRPCUrl: DefaultTendermintNodeURL,
 
 		TronGridURL:       DefaultTronGridUrl,
 		AmqpURL:           DefaultAmqpURL,
-		HeimdallServerURL: DefaultHeimdallServerURL,
+		DeliveryServerURL: DefaultDeliveryServerURL,
 
 		MainchainGasLimit: DefaultMainchainGasLimit,
 		TronchainFeeLimit: DefaultTronFeeLimit,

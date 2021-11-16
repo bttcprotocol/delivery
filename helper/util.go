@@ -843,7 +843,7 @@ func MakeRequest(req *http.Request) ([]byte, error) {
 
 // GetHeimdallServerEndpoint returns heimdall server endpoint
 func GetHeimdallServerEndpoint(endpoint string) string {
-	u, _ := url.Parse(GetConfig().HeimdallServerURL)
+	u, _ := url.Parse(GetConfig().DeliveryServerURL)
 	u.Path = path.Join(u.Path, endpoint)
 	return u.String()
 }

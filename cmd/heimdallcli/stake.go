@@ -26,7 +26,7 @@ func StakeCmd(cliCtx cliContext.CLIContext) *cobra.Command {
 		Short: "Stake matic tokens for your account",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			helper.InitHeimdallConfig("")
+			helper.InitDeliveryConfig("")
 
 			validatorStr := viper.GetString(stakingcli.FlagValidatorAddress)
 			stakeAmountStr := viper.GetString(stakingcli.FlagAmount)
@@ -92,7 +92,7 @@ func ApproveCmd(cliCtx cliContext.CLIContext) *cobra.Command {
 		Short: "Approve the tokens to stake",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			helper.InitHeimdallConfig("")
+			helper.InitDeliveryConfig("")
 
 			stakeAmountStr := viper.GetString(stakingcli.FlagAmount)
 			feeAmountStr := viper.GetString(stakingcli.FlagFeeAmount)

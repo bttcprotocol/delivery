@@ -17,7 +17,7 @@ func TestCheckpointsigs(t *testing.T) {
 	tendermintNode := "tcp://localhost:26657"
 	viper.Set(NodeFlag, tendermintNode)
 	viper.Set("log_level", "info")
-	InitHeimdallConfig(os.ExpandEnv("$HOME/.heimdalld"))
+	InitDeliveryConfig(os.ExpandEnv("$HOME/.deliveryd"))
 
 	contractCallerObj, err := NewContractCaller()
 	if err != nil {
