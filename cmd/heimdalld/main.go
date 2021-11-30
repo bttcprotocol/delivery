@@ -40,7 +40,7 @@ import (
 	hmModule "github.com/maticnetwork/heimdall/types/module"
 )
 
-var logger = helper.Logger.With("module", "cmd/heimdalld")
+var logger = helper.Logger.With("module", "cmd/deliveryd")
 
 var (
 	flagNodeDirPrefix    = "node-dir-prefix"
@@ -48,7 +48,6 @@ var (
 	flagNumNonValidators = "n"
 	flagOutputDir        = "output-dir"
 	flagNodeDaemonHome   = "node-daemon-home"
-	flagNodeCliHome      = "node-cli-home"
 	flagNodeHostPrefix   = "node-host-prefix"
 )
 
@@ -81,21 +80,21 @@ func main() {
 	ctx := server.NewDefaultContext()
 
 	rootCmd := &cobra.Command{
-		Use:               "heimdalld",
-		Short:             "Heimdall Daemon (server)",
+		Use:               "deliveryd",
+		Short:             "Delivery Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 
 	// add new persistent flag for heimdall-config
 	rootCmd.PersistentFlags().String(
-		helper.WithHeimdallConfigFlag,
+		helper.WithDeliveryConfigFlag,
 		"",
-		"Heimdall config file path (default <home>/config/heimdall-config.json)",
+		"Delivery config file path (default <home>/config/delivery-config.toml)",
 	)
 
 	// bind with-heimdall-config config with root cmd
-	if err := viper.BindPFlag(helper.WithHeimdallConfigFlag, rootCmd.Flags().Lookup(helper.WithHeimdallConfigFlag)); err != nil {
-		logger.Error("main | BindPFlag | helper.WithHeimdallConfigFlag", "Error", err)
+	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.Flags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
+		logger.Error("main | BindPFlag | helper.WithDeliveryConfigFlag", "Error", err)
 	}
 	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)
 	rootCmd.AddCommand(showAccountCmd())
@@ -106,7 +105,7 @@ func main() {
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
 
 	// prepare and add flags
-	executor := cli.PrepareBaseCmd(rootCmd, "HD", os.ExpandEnv("$HOME/.heimdalld"))
+	executor := cli.PrepareBaseCmd(rootCmd, "HD", os.ExpandEnv("$HOME/.deliveryd"))
 	err := executor.Execute()
 	if err != nil {
 		// Note: Handle with #870
@@ -116,7 +115,7 @@ func main() {
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
 	// init heimdall config
-	helper.InitHeimdallConfig("")
+	helper.InitDeliveryConfig("")
 	// create new heimdall app
 	return app.NewHeimdallApp(logger, db, baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))))
 }
@@ -132,7 +131,7 @@ func showAccountCmd() *cobra.Command {
 		Short: "Print the account's address and public key",
 		Run: func(cmd *cobra.Command, args []string) {
 			// init heimdall config
-			helper.InitHeimdallConfig("")
+			helper.InitDeliveryConfig("")
 
 			// get public keys
 			pubObject := helper.GetPubKey()
@@ -159,7 +158,7 @@ func showPrivateKeyCmd() *cobra.Command {
 		Short: "Print the account's private key",
 		Run: func(cmd *cobra.Command, args []string) {
 			// init heimdall config
-			helper.InitHeimdallConfig("")
+			helper.InitDeliveryConfig("")
 
 			// get private and public keys
 			privObject := helper.GetPrivKey()
@@ -188,7 +187,7 @@ func VerifyGenesis(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			config := ctx.Config
 			config.SetRoot(viper.GetString(cli.HomeFlag))
-			helper.InitHeimdallConfig("")
+			helper.InitDeliveryConfig("")
 
 			// Loading genesis doc
 			genDoc, err := tmTypes.GenesisDocFromFile(filepath.Join(config.RootDir, "config/genesis.json"))

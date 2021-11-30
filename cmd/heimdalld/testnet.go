@@ -30,7 +30,7 @@ import (
 func testnetCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-testnet",
-		Short: "Initialize files for a Heimdall testnet",
+		Short: "Initialize files for a Delivery testnet",
 		Long: `testnet will create "v" + "n" number of directories and populate each with
 necessary files (private validator, genesis, config, etc.).
 
@@ -48,7 +48,7 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 			// create chain id
 			chainID := viper.GetString(client.FlagChainID)
 			if chainID == "" {
-				chainID = fmt.Sprintf("heimdall-%v", common.RandStr(6))
+				chainID = fmt.Sprintf("delivery-%v", common.RandStr(6))
 			}
 
 			// num of validators = validators in genesis files
@@ -80,7 +80,6 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 			var err error
 
 			nodeDaemonHomeName := viper.GetString(flagNodeDaemonHome)
-			nodeCliHomeName := viper.GetString(flagNodeCliHome)
 
 			// get genesis time
 			genesisTime := tmtime.Now()
@@ -91,19 +90,12 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 
 				// generate node and client dir
 				nodeDir := filepath.Join(outDir, nodeDirName, nodeDaemonHomeName)
-				clientDir := filepath.Join(outDir, nodeDirName, nodeCliHomeName)
 
 				// set root in config
 				config.SetRoot(nodeDir)
 
 				// create config folder
 				err := os.MkdirAll(filepath.Join(nodeDir, "config"), nodeDirPerm)
-				if err != nil {
-					_ = os.RemoveAll(outDir)
-					return err
-				}
-
-				err = os.MkdirAll(clientDir, nodeDirPerm)
 				if err != nil {
 					_ = os.RemoveAll(outDir)
 					return err
@@ -136,7 +128,7 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 
 				signers[i] = GetSignerInfo(valPubKeys[i], privKeys[i].Bytes(), cdc)
 
-				WriteDefaultHeimdallConfig(filepath.Join(config.RootDir, "config/heimdall-config.toml"), helper.GetDefaultHeimdallConfig())
+				WriteDefaultHeimdallConfig(filepath.Join(config.RootDir, "config/delivery-config.toml"), helper.GetDefaultHeimdallConfig())
 			}
 
 			// other data
@@ -228,12 +220,8 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 		"Prefix the directory name for each node with (node results in node0, node1, ...)",
 	)
 
-	cmd.Flags().String(flagNodeDaemonHome, "heimdalld",
+	cmd.Flags().String(flagNodeDaemonHome, "deliveryd",
 		"Home directory of the node's daemon configuration",
-	)
-
-	cmd.Flags().String(flagNodeCliHome, "heimdallcli",
-		"Home directory of the node's cli configuration",
 	)
 
 	cmd.Flags().String(flagNodeHostPrefix, "node",

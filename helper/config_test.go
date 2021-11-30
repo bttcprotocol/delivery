@@ -18,7 +18,7 @@ func TestHeimdallConfig(t *testing.T) {
 	// cliCtx.BroadcastMode = client.BroadcastSync
 	// cliCtx.TrustNode = true
 
-	InitHeimdallConfig(os.ExpandEnv("$HOME/.heimdalld"))
+	InitDeliveryConfig(os.ExpandEnv("$HOME/.deliveryd"))
 
 	fmt.Println("Address", GetAddress())
 	pubKey := GetPubKey()

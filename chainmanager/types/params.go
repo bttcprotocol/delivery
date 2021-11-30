@@ -177,7 +177,7 @@ func DefaultParams() Params {
 		MaticchainTxConfirmations: DefaultMaticchainTxConfirmations,
 		TronchainTxConfirmations:  DefaultTronChainTxConfirmations,
 		ChainParams: ChainParams{
-			BorChainID:           helper.DefaultBorChainID,
+			BorChainID:           helper.DefaultBttcChainID,
 			StateReceiverAddress: DefaultStateReceiverAddress,
 			ValidatorSetAddress:  DefaultValidatorSetAddress,
 		},

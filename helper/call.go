@@ -125,7 +125,7 @@ type ContractCaller struct {
 	ReceiptCache     *lru.Cache
 	LatestBlockCache map[string]uint64
 
-	ContractInstanceCache map[common.Address]interface{}
+	ContractInstanceCache map[string]interface{}
 }
 
 type txExtraInfo struct {
@@ -185,14 +185,15 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 		return
 	}
 
-	contractCallerObj.ContractInstanceCache = make(map[common.Address]interface{})
+	contractCallerObj.ContractInstanceCache = make(map[string]interface{})
 
 	return
 }
 
 // GetRootChainInstance returns RootChain contract instance for selected base chain
 func (c *ContractCaller) GetRootChainInstance(rootchainAddress common.Address, rootChain string) (*rootchain.Rootchain, error) {
-	contractInstance, ok := c.ContractInstanceCache[rootchainAddress]
+	cacheKey := rootchainAddress.String() + rootChain
+	contractInstance, ok := c.ContractInstanceCache[cacheKey]
 	if !ok {
 		var client *ethclient.Client
 		switch rootChain {
@@ -202,7 +203,7 @@ func (c *ContractCaller) GetRootChainInstance(rootchainAddress common.Address, r
 			client = bscChainClient
 		}
 		ci, err := rootchain.NewRootchain(rootchainAddress, client)
-		c.ContractInstanceCache[rootchainAddress] = ci
+		c.ContractInstanceCache[cacheKey] = ci
 		return ci, err
 	}
 	return contractInstance.(*rootchain.Rootchain), nil
@@ -210,7 +211,8 @@ func (c *ContractCaller) GetRootChainInstance(rootchainAddress common.Address, r
 
 // GetStakingInfoInstance returns stakinginfo contract instance for selected base chain
 func (c *ContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Address, rootChain string) (*stakinginfo.Stakinginfo, error) {
-	contractInstance, ok := c.ContractInstanceCache[stakingInfoAddress]
+	cacheKey := stakingInfoAddress.String() + rootChain
+	contractInstance, ok := c.ContractInstanceCache[cacheKey]
 	if !ok {
 		var client *ethclient.Client
 		switch rootChain {
@@ -220,7 +222,7 @@ func (c *ContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Addres
 			client = bscChainClient
 		}
 		ci, err := stakinginfo.NewStakinginfo(stakingInfoAddress, client)
-		c.ContractInstanceCache[stakingInfoAddress] = ci
+		c.ContractInstanceCache[cacheKey] = ci
 		return ci, err
 	}
 	return contractInstance.(*stakinginfo.Stakinginfo), nil
@@ -228,10 +230,10 @@ func (c *ContractCaller) GetStakingInfoInstance(stakingInfoAddress common.Addres
 
 // GetValidatorSetInstance returns stakinginfo contract instance for selected base chain
 func (c *ContractCaller) GetValidatorSetInstance(validatorSetAddress common.Address) (*validatorset.Validatorset, error) {
-	contractInstance, ok := c.ContractInstanceCache[validatorSetAddress]
+	contractInstance, ok := c.ContractInstanceCache[validatorSetAddress.String()]
 	if !ok {
 		ci, err := validatorset.NewValidatorset(validatorSetAddress, mainChainClient)
-		c.ContractInstanceCache[validatorSetAddress] = ci
+		c.ContractInstanceCache[validatorSetAddress.String()] = ci
 		return ci, err
 
 	}
@@ -240,7 +242,8 @@ func (c *ContractCaller) GetValidatorSetInstance(validatorSetAddress common.Addr
 
 // GetStakeManagerInstance returns stakinginfo contract instance for selected base chain
 func (c *ContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Address, rootChain string) (*stakemanager.Stakemanager, error) {
-	contractInstance, ok := c.ContractInstanceCache[stakingManagerAddress]
+	cacheKey := stakingManagerAddress.String() + rootChain
+	contractInstance, ok := c.ContractInstanceCache[cacheKey]
 	if !ok {
 		var client *ethclient.Client
 		switch rootChain {
@@ -250,7 +253,7 @@ func (c *ContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Ad
 			client = bscChainClient
 		}
 		ci, err := stakemanager.NewStakemanager(stakingManagerAddress, client)
-		c.ContractInstanceCache[stakingManagerAddress] = ci
+		c.ContractInstanceCache[cacheKey] = ci
 		return ci, err
 	}
 	return contractInstance.(*stakemanager.Stakemanager), nil
@@ -258,10 +261,10 @@ func (c *ContractCaller) GetStakeManagerInstance(stakingManagerAddress common.Ad
 
 // GetSlashManagerInstance returns slashManager contract instance for selected base chain
 func (c *ContractCaller) GetSlashManagerInstance(slashManagerAddress common.Address) (*slashmanager.Slashmanager, error) {
-	contractInstance, ok := c.ContractInstanceCache[slashManagerAddress]
+	contractInstance, ok := c.ContractInstanceCache[slashManagerAddress.String()]
 	if !ok {
 		ci, err := slashmanager.NewSlashmanager(slashManagerAddress, mainChainClient)
-		c.ContractInstanceCache[slashManagerAddress] = ci
+		c.ContractInstanceCache[slashManagerAddress.String()] = ci
 		return ci, err
 	}
 	return contractInstance.(*slashmanager.Slashmanager), nil
@@ -269,10 +272,10 @@ func (c *ContractCaller) GetSlashManagerInstance(slashManagerAddress common.Addr
 
 // GetStateSenderInstance returns stakinginfo contract instance for selected base chain
 func (c *ContractCaller) GetStateSenderInstance(stateSenderAddress common.Address) (*statesender.Statesender, error) {
-	contractInstance, ok := c.ContractInstanceCache[stateSenderAddress]
+	contractInstance, ok := c.ContractInstanceCache[stateSenderAddress.String()]
 	if !ok {
 		ci, err := statesender.NewStatesender(stateSenderAddress, mainChainClient)
-		c.ContractInstanceCache[stateSenderAddress] = ci
+		c.ContractInstanceCache[stateSenderAddress.String()] = ci
 		return ci, err
 	}
 	return contractInstance.(*statesender.Statesender), nil
@@ -280,10 +283,10 @@ func (c *ContractCaller) GetStateSenderInstance(stateSenderAddress common.Addres
 
 // GetStateReceiverInstance returns stakinginfo contract instance for selected base chain
 func (c *ContractCaller) GetStateReceiverInstance(stateReceiverAddress common.Address) (*statereceiver.Statereceiver, error) {
-	contractInstance, ok := c.ContractInstanceCache[stateReceiverAddress]
+	contractInstance, ok := c.ContractInstanceCache[stateReceiverAddress.String()]
 	if !ok {
 		ci, err := statereceiver.NewStatereceiver(stateReceiverAddress, mainChainClient)
-		c.ContractInstanceCache[stateReceiverAddress] = ci
+		c.ContractInstanceCache[stateReceiverAddress.String()] = ci
 		return ci, err
 	}
 	return contractInstance.(*statereceiver.Statereceiver), nil
@@ -291,10 +294,10 @@ func (c *ContractCaller) GetStateReceiverInstance(stateReceiverAddress common.Ad
 
 // GetMaticTokenInstance returns stakinginfo contract instance for selected base chain
 func (c *ContractCaller) GetMaticTokenInstance(maticTokenAddress common.Address) (*erc20.Erc20, error) {
-	contractInstance, ok := c.ContractInstanceCache[maticTokenAddress]
+	contractInstance, ok := c.ContractInstanceCache[maticTokenAddress.String()]
 	if !ok {
 		ci, err := erc20.NewErc20(maticTokenAddress, mainChainClient)
-		c.ContractInstanceCache[maticTokenAddress] = ci
+		c.ContractInstanceCache[maticTokenAddress.String()] = ci
 		return ci, err
 	}
 	return contractInstance.(*erc20.Erc20), nil

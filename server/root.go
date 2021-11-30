@@ -30,7 +30,7 @@ func ServeCommands(cdc *codec.Codec, registerRoutesFn func(*lcd.RestServer)) *co
 		Use:   "rest-server",
 		Short: "Start LCD (light-client daemon), a local REST server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			helper.InitHeimdallConfig("")
+			helper.InitDeliveryConfig("")
 
 			rs := lcd.NewRestServer(cdc)
 			registerRoutesFn(rs)

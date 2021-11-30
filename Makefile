@@ -3,14 +3,14 @@ LATEST_GIT_TAG:=$(shell git describe --tags $(git rev-list --tags --max-count=1)
 VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 
-ldflags = -X github.com/maticnetwork/heimdall/version.Name=heimdall \
-		  -X github.com/maticnetwork/heimdall/version.ServerName=heimdalld \
-		  -X github.com/maticnetwork/heimdall/version.ClientName=heimdallcli \
-		  -X github.com/maticnetwork/heimdall/version.Version=$(VERSION) \
-		  -X github.com/maticnetwork/heimdall/version.Commit=$(COMMIT) \
-		  -X github.com/cosmos/cosmos-sdk/version.Name=heimdall \
-		  -X github.com/cosmos/cosmos-sdk/version.ServerName=heimdalld \
-		  -X github.com/cosmos/cosmos-sdk/version.ClientName=heimdallcli \
+ldflags = -X github.com/bttcprotocol/delivery/version.Name=delivery \
+		  -X github.com/bttcprotocol/delivery/version.ServerName=deliveryd \
+		  -X github.com/bttcprotocol/delivery/version.ClientName=deliverycli \
+		  -X github.com/bttcprotocol/delivery/version.Version=$(VERSION) \
+		  -X github.com/bttcprotocol/delivery/version.Commit=$(COMMIT) \
+		  -X github.com/cosmos/cosmos-sdk/version.Name=delivery \
+		  -X github.com/cosmos/cosmos-sdk/version.ServerName=deliveryd \
+		  -X github.com/cosmos/cosmos-sdk/version.ClientName=deliverycli \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT)
 
@@ -52,33 +52,33 @@ contracts:
 	abigen --abi=contracts/erc20/erc20.abi --pkg=erc20 --out=contracts/erc20/erc20.go
 
 
-init-heimdall:
-	./build/heimdalld init
+init-delivery:
+	./build/deliveryd init
 
-show-account-heimdall:
-	./build/heimdalld show-account
+show-account-delivery:
+	./build/deliveryd show-account
 
 show-node-id:
-	./build/heimdalld tendermint show-node-id
+	./build/deliveryd tendermint show-node-id
 
-run-heimdall:
-	./build/heimdalld start
+run-delivery:
+	./build/deliveryd start
 
-start-heimdall:
+start-delivery:
 	mkdir -p ./logs &
-	./build/heimdalld start > ./logs/heimdalld.log &
+	./build/deliveryd start > ./logs/deliveryd.log &
 
-reset-heimdall:
-	./build/heimdalld unsafe-reset-all
+reset-delivery:
+	./build/deliveryd unsafe-reset-all
 	./build/bridge purge-queue
-	rm -rf ~/.heimdalld/bridge
+	rm -rf ~/.deliveryd/bridge
 
 run-server:
-	./build/heimdalld rest-server
+	./build/deliveryd rest-server
 
 start-server:
 	mkdir -p ./logs &
-	./build/heimdalld rest-server > ./logs/heimdalld-rest-server.log &
+	./build/deliveryd rest-server > ./logs/deliveryd-rest-server.log &
 
 start:
 	mkdir -p ./logs
@@ -93,7 +93,7 @@ start-bridge:
 
 start-all:
 	mkdir -p ./logs
-	bash docker/start-heimdall.sh
+	bash docker/start-deliveryd.sh
 
 #
 # Code quality

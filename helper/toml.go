@@ -21,14 +21,14 @@ eth_rpc_url = "{{ .EthRPCUrl }}"
 # RPC endpoint for bsc chain
 bsc_rpc_url = "{{ .BscRPCUrl }}"
 
-# RPC endpoint for bor chain
-bor_rpc_url = "{{ .BorRPCUrl }}"
+# RPC endpoint for bttc chain
+bttc_rpc_url = "{{ .BttcRPCUrl }}"
 
 # RPC endpoint for tendermint
 tendermint_rpc_url = "{{ .TendermintRPCUrl }}"
 
-# Heimdall REST server endpoint
-heimdall_rest_server = "{{ .HeimdallServerURL }}"
+# Delivery REST server endpoint
+delivery_rest_server = "{{ .DeliveryServerURL }}"
 
 # RPC endpoint for tron
 tron_rpc_url = "{{ .TronRPCUrl }}"
