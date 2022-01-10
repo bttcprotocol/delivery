@@ -63,7 +63,8 @@ const (
 	TaskDelayBetweenEachVal = 24 * time.Second
 	RetryTaskDelay          = 12 * time.Second
 
-	BridgeDBFlag = "bridge-db"
+	BridgeDBFlag          = "bridge-db"
+	ProposersURLSizeLimit = 100
 )
 
 var logger log.Logger
@@ -143,43 +144,36 @@ func IsInProposerList(cliCtx cliContext.CLIContext, count uint64) (bool, error) 
 // CalculateTaskDelay calculates delay required for current validator to propose the tx
 // It solves for multiple validators sending same transaction.
 func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
-	response, err := helper.FetchFromAPI(cliCtx, helper.GetHeimdallServerEndpoint(CurrentValidatorSetURL))
+	// calculate validator position
+	valPosition := 0
+	isCurrentValidator := false
+
+	proposersURL := fmt.Sprintf(ProposersURL, ProposersURLSizeLimit)
+	proposersResponse, err := helper.FetchFromAPI(cliCtx, helper.GetHeimdallServerEndpoint(proposersURL))
 	if err != nil {
-		logger.Error("Unable to send request for current validatorset", "url", CurrentValidatorSetURL, "error", err)
-		return false, 0
+		logger.Error("Unable to send request for proposers ", "url", proposersURL, "error", err)
+		return isCurrentValidator, 0
 	}
-	// unmarshall data from buffer
-	var validatorSet hmtypes.ValidatorSet
-	err = json.Unmarshal(response.Result, &validatorSet)
+
+	var proposers []hmtypes.Validator
+	err = json.Unmarshal(proposersResponse.Result, &proposers)
 	if err != nil {
-		logger.Error("Error unmarshalling current validatorset data ", "error", err)
-		return false, 0
+		logger.Error("Error unmarshalling proposers data ", "error", err)
+		return isCurrentValidator, 0
 	}
 
-	logger.Info("Fetched current validatorset list", "currentValidatorcount", len(validatorSet.Validators))
-
-	validators := validatorSet.Validators
-	proposer := validatorSet.GetProposer().Signer.Bytes()
-	localAddress := helper.GetAddress()
-
-	proposerIndex, _ := validatorSet.GetByAddress(proposer)
-	localIndex, _ := validatorSet.GetByAddress(localAddress)
-
-	if localIndex < 0 {
-		return false, 0
+	logger.Info("Fetched proposers ", "currentValidatorsCount", len(proposers))
+	for i, validator := range proposers {
+		if bytes.Equal(validator.Signer.Bytes(), helper.GetAddress()) {
+			valPosition = i + 1
+			isCurrentValidator = true
+			break
+		}
 	}
-
-	// temp index
-	tempIndex := localIndex
-	if tempIndex < proposerIndex {
-		tempIndex = tempIndex + len(validators)
-	}
-
-	delay := tempIndex - proposerIndex + 1
 
 	// calculate delay
-	taskDelay := time.Duration(delay) * TaskDelayBetweenEachVal
-	return true, taskDelay
+	taskDelay := time.Duration(valPosition) * TaskDelayBetweenEachVal
+	return isCurrentValidator, taskDelay
 }
 
 // IsCurrentProposer checks if we are current proposer
