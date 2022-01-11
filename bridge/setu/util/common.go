@@ -63,7 +63,8 @@ const (
 	TaskDelayBetweenEachVal = 24 * time.Second
 	RetryTaskDelay          = 12 * time.Second
 
-	BridgeDBFlag = "bridge-db"
+	BridgeDBFlag          = "bridge-db"
+	ProposersURLSizeLimit = 100
 )
 
 var logger log.Logger
@@ -146,21 +147,23 @@ func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
 	// calculate validator position
 	valPosition := 0
 	isCurrentValidator := false
-	response, err := helper.FetchFromAPI(cliCtx, helper.GetHeimdallServerEndpoint(CurrentValidatorSetURL))
+
+	proposersURL := fmt.Sprintf(ProposersURL, ProposersURLSizeLimit)
+	proposersResponse, err := helper.FetchFromAPI(cliCtx, helper.GetHeimdallServerEndpoint(proposersURL))
 	if err != nil {
-		logger.Error("Unable to send request for current validatorset", "url", CurrentValidatorSetURL, "error", err)
-		return isCurrentValidator, 0
-	}
-	// unmarshall data from buffer
-	var validatorSet hmtypes.ValidatorSet
-	err = json.Unmarshal(response.Result, &validatorSet)
-	if err != nil {
-		logger.Error("Error unmarshalling current validatorset data ", "error", err)
+		logger.Error("Unable to send request for proposers ", "url", proposersURL, "error", err)
 		return isCurrentValidator, 0
 	}
 
-	logger.Info("Fetched current validatorset list", "currentValidatorcount", len(validatorSet.Validators))
-	for i, validator := range validatorSet.Validators {
+	var proposers []hmtypes.Validator
+	err = json.Unmarshal(proposersResponse.Result, &proposers)
+	if err != nil {
+		logger.Error("Error unmarshalling proposers data ", "error", err)
+		return isCurrentValidator, 0
+	}
+
+	logger.Info("Fetched proposers ", "currentValidatorsCount", len(proposers))
+	for i, validator := range proposers {
 		if bytes.Equal(validator.Signer.Bytes(), helper.GetAddress()) {
 			valPosition = i + 1
 			isCurrentValidator = true

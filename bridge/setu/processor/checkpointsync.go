@@ -61,13 +61,15 @@ func (cp *CheckpointProcessor) handleCheckpointSync() {
 			msg := checkpointTypes.NewMsgCheckpointSync(hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
 				proposer, nextCheckpointNumber, start, end, rootChain)
 			// return broadcast to heimdall
-			if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
-				cp.Logger.Error("Error while broadcasting checkpoint-sync to heimdall",
-					"root", rootChain, "number", nextCheckpointNumber, "start", start, "end", end, "error", err)
-				continue
+			if isCurrentValidator, delay := util.CalculateTaskDelay(cp.cliCtx); isCurrentValidator {
+				if err := cp.txBroadcaster.BroadcastToHeimdallWithDelay(msg, delay); err != nil {
+					cp.Logger.Error("Error while broadcasting checkpoint-sync to heimdall",
+						"root", rootChain, "number", nextCheckpointNumber, "start", start, "end", end, "error", err)
+					continue
+				}
+				cp.Logger.Info("checkpoint sync transaction sent successfully",
+					"root", rootChain, "number", nextCheckpointNumber, "start", start, "end", end)
 			}
-			cp.Logger.Info("checkpoint sync transaction sent successfully",
-				"root", rootChain, "number", nextCheckpointNumber, "start", start, "end", end)
 		}
 	}
 }
@@ -183,13 +185,17 @@ func (cp *CheckpointProcessor) sendCheckpointSyncAckToHeimdall(eventName string,
 		)
 		// fetch checkpoint sync buffer
 		bufferedCheckpoint, err := util.GetBufferedCheckpointSync(cp.cliCtx, checkpointChain)
-		if err == nil {
-			bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
-			currentTime := time.Now().UTC()
-			if currentTime.Sub(bufferedTime).Seconds() > checkpointParams.CheckpointBufferTime.Seconds()/5 {
-				cp.Logger.Debug("checkpoint sync buffer has expired, ignore this ack")
-				return nil
-			}
+
+		if err != nil {
+			cp.Logger.Debug("checkpoint sync buffer has been cleared,  this ack already submitted.")
+			return nil
+		}
+
+		bufferedTime := time.Unix(int64(bufferedCheckpoint.TimeStamp), 0)
+		currentTime := time.Now().UTC()
+		if currentTime.Sub(bufferedTime).Seconds() > checkpointParams.CheckpointBufferTime.Seconds()/5 {
+			cp.Logger.Debug("checkpoint sync buffer has expired, ignore this ack")
+			return nil
 		}
 
 		// create msg checkpoint ack message

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cliContext "github.com/cosmos/cosmos-sdk/client/context"
@@ -54,6 +55,16 @@ func NewTxBroadcaster(cdc *codec.Codec) *TxBroadcaster {
 	}
 
 	return &txBroadcaster
+}
+
+func (tb *TxBroadcaster) BroadcastToHeimdallWithDelay(msg sdk.Msg, delay time.Duration) error {
+	eta := time.Now().Add(delay)
+	timeAfterTrigger := time.After(delay)
+	tb.logger.Info("Tx sent on heimdall ", "msg", msg.Type(), "currentTime", time.Now(), "delayTime", eta)
+	select {
+	case <-timeAfterTrigger:
+		return tb.BroadcastToHeimdall(msg)
+	}
 }
 
 // BroadcastToHeimdall broadcast to heimdall
