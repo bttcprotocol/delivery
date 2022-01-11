@@ -141,9 +141,15 @@ func IsInProposerList(cliCtx cliContext.CLIContext, count uint64) (bool, error) 
 	return false, nil
 }
 
+//default offset 0
+func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration){
+	return CalculateTaskDelayWithOffset(cliCtx,0)
+}
+
 // CalculateTaskDelay calculates delay required for current validator to propose the tx
 // It solves for multiple validators sending same transaction.
-func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
+// with offset
+func CalculateTaskDelayWithOffset(cliCtx cliContext.CLIContext, offset int) (bool, time.Duration) {
 	// calculate validator position
 	valPosition := 0
 	isCurrentValidator := false
@@ -165,7 +171,7 @@ func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
 	logger.Info("Fetched proposers ", "currentValidatorsCount", len(proposers))
 	for i, validator := range proposers {
 		if bytes.Equal(validator.Signer.Bytes(), helper.GetAddress()) {
-			valPosition = i + 1
+			valPosition = i + offset
 			isCurrentValidator = true
 			break
 		}

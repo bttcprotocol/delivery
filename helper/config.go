@@ -111,12 +111,11 @@ type Configuration struct {
 	BttcRPCUrl       string `mapstructure:"bttc_rpc_url"`       // RPC endpoint for bttc chain
 	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
-	TronGridURL       string `mapstructure:"tron_grid_url"`        // tron grid url
+	TronGridUrl       string `mapstructure:"tron_grid_url"`        // tron grid url
 	AmqpURL           string `mapstructure:"amqp_url"`             // amqp url
 	DeliveryServerURL string `mapstructure:"delivery_rest_server"` // delivery server url
 
 	// tron
-	TronGridUrl    string `mapstructure:"tron_grid_url"`     // tron server url
 	TronGridApiKey string `mapstructure:"tron_grid_api_key"` // tron api key
 
 	MainchainGasLimit uint64 `mapstructure:"main_chain_gas_limit"` // gas limit to mainchain transaction. eg....submit checkpoint.
@@ -266,7 +265,7 @@ func GetDefaultHeimdallConfig() Configuration {
 		BscRPCUrl:        DefaultBscRPCUrl,
 		TendermintRPCUrl: DefaultTendermintNodeURL,
 
-		TronGridURL:       DefaultTronGridUrl,
+		TronGridUrl:       DefaultTronGridUrl,
 		AmqpURL:           DefaultAmqpURL,
 		DeliveryServerURL: DefaultDeliveryServerURL,
 
