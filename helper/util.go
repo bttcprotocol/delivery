@@ -850,7 +850,7 @@ func GetHeimdallServerEndpoint(endpoint string) string {
 
 // GetTronGridEndpoint returns tron server endpoint
 func GetTronGridEndpoint(endpoint string) string {
-	u, _ := url.Parse(GetConfig().TronGridURL)
+	u, _ := url.Parse(GetConfig().TronGridUrl)
 	u.Path = path.Join(u.Path, endpoint)
 	return u.String()
 }
