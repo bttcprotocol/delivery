@@ -214,7 +214,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 						// topup has to be processed first before validator join. so adding delay.
 						delay := util.TaskDelayBetweenEachVal
 						tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
 						// topup has to be processed first before validator join. so adding delay.
 						delay = delay + util.TaskDelayBetweenEachVal
 						tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
@@ -237,7 +237,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
 						tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
@@ -248,7 +248,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
 						tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
@@ -264,7 +264,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if bytes.Equal(event.User.Bytes(), helper.GetAddress()) {
 						tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
@@ -280,7 +280,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
 						tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
