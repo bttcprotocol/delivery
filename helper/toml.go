@@ -51,8 +51,10 @@ span_poll_interval = "{{ .SpanPollInterval }}"
 staking_poll_interval = "{{ .StakingPollInterval }}"
 
 #### gas limits ####
-main_chain_gas_limit = "{{ .MainchainGasLimit }}"
 tron_chain_fee_limit = "{{ .TronchainFeeLimit }}"
+
+#### gas price ####
+main_chain_max_gas_price = "{{ .MainchainMaxGasPrice }}"
 
 #### busy limits ####
 eth_unconfirmed_txs_busy_limit = "{{ .EthUnconfirmedTxsBusyLimit }}"

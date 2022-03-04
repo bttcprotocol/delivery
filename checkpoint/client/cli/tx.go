@@ -105,31 +105,26 @@ func SendCheckpointTx(cdc *codec.Codec) *cobra.Command {
 			}
 
 			//	start block
-
 			startBlockStr := viper.GetString(FlagStartBlock)
 			if startBlockStr == "" {
 				return fmt.Errorf("start block cannot be empty")
 			}
-
 			startBlock, err := strconv.ParseUint(startBlockStr, 10, 64)
 			if err != nil {
 				return err
 			}
 
 			//	end block
-
 			endBlockStr := viper.GetString(FlagEndBlock)
 			if endBlockStr == "" {
 				return fmt.Errorf("end block cannot be empty")
 			}
-
 			endBlock, err := strconv.ParseUint(endBlockStr, 10, 64)
 			if err != nil {
 				return err
 			}
 
 			// root hash
-
 			rootHashStr := viper.GetString(FlagRootHash)
 			if rootHashStr == "" {
 				return fmt.Errorf("root hash cannot be empty")
