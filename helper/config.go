@@ -73,7 +73,6 @@ const (
 	DefaultStakingPollInterval      = 1 * time.Minute
 	DefaultStartListenBlock         = 0
 
-	DefaultMainchainGasLimit    = uint64(5000000)
 	DefaultMainchainMaxGasPrice = 400000000000 // 400 Gwei
 	DefaultTronFeeLimit         = uint64(1000000000)
 

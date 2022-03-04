@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultDelayDuration time.Duration = 10 * time.Second
+	defaultDelayDuration = 10 * time.Second
 )
 
 // StakingProcessor - process staking related events
