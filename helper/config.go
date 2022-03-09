@@ -73,8 +73,8 @@ const (
 	DefaultStakingPollInterval      = 1 * time.Minute
 	DefaultStartListenBlock         = 0
 
-	DefaultMainchainGasLimit = uint64(5000000)
-	DefaultTronFeeLimit      = uint64(1000000000)
+	DefaultMainchainMaxGasPrice = 400000000000 // 400 Gwei
+	DefaultTronFeeLimit         = uint64(1000000000)
 
 	DefaultEthBusyLimitTxs  = 1000
 	DefaultBscBusyLimitTxs  = 1000
@@ -118,8 +118,9 @@ type Configuration struct {
 	// tron
 	TronGridApiKey string `mapstructure:"tron_grid_api_key"` // tron api key
 
-	MainchainGasLimit uint64 `mapstructure:"main_chain_gas_limit"` // gas limit to mainchain transaction. eg....submit checkpoint.
 	TronchainFeeLimit uint64 `mapstructure:"tron_chain_fee_limit"` // gas limit to tron transaction. eg....submit checkpoint.
+
+	MainchainMaxGasPrice int64 `mapstructure:"main_chain_max_gas_price"` // max gas price to mainchain transaction. eg....submit checkpoint.
 
 	// config related to bridge
 	CheckpointerPollInterval time.Duration `mapstructure:"checkpoint_poll_interval"`  // Poll interval for checkpointer service to send new checkpoints or missing ACK
@@ -269,8 +270,9 @@ func GetDefaultHeimdallConfig() Configuration {
 		AmqpURL:           DefaultAmqpURL,
 		DeliveryServerURL: DefaultDeliveryServerURL,
 
-		MainchainGasLimit: DefaultMainchainGasLimit,
 		TronchainFeeLimit: DefaultTronFeeLimit,
+
+		MainchainMaxGasPrice: DefaultMainchainMaxGasPrice,
 
 		CheckpointerPollInterval: DefaultCheckpointerPollInterval,
 		EthSyncerPollInterval:    DefaultSyncerPollInterval,

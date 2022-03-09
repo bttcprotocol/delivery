@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
@@ -20,6 +21,10 @@ import (
 	"github.com/maticnetwork/heimdall/helper"
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
 	hmTypes "github.com/maticnetwork/heimdall/types"
+)
+
+const (
+	defaultDelayDuration = 10 * time.Second
 )
 
 // StakingProcessor - process staking related events
@@ -200,6 +205,17 @@ func (sp *StakingProcessor) sendUnstakeInitToHeimdall(eventName string, logBytes
 			return nil
 		}
 
+		validNonce, nonceDelay, err := sp.checkValidNonce(event.ValidatorId.Uint64(), event.Nonce.Uint64())
+		if err != nil {
+			sp.Logger.Error("Error while validating nonce for the validator", "error", err)
+			return err
+		}
+
+		if !validNonce {
+			sp.Logger.Info("Ignoring task to send unstake-init to heimdall as nonce is out of order")
+			return tasks.NewErrRetryTaskLater("Nonce out of order", defaultDelayDuration*time.Duration(nonceDelay))
+		}
+
 		sp.Logger.Info(
 			"✅ Received task to send unstake-init to heimdall",
 			"event", eventName,
@@ -327,6 +343,18 @@ func (sp *StakingProcessor) sendSignerChangeToHeimdall(eventName string, logByte
 			)
 			return nil
 		}
+
+		validNonce, nonceDelay, err := sp.checkValidNonce(event.ValidatorId.Uint64(), event.Nonce.Uint64())
+		if err != nil {
+			sp.Logger.Error("Error while validating nonce for the validator", "error", err)
+			return err
+		}
+
+		if !validNonce {
+			sp.Logger.Info("Ignoring task to send signer-change to heimdall as nonce is out of order")
+			return tasks.NewErrRetryTaskLater("Nonce out of order", defaultDelayDuration*time.Duration(nonceDelay))
+		}
+
 		sp.Logger.Info(
 			"✅ Received task to send signer-change to heimdall",
 			"event", eventName,
@@ -680,4 +708,62 @@ func (sp *StakingProcessor) getStakingContext(rootChain string) (*StakingContext
 	return &StakingContext{
 		ChainmanagerParams: chainmanagerParams,
 	}, nil
+}
+
+func (sp *StakingProcessor) checkValidNonce(validatorId uint64, txnNonce uint64) (bool, uint64, error) {
+	currentNonce, currentHeight, err := util.GetValidatorNonce(sp.cliCtx, validatorId)
+	if err != nil {
+		sp.Logger.Error("Failed to fetch validator nonce and height data from API", "validatorId", validatorId)
+		return false, 0, err
+	}
+
+	if currentNonce+1 != txnNonce {
+		sp.Logger.Error("Nonce for the given event not in order", "validatorId", validatorId, "currentNonce", currentNonce, "txnNonce", txnNonce)
+		return false, txnNonce - currentNonce, nil
+	}
+
+	stakingTxnCount, err := queryTxCount(sp.cliCtx, validatorId, currentHeight)
+	if err != nil {
+		sp.Logger.Error("Failed to query stake txns by txquery for the given validator", "validatorId", validatorId)
+		return false, 0, err
+	}
+
+	if stakingTxnCount != 0 {
+		sp.Logger.Info("Recent staking txn count for the given validator is not zero", "validatorId", validatorId, "currentNonce", currentNonce, "txnNonce", txnNonce, "currentHeight", currentHeight)
+		return false, 1, nil
+	}
+
+	return true, 0, nil
+}
+
+func queryTxCount(cliCtx cliContext.CLIContext, validatorId uint64, currentHeight int64) (int, error) {
+	const (
+		defaultPage  = 1
+		defaultLimit = 30 // should be consistent with tendermint/tendermint/rpc/core/pipe.go:19
+	)
+
+	stakingTxnMsgMap := map[string]string{
+		"validator-stake-update": "stake-update",
+		"validator-join":         "validator-join",
+		"signer-update":          "signer-update",
+		"validator-exit":         "validator-exit",
+	}
+
+	for msg, action := range stakingTxnMsgMap {
+		events := []string{
+			fmt.Sprintf("%s.%s='%s'", sdk.EventTypeMessage, sdk.AttributeKeyAction, msg),
+			fmt.Sprintf("%s.%s=%d", action, "validator-id", validatorId),
+			fmt.Sprintf("%s.%s>%d", "tx", "height", currentHeight-3),
+		}
+
+		searchResult, err := helper.QueryTxsByEvents(cliCtx, events, defaultPage, defaultLimit)
+		if err != nil {
+			return 0, err
+		}
+
+		if searchResult.TotalCount != 0 {
+			return searchResult.TotalCount, nil
+		}
+	}
+	return 0, nil
 }
