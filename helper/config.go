@@ -63,7 +63,7 @@ const (
 
 	NoACKWaitTime = 1800 * time.Second // Time ack service waits to clear buffer and elect new proposer (1800 seconds ~ 30 mins)
 
-	DefaultCheckpointerPollInterval = 5 * time.Minute
+	DefaultCheckpointerPollInterval = 30 * time.Minute
 	DefaultSyncerPollInterval       = 1 * time.Minute
 	DefaultBscSyncerPollInterval    = 10 * time.Second
 	DefaultTronSyncerPollInterval   = 3 * time.Second
@@ -74,7 +74,7 @@ const (
 	DefaultStartListenBlock         = 0
 
 	DefaultMainchainGasLimit = uint64(5000000)
-	DefaultTronFeeLimit      = uint64(1000000000)
+	DefaultTronFeeLimit      = uint64(200000000)
 
 	DefaultEthBusyLimitTxs  = 1000
 	DefaultBscBusyLimitTxs  = 1000
