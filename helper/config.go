@@ -63,7 +63,7 @@ const (
 
 	NoACKWaitTime = 1800 * time.Second // Time ack service waits to clear buffer and elect new proposer (1800 seconds ~ 30 mins)
 
-	DefaultCheckpointerPollInterval = 5 * time.Minute
+	DefaultCheckpointerPollInterval = 30 * time.Minute
 	DefaultSyncerPollInterval       = 1 * time.Minute
 	DefaultBscSyncerPollInterval    = 10 * time.Second
 	DefaultTronSyncerPollInterval   = 3 * time.Second
@@ -73,8 +73,10 @@ const (
 	DefaultStakingPollInterval      = 1 * time.Minute
 	DefaultStartListenBlock         = 0
 
-	DefaultMainchainGasLimit = uint64(5000000)
-	DefaultTronFeeLimit      = uint64(1000000000)
+
+	DefaultMainchainMaxGasPrice = 400000000000 // 400 Gwei
+	DefaultTronFeeLimit         = uint64(200000000)
+
 
 	DefaultEthBusyLimitTxs  = 1000
 	DefaultBscBusyLimitTxs  = 1000
@@ -111,16 +113,16 @@ type Configuration struct {
 	BttcRPCUrl       string `mapstructure:"bttc_rpc_url"`       // RPC endpoint for bttc chain
 	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
-	TronGridURL       string `mapstructure:"tron_grid_url"`        // tron grid url
+	TronGridUrl       string `mapstructure:"tron_grid_url"`        // tron grid url
 	AmqpURL           string `mapstructure:"amqp_url"`             // amqp url
 	DeliveryServerURL string `mapstructure:"delivery_rest_server"` // delivery server url
 
 	// tron
-	TronGridUrl    string `mapstructure:"tron_grid_url"`     // tron server url
 	TronGridApiKey string `mapstructure:"tron_grid_api_key"` // tron api key
 
-	MainchainGasLimit uint64 `mapstructure:"main_chain_gas_limit"` // gas limit to mainchain transaction. eg....submit checkpoint.
 	TronchainFeeLimit uint64 `mapstructure:"tron_chain_fee_limit"` // gas limit to tron transaction. eg....submit checkpoint.
+
+	MainchainMaxGasPrice int64 `mapstructure:"main_chain_max_gas_price"` // max gas price to mainchain transaction. eg....submit checkpoint.
 
 	// config related to bridge
 	CheckpointerPollInterval time.Duration `mapstructure:"checkpoint_poll_interval"`  // Poll interval for checkpointer service to send new checkpoints or missing ACK
@@ -266,12 +268,13 @@ func GetDefaultHeimdallConfig() Configuration {
 		BscRPCUrl:        DefaultBscRPCUrl,
 		TendermintRPCUrl: DefaultTendermintNodeURL,
 
-		TronGridURL:       DefaultTronGridUrl,
+		TronGridUrl:       DefaultTronGridUrl,
 		AmqpURL:           DefaultAmqpURL,
 		DeliveryServerURL: DefaultDeliveryServerURL,
 
-		MainchainGasLimit: DefaultMainchainGasLimit,
 		TronchainFeeLimit: DefaultTronFeeLimit,
+
+		MainchainMaxGasPrice: DefaultMainchainMaxGasPrice,
 
 		CheckpointerPollInterval: DefaultCheckpointerPollInterval,
 		EthSyncerPollInterval:    DefaultSyncerPollInterval,

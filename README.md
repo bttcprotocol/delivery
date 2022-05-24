@@ -12,7 +12,7 @@ Make sure your have go1.11+ already installed
 ### Install 
 ```bash 
 $ make install 
-```  
+```
 
 ### Run-delivery 
 ```bash 

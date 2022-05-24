@@ -63,7 +63,8 @@ const (
 	TaskDelayBetweenEachVal = 24 * time.Second
 	RetryTaskDelay          = 12 * time.Second
 
-	BridgeDBFlag = "bridge-db"
+	BridgeDBFlag          = "bridge-db"
+	ProposersURLSizeLimit = 100
 )
 
 var logger log.Logger
@@ -140,29 +141,37 @@ func IsInProposerList(cliCtx cliContext.CLIContext, count uint64) (bool, error) 
 	return false, nil
 }
 
+//default offset 0
+func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
+	return CalculateTaskDelayWithOffset(cliCtx, 0)
+}
+
 // CalculateTaskDelay calculates delay required for current validator to propose the tx
 // It solves for multiple validators sending same transaction.
-func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
+// with offset
+func CalculateTaskDelayWithOffset(cliCtx cliContext.CLIContext, offset int) (bool, time.Duration) {
 	// calculate validator position
 	valPosition := 0
 	isCurrentValidator := false
-	response, err := helper.FetchFromAPI(cliCtx, helper.GetHeimdallServerEndpoint(CurrentValidatorSetURL))
+
+	proposersURL := fmt.Sprintf(ProposersURL, ProposersURLSizeLimit)
+	proposersResponse, err := helper.FetchFromAPI(cliCtx, helper.GetHeimdallServerEndpoint(proposersURL))
 	if err != nil {
-		logger.Error("Unable to send request for current validatorset", "url", CurrentValidatorSetURL, "error", err)
-		return isCurrentValidator, 0
-	}
-	// unmarshall data from buffer
-	var validatorSet hmtypes.ValidatorSet
-	err = json.Unmarshal(response.Result, &validatorSet)
-	if err != nil {
-		logger.Error("Error unmarshalling current validatorset data ", "error", err)
+		logger.Error("Unable to send request for proposers ", "url", proposersURL, "error", err)
 		return isCurrentValidator, 0
 	}
 
-	logger.Info("Fetched current validatorset list", "currentValidatorcount", len(validatorSet.Validators))
-	for i, validator := range validatorSet.Validators {
+	var proposers []hmtypes.Validator
+	err = json.Unmarshal(proposersResponse.Result, &proposers)
+	if err != nil {
+		logger.Error("Error unmarshalling proposers data ", "error", err)
+		return isCurrentValidator, 0
+	}
+
+	logger.Info("Fetched proposers ", "currentValidatorsCount", len(proposers))
+	for i, validator := range proposers {
 		if bytes.Equal(validator.Signer.Bytes(), helper.GetAddress()) {
-			valPosition = i + 1
+			valPosition = i + offset
 			isCurrentValidator = true
 			break
 		}
@@ -452,4 +461,28 @@ func GetNextStakingRecord(cliCtx cliContext.CLIContext, rootChain string) (*stak
 	}
 
 	return &stakingRecord, nil
+}
+
+// GetValidatorNonce fethes validator nonce and height
+func GetValidatorNonce(cliCtx cliContext.CLIContext, validatorID uint64) (uint64, int64, error) {
+	var validator hmtypes.Validator
+
+	result, err := helper.FetchFromAPI(cliCtx,
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(ValidatorURL, strconv.FormatUint(validatorID, 10))),
+	)
+
+	if err != nil {
+		logger.Error("Error fetching validator data", "error", err)
+		return 0, 0, err
+	}
+
+	err = json.Unmarshal(result.Result, &validator)
+	if err != nil {
+		logger.Error("error unmarshalling validator data", "error", err)
+		return 0, 0, err
+	}
+
+	logger.Debug("Validator data recieved ", "validator", validator.String())
+
+	return validator.Nonce, result.Height, nil
 }
