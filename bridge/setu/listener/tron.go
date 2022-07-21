@@ -71,18 +71,28 @@ func (tl *TronListener) Start() error {
 
 	tl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
 	// poll for new header using client object
-	go tl.StartPolling(headerCtx, pollInterval)
+	go tl.StartPolling(headerCtx, pollInterval, false)
 	return nil
 }
 
 // startPolling starts polling
-func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Duration) {
+func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
 
+	// needAlign is used to decide whether the ticker is align to 1970 UTC.
+	// if true, the ticker will always tick as it begins at 1970 UTC.
+	firstInterval := interval
+	// otherwise, ticker begins to tick depended on the time when program run.
+	if needAlign {
+		now := time.Now()
+		baseTime := time.Unix(0, 0)
+		firstInterval = interval - (now.UTC().Sub(baseTime) % interval)
+	}
+
 	// Setup the ticket and the channel to signal
 	// the ending of the interval
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(firstInterval)
 
 	// start listening
 	for {
@@ -95,6 +105,8 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 					Number: big.NewInt(headerNum),
 				})
 			}
+			ticker.Reset(interval)
+
 		case <-ctx.Done():
 			tl.Logger.Info("Polling stopped")
 			ticker.Stop()
@@ -214,7 +226,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 						// topup has to be processed first before validator join. so adding delay.
 						delay := util.TaskDelayBetweenEachVal
 						tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx, 1); isCurrentValidator {
 						// topup has to be processed first before validator join. so adding delay.
 						delay = delay + util.TaskDelayBetweenEachVal
 						tl.sendTaskWithDelay("sendValidatorJoinToHeimdall", selectedEvent.Name, logBytes, delay)
@@ -237,7 +249,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if bytes.Equal(event.SignerPubkey, pubkeyBytes) {
 						tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx, 1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendSignerChangeToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
@@ -248,7 +260,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
 						tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx, 1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendUnstakeInitToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
@@ -264,7 +276,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if bytes.Equal(event.User.Bytes(), helper.GetAddress()) {
 						tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx, 1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendTopUpFeeToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
@@ -280,7 +292,7 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 					}
 					if util.IsEventSender(tl.cliCtx, event.ValidatorId.Uint64()) {
 						tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, 0)
-					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx,1); isCurrentValidator {
+					} else if isCurrentValidator, delay := util.CalculateTaskDelayWithOffset(tl.cliCtx, 1); isCurrentValidator {
 						tl.sendTaskWithDelay("sendUnjailToHeimdall", selectedEvent.Name, logBytes, delay)
 					}
 
