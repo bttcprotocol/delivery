@@ -28,7 +28,7 @@ type Listener interface {
 
 	StartHeaderProcess(context.Context)
 
-	StartPolling(context.Context, time.Duration)
+	StartPolling(context.Context, time.Duration, bool)
 
 	StartSubscription(context.Context, ethereum.Subscription)
 
@@ -156,13 +156,23 @@ func (bl *BaseListener) StartHeaderProcess(ctx context.Context) {
 }
 
 // startPolling starts polling
-func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Duration) {
+func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
 
+	// needAlign is used to decide whether the ticker is align to 1970 UTC.
+	// if true, the ticker will always tick as it begins at 1970 UTC.
+	firstInterval := interval
+	// otherwise, ticker begins to tick depended on the time when program run.
+	if needAlign {
+		now := time.Now()
+		baseTime := time.Unix(0, 0)
+		firstInterval = interval - (now.UTC().Sub(baseTime) % interval)
+	}
+
 	// Setup the ticket and the channel to signal
 	// the ending of the interval
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(firstInterval)
 
 	// start listening
 	for {
@@ -173,6 +183,8 @@ func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Dura
 				// send data to channel
 				bl.HeaderChannel <- header
 			}
+			ticker.Reset(interval)
+
 		case <-ctx.Done():
 			bl.Logger.Info("Polling stopped")
 			ticker.Stop()

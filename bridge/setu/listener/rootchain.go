@@ -108,7 +108,7 @@ func (rl *RootChainListener) Start() error {
 		// start go routine to poll for new header using client object
 		rl.Logger.Info("Start polling for root chain header blocks",
 			"root", rl.rootChainType, "pollInterval", rl.pollInterval)
-		go rl.StartPolling(ctx, rl.pollInterval)
+		go rl.StartPolling(ctx, rl.pollInterval, false)
 	} else {
 		// start go routine to listen new header using subscription
 		go rl.StartSubscription(ctx, subscription)
