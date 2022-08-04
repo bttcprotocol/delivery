@@ -3,6 +3,9 @@ package processor
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/maticnetwork/bor/common"
+	"github.com/maticnetwork/heimdall/types"
 )
 
 // HeaderBlock header block
@@ -10,6 +13,15 @@ type HeaderBlock struct {
 	start  uint64
 	end    uint64
 	number *big.Int
+}
+
+type CheckpointInfo struct {
+	rootHash   common.Hash
+	number     uint64
+	start      uint64
+	end        uint64
+	createTime uint64
+	proposer   types.HeimdallAddress
 }
 
 // ContractCheckpoint contract checkpoint

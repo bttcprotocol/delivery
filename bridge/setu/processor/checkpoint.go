@@ -66,8 +66,7 @@ func (cp *CheckpointProcessor) Start() error {
 	// no-ack
 	ackCtx, cancelNoACKPolling := context.WithCancel(context.Background())
 	cp.cancelNoACKPolling = cancelNoACKPolling
-	cp.Logger.Info("Start polling for no-ack", "pollInterval", helper.GetConfig().NoACKPollInterval)
-	go cp.startPollingForNoAck(ackCtx, helper.GetConfig().NoACKPollInterval)
+	go cp.startPolling(ackCtx)
 	return nil
 }
 
@@ -94,21 +93,24 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 	}
 }
 
-func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	ticker1 := time.NewTicker(helper.GetConfig().CheckpointerPollInterval)
+func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
+	tickerForNoAck := time.NewTicker(helper.GetConfig().NoACKPollInterval)
+
+	syncInterval := helper.GetConfig().CheckpointerPollInterval / 2
+	tickerForSync := time.NewTicker(syncInterval)
 	// stop ticker when everything done
-	defer ticker.Stop()
-	defer ticker1.Stop()
+	defer tickerForNoAck.Stop()
+	defer tickerForSync.Stop()
+
+	cp.Logger.Info("Start polling", "no-ack-interval", helper.GetConfig().NoACKPollInterval, "checkpoint-sync-interval", syncInterval)
 	for {
 		select {
-		case <-ticker.C:
+		case <-tickerForNoAck.C:
 			go cp.handleCheckpointNoAck()
-		case <-ticker1.C:
+		case <-tickerForSync.C:
 			go cp.handleCheckpointSync()
 		case <-ctx.Done():
-			cp.Logger.Info("No-ack Polling stopped")
-			ticker.Stop()
+			cp.Logger.Info("Polling stopped")
 			return
 		}
 	}
@@ -402,8 +404,7 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 	}
 }
 
-// nextExpectedCheckpoint - fetched contract checkpoint state and returns the next probable checkpoint that needs to be sent
-func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *CheckpointContext, latestChildBlock uint64, rootChain string) (*ContractCheckpoint, error) {
+func (cp *CheckpointProcessor) getCurrentCheckpoint(checkpointContext *CheckpointContext, rootChain string) (*CheckpointInfo, error) {
 	chainmanagerParams := checkpointContext.ChainmanagerParams
 	checkpointParams := checkpointContext.CheckpointParams
 
@@ -413,17 +414,34 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	}
 
 	// fetch current header block from mainchain contract
-	_currentHeaderBlock, err := cp.contractConnector.CurrentHeaderBlock(rootChainInstance, checkpointParams.ChildBlockInterval)
+	currentHeaderNumber, err := cp.contractConnector.CurrentHeaderBlock(rootChainInstance, checkpointParams.ChildBlockInterval)
 	if err != nil {
 		cp.Logger.Error("Error while fetching current header block number from rootchain", "root", rootChain, "error", err)
 		return nil, err
 	}
 
-	// current header block
-	currentHeaderBlockNumber := big.NewInt(0).SetUint64(_currentHeaderBlock)
-
 	// get header info
-	_, currentStart, currentEnd, lastCheckpointTime, _, err := cp.contractConnector.GetHeaderInfo(currentHeaderBlockNumber.Uint64(), rootChainInstance, checkpointParams.ChildBlockInterval)
+	rootHash, start, end, createAt, proposer, err := cp.contractConnector.GetHeaderInfo(currentHeaderNumber, rootChainInstance, checkpointParams.ChildBlockInterval)
+	if err != nil {
+		cp.Logger.Error("Error while fetching current header block object from rootchain", "root", rootChain, "error", err)
+		return nil, err
+	}
+
+	return &CheckpointInfo{
+		rootHash:   rootHash,
+		number:     currentHeaderNumber,
+		start:      start,
+		end:        end,
+		createTime: createAt,
+		proposer:   proposer,
+	}, nil
+}
+
+// nextExpectedCheckpoint - fetched contract checkpoint state and returns the next probable checkpoint that needs to be sent
+func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *CheckpointContext, latestChildBlock uint64, rootChain string) (*ContractCheckpoint, error) {
+	checkpointParams := checkpointContext.CheckpointParams
+	// get header info
+	currentCheckpointInfo, err := cp.getCurrentCheckpoint(checkpointContext, rootChain)
 	if err != nil {
 		cp.Logger.Error("Error while fetching current header block object from rootchain", "root", rootChain, "error", err)
 		return nil, err
@@ -431,7 +449,7 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 
 	// find next start/end
 	var start, end uint64
-	start = currentEnd
+	start = currentCheckpointInfo.end
 
 	// add 1 if start > 0
 	if start > 0 {
@@ -466,11 +484,11 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 
 		currentTime := time.Now().UTC().Unix()
 		defaultForcePushInterval := checkpointParams.MaxCheckpointLength * 2 // in seconds (1024 * 2 seconds)
-		if currentTime-int64(lastCheckpointTime) > int64(defaultForcePushInterval) {
+		if currentTime-int64(currentCheckpointInfo.createTime) > int64(defaultForcePushInterval) {
 			end = latestChildBlock
 			cp.Logger.Info("Force push checkpoint",
 				"currentTime", currentTime,
-				"lastCheckpointTime", lastCheckpointTime,
+				"lastCheckpointTime", currentCheckpointInfo.createTime,
 				"defaultForcePushInterval", defaultForcePushInterval,
 				"start", start,
 				"end", end,
@@ -483,9 +501,9 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	// 	return nil, errors.New("Invalid start end formation")
 	// }
 	return NewContractCheckpoint(start, end, &HeaderBlock{
-		start:  currentStart,
-		end:    currentEnd,
-		number: currentHeaderBlockNumber,
+		start:  currentCheckpointInfo.start,
+		end:    currentCheckpointInfo.end,
+		number: big.NewInt(0).SetUint64(currentCheckpointInfo.number),
 	}), nil
 }
 
