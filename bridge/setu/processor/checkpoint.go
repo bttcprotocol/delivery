@@ -127,7 +127,7 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 
 	cp.Logger.Info("Processing new header", "headerNumber", header.Number)
 	var isProposer bool
-	if isProposer, err = util.IsProposer(cp.cliCtx); err != nil {
+	if isProposer, err = util.IsProposerByIndex(cp.cliCtx, 0); err != nil {
 		cp.Logger.Error("Error checking isProposer in HeaderBlock handler", "error", err)
 		return err
 	}
@@ -386,8 +386,8 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 	if isNoAckRequired {
 		var isProposer bool
 
-		if isProposer, err = util.IsInProposerList(cp.cliCtx, count); err != nil {
-			cp.Logger.Error("Error checking IsInProposerList while proposing Checkpoint No-Ack ", "error", err)
+		if isProposer, err = util.IsProposerByIndex(cp.cliCtx, count); err != nil {
+			cp.Logger.Error("Error checking IsProposer while proposing Checkpoint No-Ack ", "error", err)
 			return
 		}
 

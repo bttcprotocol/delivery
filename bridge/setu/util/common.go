@@ -86,10 +86,12 @@ func Logger() log.Logger {
 	return logger
 }
 
-// IsProposer  checks if we are proposer
-func IsProposer(cliCtx cliContext.CLIContext) (bool, error) {
+// IsProposer  checks if we are proposer.
+// index starts from 0, and it will return whether it is the current proposer
+// if index = 0.
+func IsProposerByIndex(cliCtx cliContext.CLIContext, index uint64) (bool, error) {
 	var proposers []hmtypes.Validator
-	count := uint64(1)
+	count := index + 1
 	result, err := helper.FetchFromAPI(cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(ProposersURL, strconv.FormatUint(count, 10))),
 	)
@@ -105,7 +107,13 @@ func IsProposer(cliCtx cliContext.CLIContext) (bool, error) {
 		return false, err
 	}
 
-	if bytes.Equal(proposers[0].Signer.Bytes(), helper.GetAddress()) {
+	proposerSize := len(proposers)
+	if proposerSize == 0 {
+		return false, nil
+	}
+	proposerIndex := index % uint64(proposerSize)
+
+	if bytes.Equal(proposers[proposerIndex].Signer.Bytes(), helper.GetAddress()) {
 		return true, nil
 	}
 
