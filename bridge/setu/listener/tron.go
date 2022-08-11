@@ -76,14 +76,13 @@ func (tl *TronListener) Start() error {
 }
 
 // startPolling starts polling
+// needAlign is used to decide whether the ticker is align to 1970 UTC.
+// if true, the ticker will always tick as it begins at 1970 UTC.
 func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
-
-	// needAlign is used to decide whether the ticker is align to 1970 UTC.
-	// if true, the ticker will always tick as it begins at 1970 UTC.
 	firstInterval := interval
-	// otherwise, ticker begins to tick depended on the time when program run.
+
 	if needAlign {
 		now := time.Now()
 		baseTime := time.Unix(0, 0)
@@ -98,6 +97,7 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 	for {
 		select {
 		case <-ticker.C:
+			ticker.Reset(interval)
 			headerNum, err := tl.contractConnector.GetTronLatestBlockNumber()
 			if err == nil {
 				// send data to channel
@@ -105,7 +105,6 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 					Number: big.NewInt(headerNum),
 				})
 			}
-			ticker.Reset(interval)
 
 		case <-ctx.Done():
 			tl.Logger.Info("Polling stopped")

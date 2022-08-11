@@ -57,13 +57,11 @@ func (hl *HeimdallListener) ProcessHeader(*types.Header) {
 }
 
 // StartPolling - starts polling for heimdall events
+// needAlign is used to decide whether the ticker is align to 1970 UTC.
+// if true, the ticker will always tick as it begins at 1970 UTC.
 func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
-
-	// needAlign is used to decide whether the ticker is align to 1970 UTC.
-	// if true, the ticker will always tick as it begins at 1970 UTC.
-	// otherwise, ticker begins to tick depended on the time when program run.
 	firstInterval := interval
 	if needAlign {
 		now := time.Now()
@@ -85,6 +83,7 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 	for {
 		select {
 		case <-ticker.C:
+			ticker.Reset(interval)
 			fromBlock, toBlock, err := hl.fetchFromAndToBlock()
 			if err != nil {
 				hl.Logger.Error("Error fetching fromBlock and toBlock...skipping events query", "error", err)
@@ -143,7 +142,6 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 					hl.Logger.Error("hl.storageClient.Put", "Error", err)
 				}
 			}
-			ticker.Reset(interval)
 
 		case <-ctx.Done():
 			hl.Logger.Info("Polling stopped")

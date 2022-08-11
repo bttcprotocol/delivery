@@ -156,14 +156,12 @@ func (bl *BaseListener) StartHeaderProcess(ctx context.Context) {
 }
 
 // startPolling starts polling
+// needAlign is used to decide whether the ticker is align to 1970 UTC.
+// if true, the ticker will always tick as it begins at 1970 UTC.
 func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
-
-	// needAlign is used to decide whether the ticker is align to 1970 UTC.
-	// if true, the ticker will always tick as it begins at 1970 UTC.
 	firstInterval := interval
-	// otherwise, ticker begins to tick depended on the time when program run.
 	if needAlign {
 		now := time.Now()
 		baseTime := time.Unix(0, 0)
@@ -178,12 +176,12 @@ func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Dura
 	for {
 		select {
 		case <-ticker.C:
+			ticker.Reset(interval)
 			header, err := bl.chainClient.HeaderByNumber(ctx, nil)
 			if err == nil && header != nil {
 				// send data to channel
 				bl.HeaderChannel <- header
 			}
-			ticker.Reset(interval)
 
 		case <-ctx.Done():
 			bl.Logger.Info("Polling stopped")
