@@ -177,11 +177,13 @@ func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Dura
 		select {
 		case <-ticker.C:
 			ticker.Reset(interval)
-			header, err := bl.chainClient.HeaderByNumber(ctx, nil)
-			if err == nil && header != nil {
-				// send data to channel
-				bl.HeaderChannel <- header
-			}
+			go func() {
+				header, err := bl.chainClient.HeaderByNumber(ctx, nil)
+				if err == nil && header != nil {
+					// send data to channel
+					bl.HeaderChannel <- header
+				}
+			}()
 
 		case <-ctx.Done():
 			bl.Logger.Info("Polling stopped")
