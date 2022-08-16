@@ -48,27 +48,35 @@ func (cp *CheckpointProcessor) handleCheckpointSync() {
 			cp.Logger.Error("Error fetching syncedHeaderNumber from stakeChain", "root", rootChain, "error", err)
 			continue
 		}
-		nextCheckpointNumber := lastSyncedCheckpointNumber + 1
+		nextSyncCheckpointNumber := lastSyncedCheckpointNumber + 1
 		// fetch nextHeaderBlock from rootChain
-		start, end, proposer, err := cp.getHeaderBlock(checkpointContext, nextCheckpointNumber, rootChain)
+		start, end, proposer, err := cp.getHeaderBlock(checkpointContext, nextSyncCheckpointNumber, rootChain)
 		if err != nil {
 			cp.Logger.Error("Error fetching currentHeaderBlock from rootChain", "root", rootChain, "error", err)
 			continue
 		}
 
+		latestCheckpointInfo, err := cp.getCurrentCheckpoint(checkpointContext, rootChain)
+		if err != nil {
+			cp.Logger.Error("Error get latest checkpoint", "root", rootChain)
+			continue
+		}
+
+		cp.Logger.Info("checkpoint sync is ready to send", "root", rootChain, "checkpointSyncNumber", nextSyncCheckpointNumber, "start", start, "end", end,
+			"latestCheckpointNumber", latestCheckpointInfo.number)
 		if end != 0 {
 			// send checkpoint sync
 			msg := checkpointTypes.NewMsgCheckpointSync(hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
-				proposer, nextCheckpointNumber, start, end, rootChain)
+				proposer, nextSyncCheckpointNumber, start, end, rootChain)
 			// return broadcast to heimdall
 			if isCurrentValidator, delay := util.CalculateTaskDelay(cp.cliCtx); isCurrentValidator {
 				if err := cp.txBroadcaster.BroadcastToHeimdallWithDelay(msg, delay); err != nil {
 					cp.Logger.Error("Error while broadcasting checkpoint-sync to heimdall",
-						"root", rootChain, "number", nextCheckpointNumber, "start", start, "end", end, "error", err)
+						"root", rootChain, "number", nextSyncCheckpointNumber, "start", start, "end", end, "error", err)
 					continue
 				}
 				cp.Logger.Info("checkpoint sync transaction sent successfully",
-					"root", rootChain, "number", nextCheckpointNumber, "start", start, "end", end)
+					"root", rootChain, "number", nextSyncCheckpointNumber, "start", start, "end", end)
 			}
 		}
 	}
