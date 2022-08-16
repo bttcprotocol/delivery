@@ -263,39 +263,47 @@ func (cp *CheckpointProcessor) sendCheckpointToRootchain(eventBytes string, bloc
 		return err
 	}
 
-	if rootChain == hmTypes.RootChainTypeTron {
+	switch rootChain {
+	case hmTypes.RootChainTypeTron:
 		shouldSend, err := cp.shouldSendTronCheckpoint(checkpointContext, startBlock, endBlock)
 		if err != nil {
 			return err
 		}
 
-		if shouldSend && isCurrentProposer {
+		if shouldSend {
 			txHash := common.FromHex(txHash)
 			if err := cp.createAndSendCheckpointToTron(checkpointContext, startBlock, endBlock, blockHeight, txHash); err != nil {
 				cp.Logger.Error("Error sending checkpoint to rootchain", "error", err)
 				return err
 			}
 		} else {
-			cp.Logger.Info("I am not the current proposer or checkpoint already sent. Ignoring", "eventType", event.Type)
+			cp.Logger.Info("Checkpoint has already sent. Ignoring", "eventType", event.Type)
 			return nil
 		}
-		return nil
-	}
-	shouldSend, err := cp.shouldSendCheckpoint(checkpointContext, startBlock, endBlock, rootChain)
-	if err != nil {
+
+	case hmTypes.RootChainTypeBsc, hmTypes.RootChainTypeEth:
+		shouldSend, err := cp.shouldSendCheckpoint(checkpointContext, startBlock, endBlock, rootChain)
+		if err != nil {
+			return err
+		}
+
+		if shouldSend {
+			txHash := common.FromHex(txHash)
+			if err := cp.createAndSendCheckpointToRootchain(checkpointContext, startBlock, endBlock, blockHeight, txHash, rootChain); err != nil {
+				cp.Logger.Error("Error sending checkpoint to rootchain", "root", rootChain, "error", err)
+				return err
+			}
+		} else {
+			cp.Logger.Info("Checkpoint has already sent. Ignoring", "root", rootChain, "eventType", event.Type)
+			return nil
+		}
+
+	default:
+		err := fmt.Errorf("Unknown rootchain: %s", rootChain)
+		cp.Logger.Error("Error sending checkpoint to rootchain", "root", rootChain, "error", err)
 		return err
 	}
 
-	if shouldSend && isCurrentProposer {
-		txHash := common.FromHex(txHash)
-		if err := cp.createAndSendCheckpointToRootchain(checkpointContext, startBlock, endBlock, blockHeight, txHash, rootChain); err != nil {
-			cp.Logger.Error("Error sending checkpoint to rootchain", "root", rootChain, "error", err)
-			return err
-		}
-	} else {
-		cp.Logger.Info("I am not the current proposer or checkpoint already sent. Ignoring", "root", rootChain, "eventType", event.Type)
-		return nil
-	}
 	return nil
 }
 
