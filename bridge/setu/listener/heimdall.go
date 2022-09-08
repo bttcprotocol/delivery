@@ -47,7 +47,7 @@ func (hl *HeimdallListener) Start() error {
 	}
 
 	hl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
-	hl.StartPolling(headerCtx, pollInterval)
+	hl.StartPolling(headerCtx, pollInterval, false)
 	return nil
 }
 
@@ -57,13 +57,21 @@ func (hl *HeimdallListener) ProcessHeader(*types.Header) {
 }
 
 // StartPolling - starts polling for heimdall events
-func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.Duration) {
+// needAlign is used to decide whether the ticker is align to 1970 UTC.
+// if true, the ticker will always tick as it begins at 1970 UTC.
+func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
+	firstInterval := interval
+	if needAlign {
+		now := time.Now()
+		baseTime := time.Unix(0, 0)
+		firstInterval = interval - (now.UTC().Sub(baseTime) % interval)
+	}
 
 	// Setup the ticket and the channel to signal
 	// the ending of the interval
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(firstInterval)
 
 	// var eventTypes []string
 	// eventTypes = append(eventTypes, "message.action='checkpoint'")
@@ -75,6 +83,7 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 	for {
 		select {
 		case <-ticker.C:
+			ticker.Reset(interval)
 			fromBlock, toBlock, err := hl.fetchFromAndToBlock()
 			if err != nil {
 				hl.Logger.Error("Error fetching fromBlock and toBlock...skipping events query", "error", err)
