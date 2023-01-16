@@ -61,7 +61,7 @@ const (
 	DefaultDeliveryServerURL = "http://0.0.0.0:1317"
 	DefaultTendermintNodeURL = "http://0.0.0.0:26657"
 
-	NoACKWaitTime = 1800 * time.Second // Time ack service waits to clear buffer and elect new proposer (1800 seconds ~ 30 mins)
+	NoACKWaitTime = 1920 * time.Second // Time ack service waits to clear buffer and elect new proposer (1920 seconds ~ 32 mins)
 
 	DefaultCheckpointerPollInterval = 30 * time.Minute
 	DefaultSyncerPollInterval       = 1 * time.Minute
@@ -73,10 +73,8 @@ const (
 	DefaultStakingPollInterval      = 1 * time.Minute
 	DefaultStartListenBlock         = 0
 
-
 	DefaultMainchainMaxGasPrice = 400000000000 // 400 Gwei
 	DefaultTronFeeLimit         = uint64(200000000)
-
 
 	DefaultEthBusyLimitTxs  = 1000
 	DefaultBscBusyLimitTxs  = 1000
