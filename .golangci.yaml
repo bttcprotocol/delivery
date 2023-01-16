@@ -1,0 +1,28 @@
+linters:
+  enable-all: true
+  disable: 
+    - golint
+    - scopelint
+    - interfacer
+    - maligned
+
+service:
+  golangci-lint-version: 1.41
+
+run:
+  skip-dirs:
+    - gov/simulation
+    - gov/client
+    - simulation
+
+  skip-files:
+    - _test.go
+    - "test_.*"
+
+issues:
+  new: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
