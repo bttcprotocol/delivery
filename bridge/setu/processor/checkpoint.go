@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"sync"
 	"time"
 
 	cliContext "github.com/cosmos/cosmos-sdk/client/context"
@@ -94,18 +95,30 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 }
 
 func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
-	tickerForNoAck := time.NewTicker(helper.GetConfig().NoACKPollInterval)
+	now := time.Now()
+	baseTime := time.Unix(0, 0)
+	// no-ack ticker interval keep same with checkpoint interval
+	noAckInterval := helper.GetConfig().CheckpointerPollInterval
+	// adjust no-ack ticker to tick at the middle of checkpoint interval
+	firstIntervalForNoAck := noAckInterval - (now.UTC().Sub(baseTime) % noAckInterval) - noAckInterval/2 // nolint: gomnd
+	if firstIntervalForNoAck <= 0 {
+		firstIntervalForNoAck += noAckInterval
+	}
 
+	tickerForNoAck := time.NewTicker(firstIntervalForNoAck)
 	syncInterval := helper.GetConfig().CheckpointerPollInterval / 2
 	tickerForSync := time.NewTicker(syncInterval)
 	// stop ticker when everything done
 	defer tickerForNoAck.Stop()
 	defer tickerForSync.Stop()
 
-	cp.Logger.Info("Start polling", "no-ack-interval", helper.GetConfig().NoACKPollInterval, "checkpoint-sync-interval", syncInterval)
+	cp.Logger.Info("Start polling", "no-ack-interval", noAckInterval, "checkpoint-sync-interval", syncInterval)
+
+	adjustOnce := sync.Once{}
 	for {
 		select {
 		case <-tickerForNoAck.C:
+			adjustOnce.Do(func() { tickerForNoAck.Reset(noAckInterval) })
 			go cp.handleCheckpointNoAck()
 		case <-tickerForSync.C:
 			go cp.handleCheckpointSync()
@@ -392,11 +405,11 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 		return
 	}
 
-	isNoAckRequired, count := cp.checkIfNoAckIsRequired(checkpointContext, lastCreatedAt)
+	isNoAckRequired, _ := cp.checkIfNoAckIsRequired(checkpointContext, lastCreatedAt)
 	if isNoAckRequired {
 		var isProposer bool
 
-		if isProposer, err = util.IsProposerByIndex(cp.cliCtx, count); err != nil {
+		if isProposer, err = util.IsValidator(cp.cliCtx); err != nil {
 			cp.Logger.Error("Error checking IsProposer while proposing Checkpoint No-Ack ", "error", err)
 			return
 		}
@@ -797,10 +810,10 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 
 	checkpointCreationTime := time.Unix(lastCreatedAt, 0)
 	currentTime := time.Now().UTC()
+
 	timeDiff := currentTime.Sub(checkpointCreationTime)
-	// check if last checkpoint was < NoACK wait time
-	if timeDiff.Seconds() >= helper.GetConfig().NoACKWaitTime.Seconds() && index == 0 {
-		index = math.Floor(timeDiff.Seconds() / helper.GetConfig().NoACKWaitTime.Seconds())
+	if timeDiff.Seconds() >= helper.GetConfig().CheckpointerPollInterval.Seconds() && index == 0 {
+		index = math.Floor(timeDiff.Seconds() / helper.GetConfig().CheckpointerPollInterval.Seconds())
 	}
 
 	if index == 0 {
@@ -812,7 +825,6 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 
 	// check if difference between no-ack time and current time
 	lastNoAck := cp.getLastNoAckTime()
-
 	lastNoAckTime := time.Unix(int64(lastNoAck), 0)
 	// if last no ack == 0 , first no-ack to be sent
 	if currentTime.Sub(lastNoAckTime).Seconds() < checkpointParams.CheckpointBufferTime.Seconds() && lastNoAck != 0 {

@@ -120,6 +120,34 @@ func IsProposerByIndex(cliCtx cliContext.CLIContext, index uint64) (bool, error)
 	return false, nil
 }
 
+func IsValidator(cliCtx cliContext.CLIContext) (bool, error) {
+	var validatorSet hmtypes.ValidatorSet
+
+	result, err := helper.FetchFromAPI(cliCtx,
+		helper.GetHeimdallServerEndpoint(CurrentValidatorSetURL),
+	)
+	if err != nil {
+		logger.Error("Error fetching proposers", "url", CurrentValidatorSetURL, "error", err)
+
+		return false, fmt.Errorf("failed to query heimdall server: %w", err)
+	}
+
+	err = json.Unmarshal(result.Result, &validatorSet)
+	if err != nil {
+		logger.Error("error unmarshalling proposer slice", "error", err)
+
+		return false, fmt.Errorf("failed to unmarshal validatorSet: %w", err)
+	}
+
+	for _, validator := range validatorSet.Validators {
+		if bytes.Equal(validator.Signer.Bytes(), helper.GetAddress()) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // IsInProposerList checks if we are in current proposer
 func IsInProposerList(cliCtx cliContext.CLIContext, count uint64) (bool, error) {
 	logger.Debug("Skipping proposers", "count", strconv.FormatUint(count, 10))
