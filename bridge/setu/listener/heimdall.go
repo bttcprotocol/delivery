@@ -73,8 +73,8 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 	// Setup the ticket and the channel to signal
 	// the ending of the interval
 	ticker := time.NewTicker(firstInterval)
-	var tickerOnce sync.Once
 
+	var tickerOnce sync.Once
 	// var eventTypes []string
 	// eventTypes = append(eventTypes, "message.action='checkpoint'")
 	// eventTypes = append(eventTypes, "message.action='event-record'")
