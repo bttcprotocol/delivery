@@ -172,8 +172,8 @@ func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Dura
 	// Setup the ticket and the channel to signal
 	// the ending of the interval
 	ticker := time.NewTicker(firstInterval)
-	var tickerOnce sync.Once
 
+	var tickerOnce sync.Once
 	// start listening
 	for {
 		select {
