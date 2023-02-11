@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"sync"
 	"time"
 
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
@@ -73,6 +74,7 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 	// the ending of the interval
 	ticker := time.NewTicker(firstInterval)
 
+	var tickerOnce sync.Once
 	// var eventTypes []string
 	// eventTypes = append(eventTypes, "message.action='checkpoint'")
 	// eventTypes = append(eventTypes, "message.action='event-record'")
@@ -83,7 +85,9 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 	for {
 		select {
 		case <-ticker.C:
-			ticker.Reset(interval)
+			tickerOnce.Do(func() {
+				ticker.Reset(interval)
+			})
 			fromBlock, toBlock, err := hl.fetchFromAndToBlock()
 			if err != nil {
 				hl.Logger.Error("Error fetching fromBlock and toBlock...skipping events query", "error", err)
