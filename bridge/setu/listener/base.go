@@ -3,6 +3,7 @@ package listener
 import (
 	"context"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -172,11 +173,15 @@ func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Dura
 	// the ending of the interval
 	ticker := time.NewTicker(firstInterval)
 
+	var tickerOnce sync.Once
 	// start listening
 	for {
 		select {
 		case <-ticker.C:
-			ticker.Reset(interval)
+			tickerOnce.Do(func() {
+				ticker.Reset(interval)
+			})
+
 			header, err := bl.chainClient.HeaderByNumber(ctx, nil)
 			if err == nil && header != nil {
 				// send data to channel

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
@@ -93,11 +94,14 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 	// the ending of the interval
 	ticker := time.NewTicker(firstInterval)
 
+	var tickerOnce sync.Once
 	// start listening
 	for {
 		select {
 		case <-ticker.C:
-			ticker.Reset(interval)
+			tickerOnce.Do(func() {
+				ticker.Reset(interval)
+			})
 			headerNum, err := tl.contractConnector.GetTronLatestBlockNumber()
 			if err == nil {
 				// send data to channel
