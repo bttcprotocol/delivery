@@ -1,0 +1,682 @@
+{
+  "genesis_time": "2021-11-05T10:17:41.654867Z",
+  "chain_id": "delivery-1029",
+  "consensus_params": {
+    "block": {
+      "max_bytes": "1048576",
+      "max_gas": "-1",
+      "time_iota_ms": "1000"
+    },
+    "evidence": {
+      "max_age": "100000"
+    },
+    "validator": {
+      "pub_key_types": [
+        "secp256k1"
+      ]
+    }
+  },
+  "app_hash": "",
+  "app_state": {
+    "auth": {
+      "params": {
+        "max_memo_characters": "256",
+        "tx_sig_limit": "7",
+        "tx_size_cost_per_byte": "10",
+        "sig_verify_cost_ed25519": "590",
+        "sig_verify_cost_secp256k1": "1000",
+        "max_tx_gas": "1000000",
+        "tx_fees": "100000000000000000000"
+      },
+      "accounts": [
+        {
+          "address": "0x62c3adbece50a544aa3c45b53f86f672feb44ebc",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        },
+        {
+          "address": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        },
+        {
+          "address": "0x643d412bcc45d910f4514e2f597167d85856e08f",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        },
+        {
+          "address": "0xe848f81560e480ee381365a3d98d1d4e5f24159a",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        },
+        {
+          "address": "0xf4c2f1d772488cc6d3ec3c703b9710fa2c0e227e",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        },
+        {
+          "address": "0xcb670b22515bcaeaa7b3ffb8149d303f00fb026e",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        },
+        {
+          "address": "0x671e21ec4f4ce86b31bf215978e42aa7f0db8d6b",
+          "coins": [
+            {
+              "denom": "btt",
+              "amount": "100000000000000000000000000"
+            }
+          ],
+          "sequence_number": "0",
+          "account_number": "0",
+          "module_name": "",
+          "module_permissions": null
+        }
+      ]
+    },
+    "bank": {
+      "send_enabled": true
+    },
+    "bor": {
+      "params": {
+        "sprint_duration": "64",
+        "span_duration": "6400",
+        "producer_count": "11"
+      },
+      "spans": [
+        {
+          "span_id": "0",
+          "start_block": "0",
+          "end_block": "255",
+          "validator_set": {
+            "validators": [
+              {
+                "ID": "2",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x048c1e74ca9ea35ca86c617009ec2dbaaaefd00d236a6e28800f2332b178184007f92c08b98d9ca03d0822cc9a824677017b73688a25a7b9f5952ff4388007e060",
+                "signer": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "-6"
+              },
+              {
+                "ID": "1",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x04450e6193ff5b67764024c4b548699b1e59ac88cc9ca06ab9047a3be583fe877e05889db2eac8a368d2e1968e22760aea55c5ca53db3285580b70a36b2e6d60e9",
+                "signer": "0x62c3adbece50a544aa3c45b53f86f672feb44ebc",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "1"
+              },
+              {
+                "ID": "3",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x04d8ef3d9493e13fdc5cb0a92c79d8174c95837e020d96d3ac74763163ed01f232249c6210aee58f1fecee52b78a6066271301498f34cebb1bdd414ffefaf2f13f",
+                "signer": "0x643d412bcc45d910f4514e2f597167d85856e08f",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "1"
+              },
+              {
+                "ID": "7",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x041a584e0cbea22b7ac5fe9aab96351035f3d58396492055b82ed1e4445a9043c9925babb1dcd0df7cd0abb8dc9cd720f68775da007bcf37375bfec7f8f5dc15ce",
+                "signer": "0x671e21ec4f4ce86b31bf215978e42aa7f0db8d6b",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "1"
+              },
+              {
+                "ID": "6",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x0499aa2fc47a810f4ebbc3f6bc1453acc7f946689ba329d28c591e09eef55840130e958c7715fb7aed0dd2ce1187cf7c2ef94578927d91b79b3f40c1f54814cefe",
+                "signer": "0xcb670b22515bcaeaa7b3ffb8149d303f00fb026e",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "1"
+              },
+              {
+                "ID": "4",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x0435f770d9d656156787a8e4f01234b62e80f68dffd44d0975fc3c61b2ace25962087ec5f95aebee44061b5d4d41fcfe201b434594823fcd94dcf56e8233020110",
+                "signer": "0xe848f81560e480ee381365a3d98d1d4e5f24159a",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "1"
+              },
+              {
+                "ID": "5",
+                "startEpoch": "0",
+                "endEpoch": "0",
+                "nonce": "1",
+                "power": "1",
+                "pubKey": "0x04b48bd808dc61e8c88f16b2f83f24ea673198afda9f6ea0c14e52cd51f7a83212f75655feb8b901e0c02a3a32e6e47f893b6b044fe5d5be62702894804a0c1361",
+                "signer": "0xf4c2f1d772488cc6d3ec3c703b9710fa2c0e227e",
+                "last_updated": "",
+                "jailed": false,
+                "accum": "1"
+              }
+            ],
+            "proposer": {
+              "ID": "2",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x048c1e74ca9ea35ca86c617009ec2dbaaaefd00d236a6e28800f2332b178184007f92c08b98d9ca03d0822cc9a824677017b73688a25a7b9f5952ff4388007e060",
+              "signer": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "-6"
+            }
+          },
+          "selected_producers": [
+            {
+              "ID": "2",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x048c1e74ca9ea35ca86c617009ec2dbaaaefd00d236a6e28800f2332b178184007f92c08b98d9ca03d0822cc9a824677017b73688a25a7b9f5952ff4388007e060",
+              "signer": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "-6"
+            },
+            {
+              "ID": "1",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x04450e6193ff5b67764024c4b548699b1e59ac88cc9ca06ab9047a3be583fe877e05889db2eac8a368d2e1968e22760aea55c5ca53db3285580b70a36b2e6d60e9",
+              "signer": "0x62c3adbece50a544aa3c45b53f86f672feb44ebc",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "1"
+            },
+            {
+              "ID": "3",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x04d8ef3d9493e13fdc5cb0a92c79d8174c95837e020d96d3ac74763163ed01f232249c6210aee58f1fecee52b78a6066271301498f34cebb1bdd414ffefaf2f13f",
+              "signer": "0x643d412bcc45d910f4514e2f597167d85856e08f",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "1"
+            },
+            {
+              "ID": "7",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x041a584e0cbea22b7ac5fe9aab96351035f3d58396492055b82ed1e4445a9043c9925babb1dcd0df7cd0abb8dc9cd720f68775da007bcf37375bfec7f8f5dc15ce",
+              "signer": "0x671e21ec4f4ce86b31bf215978e42aa7f0db8d6b",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "1"
+            },
+            {
+              "ID": "6",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x0499aa2fc47a810f4ebbc3f6bc1453acc7f946689ba329d28c591e09eef55840130e958c7715fb7aed0dd2ce1187cf7c2ef94578927d91b79b3f40c1f54814cefe",
+              "signer": "0xcb670b22515bcaeaa7b3ffb8149d303f00fb026e",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "1"
+            },
+            {
+              "ID": "4",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x0435f770d9d656156787a8e4f01234b62e80f68dffd44d0975fc3c61b2ace25962087ec5f95aebee44061b5d4d41fcfe201b434594823fcd94dcf56e8233020110",
+              "signer": "0xe848f81560e480ee381365a3d98d1d4e5f24159a",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "1"
+            },
+            {
+              "ID": "5",
+              "startEpoch": "0",
+              "endEpoch": "0",
+              "nonce": "1",
+              "power": "1",
+              "pubKey": "0x04b48bd808dc61e8c88f16b2f83f24ea673198afda9f6ea0c14e52cd51f7a83212f75655feb8b901e0c02a3a32e6e47f893b6b044fe5d5be62702894804a0c1361",
+              "signer": "0xf4c2f1d772488cc6d3ec3c703b9710fa2c0e227e",
+              "last_updated": "",
+              "jailed": false,
+              "accum": "1"
+            }
+          ],
+          "bor_chain_id": "1029"
+        }
+      ]
+    },
+    "chainmanager": {
+      "params": {
+        "mainchain_tx_confirmations": "6",
+        "maticchain_tx_confirmations": "10",
+        "tronchain_tx_confirmations": "18",
+        "chain_params": {
+          "bor_chain_id": "1029",
+          "matic_token_address": "0xD5A8752A5FC64A1CE09DF7B195DF6B669D09271F",
+          "staking_manager_address": "0x4c8aa32c684d12a584bfd9944028ef16aa98928c",
+          "slash_manager_address": "0x0000000000000000000000000000000000000000",
+          "root_chain_address": "0x42cdf3395bbd91ad1879b51f606c6ac51a34a9ce",
+          "staking_info_address": "0x1035e2b3ed0b62484ad992ba9831d801582fc428",
+          "state_sender_address": "0x2f6734ece0ea6c4345ebaa050fede821a2ace20f",
+          "tron_chain_address": "417F36436E82ED2DEE196A05E3D606D2551296A33A",
+          "tron_state_sender_address": "41E016F77AAB49CB86CD3EF9AEDD0530F30D3234D1",
+          "tron_staking_manager_address": "4180B4EF3B990F46626CD537B7D5B84353604246B7",
+          "tron_state_info_address": "414AC852FD0223E2A6482C75BD6234D9B67BDDEE2A",
+          "state_receiver_address": "0x0000000000000000000000000000000000001001",
+          "validator_set_address": "0x0000000000000000000000000000000000001000"
+        }
+      },
+      "chain_infos": []
+    },
+    "checkpoint": {
+      "params": {
+        "checkpoint_buffer_time": "1000000000000",
+        "avg_checkpoint_length": "256",
+        "max_checkpoint_length": "1024",
+        "child_chain_block_interval": "10000"
+      },
+      "buffered_checkpoint": null,
+      "last_no_ack": "0",
+      "ack_count": "0",
+      "checkpoints": null,
+      "tron_ack_count": "0",
+      "tron_checkpoints": null
+    },
+    "clerk": {
+      "event_records": [],
+      "record_sequences": null
+    },
+    "gov": {
+      "starting_proposal_id": "1",
+      "deposits": null,
+      "votes": null,
+      "proposals": null,
+      "deposit_params": {
+        "min_deposit": [
+          {
+            "denom": "btt",
+            "amount": "10000000000000000000"
+          }
+        ],
+        "max_deposit_period": "172800000000000"
+      },
+      "voting_params": {
+        "voting_period": "172800000000000"
+      },
+      "tally_params": {
+        "quorum": "0.334000000000000000",
+        "threshold": "0.500000000000000000",
+        "veto": "0.334000000000000000"
+      }
+    },
+    "params": null,
+    "sidechannel": {
+      "past_commits": []
+    },
+    "slashing": {
+      "params": {
+        "signed_blocks_window": "100",
+        "min_signed_per_window": "0.500000000000000000",
+        "downtime_jail_duration": "600000000000",
+        "slash_fraction_double_sign": "0.050000000000000000",
+        "slash_fraction_downtime": "0.010000000000000000",
+        "slash_fraction_limit": "0.333333333333333333",
+        "jail_fraction_limit": "0.333333333333333333",
+        "max_evidence_age": "120000000000",
+        "enable_slashing": false
+      },
+      "signing_infos": {
+        "3": {
+          "valID": "3",
+          "startHeight": "0",
+          "indexOffset": "0"
+        },
+        "4": {
+          "valID": "4",
+          "startHeight": "0",
+          "indexOffset": "0"
+        },
+        "5": {
+          "valID": "5",
+          "startHeight": "0",
+          "indexOffset": "0"
+        },
+        "6": {
+          "valID": "6",
+          "startHeight": "0",
+          "indexOffset": "0"
+        },
+        "7": {
+          "valID": "7",
+          "startHeight": "0",
+          "indexOffset": "0"
+        },
+        "1": {
+          "valID": "1",
+          "startHeight": "0",
+          "indexOffset": "0"
+        },
+        "2": {
+          "valID": "2",
+          "startHeight": "0",
+          "indexOffset": "0"
+        }
+      },
+      "missed_blocks": {},
+      "buffer_val_slash_info": null,
+      "tick_val_slash_info": null,
+      "tick_count": "0"
+    },
+    "staking": {
+      "params": {
+        "staking_buffer_time": "600000000000"
+      },
+      "validators": [
+        {
+          "ID": "1",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x04450e6193ff5b67764024c4b548699b1e59ac88cc9ca06ab9047a3be583fe877e05889db2eac8a368d2e1968e22760aea55c5ca53db3285580b70a36b2e6d60e9",
+          "signer": "0x62c3adbece50a544aa3c45b53f86f672feb44ebc",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        },
+        {
+          "ID": "2",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x048c1e74ca9ea35ca86c617009ec2dbaaaefd00d236a6e28800f2332b178184007f92c08b98d9ca03d0822cc9a824677017b73688a25a7b9f5952ff4388007e060",
+          "signer": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        },
+        {
+          "ID": "3",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x04d8ef3d9493e13fdc5cb0a92c79d8174c95837e020d96d3ac74763163ed01f232249c6210aee58f1fecee52b78a6066271301498f34cebb1bdd414ffefaf2f13f",
+          "signer": "0x643d412bcc45d910f4514e2f597167d85856e08f",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        },
+        {
+          "ID": "4",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x0435f770d9d656156787a8e4f01234b62e80f68dffd44d0975fc3c61b2ace25962087ec5f95aebee44061b5d4d41fcfe201b434594823fcd94dcf56e8233020110",
+          "signer": "0xe848f81560e480ee381365a3d98d1d4e5f24159a",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        },
+        {
+          "ID": "5",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x04b48bd808dc61e8c88f16b2f83f24ea673198afda9f6ea0c14e52cd51f7a83212f75655feb8b901e0c02a3a32e6e47f893b6b044fe5d5be62702894804a0c1361",
+          "signer": "0xf4c2f1d772488cc6d3ec3c703b9710fa2c0e227e",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        },
+        {
+          "ID": "6",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x0499aa2fc47a810f4ebbc3f6bc1453acc7f946689ba329d28c591e09eef55840130e958c7715fb7aed0dd2ce1187cf7c2ef94578927d91b79b3f40c1f54814cefe",
+          "signer": "0xcb670b22515bcaeaa7b3ffb8149d303f00fb026e",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        },
+        {
+          "ID": "7",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x041a584e0cbea22b7ac5fe9aab96351035f3d58396492055b82ed1e4445a9043c9925babb1dcd0df7cd0abb8dc9cd720f68775da007bcf37375bfec7f8f5dc15ce",
+          "signer": "0x671e21ec4f4ce86b31bf215978e42aa7f0db8d6b",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "0"
+        }
+      ],
+      "current_val_set": {
+        "validators": [
+          {
+            "ID": "2",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x048c1e74ca9ea35ca86c617009ec2dbaaaefd00d236a6e28800f2332b178184007f92c08b98d9ca03d0822cc9a824677017b73688a25a7b9f5952ff4388007e060",
+            "signer": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "-6"
+          },
+          {
+            "ID": "1",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x04450e6193ff5b67764024c4b548699b1e59ac88cc9ca06ab9047a3be583fe877e05889db2eac8a368d2e1968e22760aea55c5ca53db3285580b70a36b2e6d60e9",
+            "signer": "0x62c3adbece50a544aa3c45b53f86f672feb44ebc",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "1"
+          },
+          {
+            "ID": "3",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x04d8ef3d9493e13fdc5cb0a92c79d8174c95837e020d96d3ac74763163ed01f232249c6210aee58f1fecee52b78a6066271301498f34cebb1bdd414ffefaf2f13f",
+            "signer": "0x643d412bcc45d910f4514e2f597167d85856e08f",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "1"
+          },
+          {
+            "ID": "7",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x041a584e0cbea22b7ac5fe9aab96351035f3d58396492055b82ed1e4445a9043c9925babb1dcd0df7cd0abb8dc9cd720f68775da007bcf37375bfec7f8f5dc15ce",
+            "signer": "0x671e21ec4f4ce86b31bf215978e42aa7f0db8d6b",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "1"
+          },
+          {
+            "ID": "6",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x0499aa2fc47a810f4ebbc3f6bc1453acc7f946689ba329d28c591e09eef55840130e958c7715fb7aed0dd2ce1187cf7c2ef94578927d91b79b3f40c1f54814cefe",
+            "signer": "0xcb670b22515bcaeaa7b3ffb8149d303f00fb026e",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "1"
+          },
+          {
+            "ID": "4",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x0435f770d9d656156787a8e4f01234b62e80f68dffd44d0975fc3c61b2ace25962087ec5f95aebee44061b5d4d41fcfe201b434594823fcd94dcf56e8233020110",
+            "signer": "0xe848f81560e480ee381365a3d98d1d4e5f24159a",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "1"
+          },
+          {
+            "ID": "5",
+            "startEpoch": "0",
+            "endEpoch": "0",
+            "nonce": "1",
+            "power": "1",
+            "pubKey": "0x04b48bd808dc61e8c88f16b2f83f24ea673198afda9f6ea0c14e52cd51f7a83212f75655feb8b901e0c02a3a32e6e47f893b6b044fe5d5be62702894804a0c1361",
+            "signer": "0xf4c2f1d772488cc6d3ec3c703b9710fa2c0e227e",
+            "last_updated": "",
+            "jailed": false,
+            "accum": "1"
+          }
+        ],
+        "proposer": {
+          "ID": "2",
+          "startEpoch": "0",
+          "endEpoch": "0",
+          "nonce": "1",
+          "power": "1",
+          "pubKey": "0x048c1e74ca9ea35ca86c617009ec2dbaaaefd00d236a6e28800f2332b178184007f92c08b98d9ca03d0822cc9a824677017b73688a25a7b9f5952ff4388007e060",
+          "signer": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+          "last_updated": "",
+          "jailed": false,
+          "accum": "-6"
+        }
+      },
+      "staking_sequences": null
+    },
+    "supply": {
+      "supply": {
+        "total": []
+      }
+    },
+    "topup": {
+      "tx_sequences": null,
+      "dividend_accounts": [
+        {
+          "user": "0x62c3adbece50a544aa3c45b53f86f672feb44ebc",
+          "feeAmount": "0"
+        },
+        {
+          "user": "0x54ffc23455ade612e7d0e068b36d1f80f0885cc0",
+          "feeAmount": "0"
+        },
+        {
+          "user": "0x643d412bcc45d910f4514e2f597167d85856e08f",
+          "feeAmount": "0"
+        },
+        {
+          "user": "0xe848f81560e480ee381365a3d98d1d4e5f24159a",
+          "feeAmount": "0"
+        },
+        {
+          "user": "0xf4c2f1d772488cc6d3ec3c703b9710fa2c0e227e",
+          "feeAmount": "0"
+        },
+        {
+          "user": "0xcb670b22515bcaeaa7b3ffb8149d303f00fb026e",
+          "feeAmount": "0"
+        },
+        {
+          "user": "0x671e21ec4f4ce86b31bf215978e42aa7f0db8d6b",
+          "feeAmount": "0"
+        }
+      ]
+    }
+  }
+}

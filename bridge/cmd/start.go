@@ -75,7 +75,9 @@ func StartBridge(isStandAlone bool) {
 			util.CloseBridgeDBInstance()
 
 			// exit
-			os.Exit(1)
+			if isStandAlone {
+				os.Exit(1)
+			}
 		}
 	}()
 
