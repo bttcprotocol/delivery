@@ -28,6 +28,11 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// BridgeCommands returns command for bridge service
+func BridgeCommands() *cobra.Command {
+	return rootCmd
+}
+
 // InitTendermintViperConfig sets global viper configuration needed to heimdall
 func InitTendermintViperConfig(cmd *cobra.Command) {
 	tendermintNode, _ := cmd.Flags().GetString(helper.NodeFlag)

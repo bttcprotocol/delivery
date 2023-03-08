@@ -30,7 +30,10 @@ const (
 	WithDeliveryConfigFlag = "with-delivery-config"
 	HomeFlag               = "home"
 	FlagClientHome         = "home-client"
-
+	ChainFlag              = "chain"
+	RestServerFlag         = "rest-server"
+	BridgeFlag             = "bridge"
+	LogLevel               = "log_level"
 	// ---
 	// TODO Move these to common client flags
 	// BroadcastBlock defines a tx broadcasting mode where the client waits for
@@ -383,4 +386,9 @@ func GetPubKey() secp256k1.PubKeySecp256k1 {
 // GetAddress returns address object
 func GetAddress() []byte {
 	return GetPubKey().Address().Bytes()
+}
+
+// GetValidChains returns all the valid chains
+func GetValidChains() []string {
+	return []string{"mainnet", "test1029", "local"}
 }

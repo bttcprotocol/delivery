@@ -1,8 +1,10 @@
 package server
 
 import (
+	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/lcd"
@@ -21,6 +23,41 @@ import (
 	// unnamed import of statik for swagger UI support
 	_ "github.com/maticnetwork/heimdall/server/statik"
 )
+
+func StartRestServer(cdc *codec.Codec, registerRoutesFn func(*lcd.RestServer), restCh chan struct{}) error {
+	rs := lcd.NewRestServer(cdc)
+	registerRoutesFn(rs)
+	logger := tmLog.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "rest-server")
+	go restServerHealthCheck(restCh)
+	err := rs.Start(
+		viper.GetString(client.FlagListenAddr),
+		viper.GetInt(client.FlagMaxOpenConnections),
+		0,
+		0,
+	)
+	if err != nil {
+		logger.Error("Cannot start REST server.", "Error", err)
+	}
+
+	return err
+}
+// Check locally if rest server port has been opened
+func restServerHealthCheck(restCh chan struct{}) {
+	address := viper.GetString(client.FlagListenAddr)
+	for {
+		conn, err := net.Dial("tcp", address[6:])
+		if err != nil {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+		if conn != nil {
+			defer conn.Close()
+		}
+
+		close(restCh)
+		break
+	}
+}
 
 // ServeCommands will generate a long-running rest server
 // (aka Light Client Daemon) that exposes functionality similar

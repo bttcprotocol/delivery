@@ -4,6 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/proxy"
 	"io"
 	"math/big"
 	"os"
@@ -20,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
@@ -35,7 +39,8 @@ import (
 	"github.com/maticnetwork/heimdall/app"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	"github.com/maticnetwork/heimdall/helper"
-	hmserver "github.com/maticnetwork/heimdall/server"
+	bridgeCmd "github.com/maticnetwork/heimdall/bridge/cmd"
+	restServer "github.com/maticnetwork/heimdall/server"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 	hmModule "github.com/maticnetwork/heimdall/types/module"
 )
@@ -49,6 +54,17 @@ var (
 	flagOutputDir        = "output-dir"
 	flagNodeDaemonHome   = "node-daemon-home"
 	flagNodeHostPrefix   = "node-host-prefix"
+)
+
+// Tendermint full-node start flags
+const (
+	flagAddress      = "address"
+	flagTraceStore   = "trace-store"
+	flagPruning      = "pruning"
+	flagCPUProfile   = "cpu-profile"
+	FlagMinGasPrices = "minimum-gas-prices"
+	FlagHaltHeight   = "halt-height"
+	FlagHaltTime     = "halt-time"
 )
 
 const (
@@ -84,6 +100,10 @@ func main() {
 		Short:             "Delivery Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
+	tendermintCmd := &cobra.Command{
+		Use:   "tendermint",
+		Short: "Tendermint subcommands",
+	}
 
 	// add new persistent flag for heimdall-config
 	rootCmd.PersistentFlags().String(
@@ -91,15 +111,32 @@ func main() {
 		"",
 		"Delivery config file path (default <home>/config/delivery-config.toml)",
 	)
+	rootCmd.PersistentFlags().String(
+		helper.ChainFlag,
+		"",
+		fmt.Sprintf("Set one of the chains: [%s]", strings.Join(helper.GetValidChains(), ",")),
+	)
 
-	// bind with-heimdall-config config with root cmd
+	// bind with-heimdall-config config and chain flag with root cmd
 	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.Flags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
 		logger.Error("main | BindPFlag | helper.WithDeliveryConfigFlag", "Error", err)
 	}
-	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)
+	if err := viper.BindPFlag(helper.ChainFlag, rootCmd.PersistentFlags().Lookup(helper.ChainFlag)); err != nil {
+		logger.Error("main | BindPFlag | helper.ChainFlag", "Error", err)
+	}
+	rootCmd.AddCommand(deliveryStart(ctx, newApp, cdc)) // New Heimdall start command
+
+	tendermintCmd.AddCommand(
+		server.ShowNodeIDCmd(ctx),
+		server.ShowValidatorCmd(ctx),
+		server.ShowAddressCmd(ctx),
+		server.VersionCmd(ctx),
+	)
+
 	rootCmd.AddCommand(showAccountCmd())
 	rootCmd.AddCommand(showPrivateKeyCmd())
-	rootCmd.AddCommand(hmserver.ServeCommands(cdc, hmserver.RegisterRoutes))
+	rootCmd.AddCommand(restServer.ServeCommands(cdc, restServer.RegisterRoutes))
+	rootCmd.AddCommand(bridgeCmd.BridgeCommands())
 	rootCmd.AddCommand(VerifyGenesis(ctx, cdc))
 	rootCmd.AddCommand(initCmd(ctx, cdc))
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
@@ -328,4 +365,189 @@ func WriteDefaultHeimdallConfig(path string, conf helper.Configuration) {
 func CryptoKeyToPubkey(key crypto.PubKey) hmTypes.PubKey {
 	validatorPublicKey := helper.GetPubObjects(key)
 	return hmTypes.NewPubKey(validatorPublicKey[:])
+}
+
+func deliveryStart(ctx *server.Context, appCreator server.AppCreator, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "start",
+		Short: "Run the full node",
+		Long: `Run the full node application with Tendermint in process.
+Starting rest server is provided with the flag --rest-server and starting bridge with 
+the flag --bridge when starting Tendermint in process.
+Pruning options can be provided via the '--pruning' flag. The options are as follows:
+syncable: only those states not needed for state syncing will be deleted (keeps last 100 + every 10000th)
+nothing: all historic states will be saved, nothing will be deleted (i.e. archiving node)
+everything: all saved states will be deleted, storing only the current state
+Node halting configurations exist in the form of two flags: '--halt-height' and '--halt-time'. During
+the ABCI Commit phase, the node will check if the current block height is greater than or equal to
+the halt-height or if the current block time is greater than or equal to the halt-time. If so, the
+node will attempt to gracefully shutdown and the block will not be committed. In addition, the node
+will not be able to commit subsequent blocks.
+For profiling and benchmarking purposes, CPU profiling can be enabled via the '--cpu-profile' flag
+which accepts a path for the resulting pprof file.
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx.Logger.Info("starting ABCI with Tendermint")
+
+			startRestServer, _ := cmd.Flags().GetBool(helper.RestServerFlag)
+			startBridge, _ := cmd.Flags().GetBool(helper.BridgeFlag)
+
+			_, err := startInProcess(ctx, appCreator, cdc, startRestServer, startBridge)
+			return err
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			// bridge binding
+			if err := viper.BindPFlag("all", cmd.Flags().Lookup("all")); err != nil {
+				logger.Error("GetStartCmd | BindPFlag | all", "Error", err)
+			}
+
+			if err := viper.BindPFlag("only", cmd.Flags().Lookup("only")); err != nil {
+				logger.Error("GetStartCmd | BindPFlag | only", "Error", err)
+			}
+		},
+	}
+
+	cmd.Flags().Bool(
+		helper.RestServerFlag,
+		false,
+		"Start rest server",
+	)
+
+	cmd.Flags().Bool(
+		helper.BridgeFlag,
+		false,
+		"Start bridge service",
+	)
+
+	cmd.PersistentFlags().String(helper.LogLevel, ctx.Config.LogLevel, "Log level")
+	if err := viper.BindPFlag(helper.LogLevel, cmd.PersistentFlags().Lookup(helper.LogLevel)); err != nil {
+		logger.Error("main | BindPFlag | helper.LogLevel", "Error", err)
+	}
+	// bridge flags
+	cmd.Flags().Bool("all", true, "start all bridge services")
+
+	// rest server flags
+	cmd.Flags().String(client.FlagListenAddr, "tcp://0.0.0.0:1317", "The address for the server to listen on")
+
+	// core flags for the ABCI application
+	cmd.Flags().String(flagAddress, "tcp://0.0.0.0:26658", "Listen address")
+	cmd.Flags().String(flagTraceStore, "", "Enable KVStore tracing to an output file")
+	cmd.Flags().String(flagPruning, "syncable", "Pruning strategy: syncable, nothing, everything")
+	cmd.Flags().String(
+		FlagMinGasPrices, "",
+		"Minimum gas prices to accept for transactions; Any fee in a tx must meet this minimum (e.g. 0.01photino;0.0001stake)",
+	)
+	cmd.Flags().Uint64(FlagHaltHeight, 0, "Height at which to gracefully halt the chain and shutdown the node")
+	cmd.Flags().Uint64(FlagHaltTime, 0, "Minimum block time (in Unix seconds) at which to gracefully halt the chain and shutdown the node")
+	cmd.Flags().String(flagCPUProfile, "", "Enable CPU profiling and write to the provided file")
+	cmd.Flags().String(helper.FlagClientHome, helper.DefaultCLIHome, "client's home directory")
+
+	// Heimdall flags
+	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
+	cmd.Flags().String(client.FlagNode, helper.DefaultTendermintNodeURL, "Address of the node to connect to")
+
+	// add support for all Tendermint-specific command line options
+	tcmd.AddNodeFlags(cmd)
+	return cmd
+}
+
+func openDB(rootDir string) (dbm.DB, error) {
+	dataDir := filepath.Join(rootDir, "data")
+	db, err := sdk.NewLevelDB("application", dataDir)
+	return db, err
+}
+
+func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
+	if traceWriterFile != "" {
+		w, err = os.OpenFile(
+			traceWriterFile,
+			os.O_WRONLY|os.O_APPEND|os.O_CREATE,
+			0666,
+		)
+		return
+	}
+	return
+}
+func startInProcess(ctx *server.Context, appCreator server.AppCreator, cdc *codec.Codec, startRestServer bool, startBridge bool) (*node.Node, error) {
+	cfg := ctx.Config
+	home := cfg.RootDir
+	traceWriterFile := viper.GetString(flagTraceStore)
+
+	// initialize heimdall if needed (do not force!)
+	initConfig := &initDeliveryConfig{
+		chainID:     "", // chain id should be auto generated if chain flag is not set to mumbai or mainnet
+		chain:       viper.GetString(helper.ChainFlag),
+		validatorID: 1, // default id for validator
+		clientHome:  viper.GetString(helper.FlagClientHome),
+		forceInit:   false,
+	}
+	err := deliveryInit(ctx, cdc, initConfig, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := openDB(home)
+	if err != nil {
+		return nil, err
+	}
+
+	traceWriter, err := openTraceWriter(traceWriterFile)
+	if err != nil {
+		return nil, err
+	}
+	app := appCreator(ctx.Logger, db, traceWriter)
+
+	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
+	if err != nil {
+		return nil, err
+	}
+
+	server.UpgradeOldPrivValFile(cfg)
+
+	// create & start tendermint node
+	tmNode, err := node.NewNode(
+		cfg,
+		privval.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
+		nodeKey,
+		proxy.NewLocalClientCreator(app),
+		node.DefaultGenesisDocProviderFunc(cfg),
+		node.DefaultDBProvider,
+		node.DefaultMetricsProvider(cfg.Instrumentation),
+		ctx.Logger.With("module", "node"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tmNode.Start(); err != nil {
+		return nil, err
+	}
+
+	// start rest
+	if startRestServer {
+		restCh := make(chan struct{})
+		go func() {
+			_ = restServer.StartRestServer(cdc, restServer.RegisterRoutes, restCh)
+		}()
+		<-restCh
+	}
+
+	// start bridge
+	if startBridge {
+		go func() {
+			bridgeCmd.StartBridge(false)
+		}()
+	}
+
+	server.TrapSignal(func() {
+		ctx.Logger.Info("trap signal")
+
+		if tmNode.IsRunning() {
+			_ = tmNode.Stop()
+		}
+
+		ctx.Logger.Info("exiting...")
+	})
+	// TODO add gracefully shut down of the services rest server, bridge and daemon
+	select {}
 }

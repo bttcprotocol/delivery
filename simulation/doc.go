@@ -65,7 +65,7 @@ To execute simulation from a genesis file:
  	-Commit=true \
  	-Seed=99 \
  	-Period=5 \
-	-Genesis=/path/to/genesis.json \
+	-Genesis=/path/to/mainnet.json \
  	-v -timeout 24h
 
 To execute simulation from a simulation params file:
@@ -106,7 +106,7 @@ To export the simulation app state (i.e genesis) to a file:
  	-Commit=true \
  	-Seed=99 \
  	-Period=5 \
-	-ExportStatePath=/path/to/genesis.json \
+	-ExportStatePath=/path/to/mainnet.json \
 	 v -timeout 24h
 
 Params
