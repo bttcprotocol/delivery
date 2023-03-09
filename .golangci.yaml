@@ -5,6 +5,8 @@ linters:
     - scopelint
     - interfacer
     - maligned
+    - gomoddirectives
+    - gci
 
 service:
   golangci-lint-version: 1.41

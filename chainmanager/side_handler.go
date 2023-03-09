@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ethCommon "github.com/maticnetwork/bor/common"
-	ethTypes "github.com/maticnetwork/bor/core/types"
+	ethCommon "github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/common"
 	"github.com/maticnetwork/heimdall/helper"

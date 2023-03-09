@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/maticnetwork/bor/core/types"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
