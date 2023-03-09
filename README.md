@@ -25,3 +25,8 @@ $ deliveryd start
 $ deliveryd rest-server 
 ```
 
+### Run-bridge 
+```bash 
+$ deliveryd bridge
+```
+
