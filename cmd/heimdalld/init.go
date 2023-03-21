@@ -115,7 +115,6 @@ func deliveryInit(ctx *server.Context, cdc *codec.Codec, initConfig *initDeliver
 	vals := []*hmTypes.Validator{validator}
 	validatorSet := hmTypes.NewValidatorSet(vals)
 
-	dividendAccounts := []hmTypes.DividendAccount{dividendAccount}
 
 	// create validator signing info
 	valSigningInfo := hmTypes.NewValidatorSigningInfo(validator.ID, 0, 0, 0)
@@ -152,8 +151,14 @@ func deliveryInit(ctx *server.Context, cdc *codec.Codec, initConfig *initDeliver
 		return err
 	}
 
+	return toPrintWriteGenesisFile(dividendAccount,chainID, nodeID, cdc, config, appStateBytes)
+
+}
+
+func toPrintWriteGenesisFile(dividendAccount hmTypes.DividendAccount,chainID string, nodeID string, cdc *codec.Codec, config *cfg.Config, appStateBytes map[string]json.RawMessage) error {
 	// topup state change
-	appStateBytes, err = topupTypes.SetGenesisStateToAppState(appStateBytes, dividendAccounts)
+	dividendAccounts := []hmTypes.DividendAccount{dividendAccount}
+	appStateBytes, err := topupTypes.SetGenesisStateToAppState(appStateBytes, dividendAccounts)
 	if err != nil {
 		return err
 	}
@@ -163,11 +168,7 @@ func deliveryInit(ctx *server.Context, cdc *codec.Codec, initConfig *initDeliver
 	if err != nil {
 		return err
 	}
-	return toPrintWriteGenesisFile(chainID, nodeID, cdc, config, appStateJSON)
 
-}
-
-func toPrintWriteGenesisFile(chainID string, nodeID string, cdc *codec.Codec, config *cfg.Config, appStateJSON []byte) error {
 	toPrint := struct {
 		ChainID string `json:"chain_id"`
 		NodeID  string `json:"node_id"`
