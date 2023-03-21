@@ -38,8 +38,8 @@ import (
 
 	"github.com/maticnetwork/heimdall/app"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
-	"github.com/maticnetwork/heimdall/helper"
 	bridgeCmd "github.com/maticnetwork/heimdall/bridge/cmd"
+	"github.com/maticnetwork/heimdall/helper"
 	restServer "github.com/maticnetwork/heimdall/server"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 	hmModule "github.com/maticnetwork/heimdall/types/module"
@@ -132,11 +132,15 @@ func main() {
 		server.ShowAddressCmd(ctx),
 		server.VersionCmd(ctx),
 	)
+	// add tendermint subCmds
+	rootCmd.AddCommand(tendermintCmd)
+	rootCmd.AddCommand(server.ExportCmd(ctx, cdc, exportAppStateAndTMValidators))
 
 	rootCmd.AddCommand(showAccountCmd())
 	rootCmd.AddCommand(showPrivateKeyCmd())
 	rootCmd.AddCommand(restServer.ServeCommands(cdc, restServer.RegisterRoutes))
 	rootCmd.AddCommand(bridgeCmd.BridgeCommands())
+
 	rootCmd.AddCommand(VerifyGenesis(ctx, cdc))
 	rootCmd.AddCommand(initCmd(ctx, cdc))
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
@@ -407,18 +411,6 @@ which accepts a path for the resulting pprof file.
 		},
 	}
 
-	cmd.Flags().Bool(
-		helper.RestServerFlag,
-		false,
-		"Start rest server",
-	)
-
-	cmd.Flags().Bool(
-		helper.BridgeFlag,
-		false,
-		"Start bridge service",
-	)
-
 	cmd.PersistentFlags().String(helper.LogLevel, ctx.Config.LogLevel, "Log level")
 	if err := viper.BindPFlag(helper.LogLevel, cmd.PersistentFlags().Lookup(helper.LogLevel)); err != nil {
 		logger.Error("main | BindPFlag | helper.LogLevel", "Error", err)
@@ -430,6 +422,18 @@ which accepts a path for the resulting pprof file.
 	cmd.Flags().String(client.FlagListenAddr, "tcp://0.0.0.0:1317", "The address for the server to listen on")
 
 	// core flags for the ABCI application
+	setTendermintFlags(cmd)
+
+	// Heimdall flags
+	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
+	cmd.Flags().String(client.FlagNode, helper.DefaultTendermintNodeURL, "Address of the node to connect to")
+
+	// add support for all Tendermint-specific command line options
+	tcmd.AddNodeFlags(cmd)
+	return cmd
+}
+
+func setTendermintFlags(cmd *cobra.Command) {
 	cmd.Flags().String(flagAddress, "tcp://0.0.0.0:26658", "Listen address")
 	cmd.Flags().String(flagTraceStore, "", "Enable KVStore tracing to an output file")
 	cmd.Flags().String(flagPruning, "syncable", "Pruning strategy: syncable, nothing, everything")
@@ -442,13 +446,6 @@ which accepts a path for the resulting pprof file.
 	cmd.Flags().String(flagCPUProfile, "", "Enable CPU profiling and write to the provided file")
 	cmd.Flags().String(helper.FlagClientHome, helper.DefaultCLIHome, "client's home directory")
 
-	// Heimdall flags
-	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
-	cmd.Flags().String(client.FlagNode, helper.DefaultTendermintNodeURL, "Address of the node to connect to")
-
-	// add support for all Tendermint-specific command line options
-	tcmd.AddNodeFlags(cmd)
-	return cmd
 }
 
 func openDB(rootDir string) (dbm.DB, error) {
@@ -523,6 +520,13 @@ func startInProcess(ctx *server.Context, appCreator server.AppCreator, cdc *code
 		return nil, err
 	}
 
+	startRestServerOrBridge(startRestServer, startBridge, cdc, ctx, tmNode)
+
+	// TODO add gracefully shut down of the services rest server, bridge and daemon
+	select {}
+}
+
+func startRestServerOrBridge(startRestServer bool, startBridge bool, cdc *codec.Codec, ctx *server.Context, tmNode *node.Node) {
 	// start rest
 	if startRestServer {
 		restCh := make(chan struct{})
@@ -538,16 +542,12 @@ func startInProcess(ctx *server.Context, appCreator server.AppCreator, cdc *code
 			bridgeCmd.StartBridge(false)
 		}()
 	}
-
 	server.TrapSignal(func() {
 		ctx.Logger.Info("trap signal")
 
 		if tmNode.IsRunning() {
 			_ = tmNode.Stop()
 		}
-
 		ctx.Logger.Info("exiting...")
 	})
-	// TODO add gracefully shut down of the services rest server, bridge and daemon
-	select {}
 }

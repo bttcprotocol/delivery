@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// BridgeCommands returns command for bridge service
+// BridgeCommands returns command for bridge service.
 func BridgeCommands() *cobra.Command {
 	return rootCmd
 }

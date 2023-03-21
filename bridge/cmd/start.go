@@ -65,7 +65,6 @@ func StartBridge(isStandAlone bool) {
 					logger.Error("GetStartCmd | service.Stop", "Error", err)
 				}
 			}
-
 			// stop http client
 			if err := _httpClient.Stop(); err != nil {
 				logger.Error("GetStartCmd | _httpClient.Stop", "Error", err)
