@@ -62,9 +62,9 @@ endif
 build-docker:
 	@echo Fetching latest tag: $(LATEST_GIT_TAG)
 	git checkout $(LATEST_GIT_TAG)
-	docker build -t "bttcprotocol/delivery:$(LATEST_GIT_TAG)" -f docker/Dockerfile .
+	docker build -t "delivery:$(LATEST_GIT_TAG)" -f docker/Dockerfile .
 
 build-docker-develop:
-	docker build -t "bttcprotocol/delivery:develop" -f docker/Dockerfile.develop .
+	docker build -t "delivery:develop" -f docker/Dockerfile.develop .
 
 .PHONY: contracts build
