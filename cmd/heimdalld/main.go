@@ -522,7 +522,6 @@ func startInProcess(ctx *server.Context, appCreator server.AppCreator, cdc *code
 
 	startRestServerOrBridge(startRestServer, startBridge, cdc, ctx, tmNode)
 
-	// TODO add gracefully shut down of the services rest server, bridge and daemon
 	select {}
 }
 

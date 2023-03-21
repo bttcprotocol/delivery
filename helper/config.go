@@ -386,7 +386,7 @@ func GetAddress() []byte {
 	return GetPubKey().Address().Bytes()
 }
 
-// GetValidChains returns all the valid chains
+// GetValidChains returns all the valid chains.
 func GetValidChains() []string {
-	return []string{"mainnet", "test1029", "local"}
+	return []string{"mainnet", "donau", "local"}
 }

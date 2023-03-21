@@ -163,21 +163,6 @@ func deliveryInit(ctx *server.Context, cdc *codec.Codec, initConfig *initDeliver
 	if err != nil {
 		return err
 	}
-
-	toPrint := struct {
-		ChainID string `json:"chain_id"`
-		NodeID  string `json:"node_id"`
-	}{
-		chainID,
-		nodeID,
-	}
-
-	out, err := codec.MarshalJSONIndent(cdc, toPrint)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintf(os.Stderr, "%s\n", string(out))
 	return toPrintWriteGenesisFile(chainID, nodeID, cdc, config, appStateJSON)
 
 }

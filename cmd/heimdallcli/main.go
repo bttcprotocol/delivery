@@ -227,9 +227,9 @@ func exportCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 				panic(err)
 			}
 
-			err = writeGenesisFile(file.Rootify("config/dump-mainnet.json", config.RootDir), chainID, appState)
+			err = writeGenesisFile(file.Rootify("config/dump-genesis.json", config.RootDir), chainID, appState)
 			if err == nil {
-				fmt.Println("New genesis json file created:", file.Rootify("config/dump-mainnet.json", config.RootDir))
+				fmt.Println("New genesis json file created:", file.Rootify("config/dump-genesis.json", config.RootDir))
 			}
 			return err
 		},

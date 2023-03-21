@@ -29,7 +29,7 @@ const (
 	waitDuration = 1 * time.Minute
 	logLevel     = "log_level"
 )
-// StartBridge starts bridge service, isStandAlone prevents os.Exit if the bridge started as side service
+// StartBridge starts bridge service, isStandAlone prevents os.Exit if the bridge started as side service.
 func StartBridge(isStandAlone bool) {
 	var logger = helper.Logger.With("module", "bridge/cmd/")
 
@@ -106,7 +106,6 @@ func StartBridge(isStandAlone bool) {
 	for _, service := range services {
 		go func(serv common.Service) {
 			defer wg.Done()
-			// TODO handle error while starting service
 			if err := serv.Start(); err != nil {
 				logger.Error("GetStartCmd | serv.Start", "Error", err)
 			}
@@ -118,7 +117,8 @@ func StartBridge(isStandAlone bool) {
 	wg.Wait()
 }
 
-// GetStartCmd returns the start command to start bridge
+
+// GetStartCmd returns the start command to start bridge.
 func GetStartCmd() *cobra.Command {
 	var logger = helper.Logger.With("module", "bridge/cmd/")
 	startCmd := &cobra.Command{
