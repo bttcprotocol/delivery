@@ -1,5 +1,6 @@
 package cli
 
+// nolint
 import (
 	"bytes"
 	"encoding/json"
@@ -7,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	ethTypes "github.com/maticnetwork/bor/core/types"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -16,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/maticnetwork/bor/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	types "github.com/maticnetwork/heimdall/checkpoint/types"
 	hmClient "github.com/maticnetwork/heimdall/client"

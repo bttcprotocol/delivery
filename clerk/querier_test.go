@@ -11,7 +11,7 @@ import (
 
 	"github.com/maticnetwork/heimdall/helper"
 
-	ethTypes "github.com/maticnetwork/bor/core/types"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/app"
 	"github.com/maticnetwork/heimdall/clerk"
 	"github.com/maticnetwork/heimdall/clerk/types"

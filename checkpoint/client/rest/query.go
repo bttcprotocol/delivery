@@ -12,8 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 
-	"github.com/maticnetwork/bor/common"
-	ethcmn "github.com/maticnetwork/bor/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/maticnetwork/heimdall/checkpoint/types"
 	"github.com/maticnetwork/heimdall/helper"
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
@@ -258,7 +257,7 @@ func prepareCheckpointHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 				Proposer:   validatorSet.Proposer.Signer,
 				StartBlock: uint64(start),
 				EndBlock:   uint64(end),
-				RootHash:   ethcmn.BytesToHash(roothash),
+				RootHash:   common.BytesToHash(roothash),
 			}
 
 			result, err = json.Marshal(checkpoint)

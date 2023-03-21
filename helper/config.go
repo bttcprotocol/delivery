@@ -11,10 +11,10 @@ import (
 
 	"github.com/maticnetwork/heimdall/tron"
 
-	ethCrypto "github.com/maticnetwork/bor/crypto"
-	"github.com/maticnetwork/bor/eth"
-	"github.com/maticnetwork/bor/ethclient"
-	"github.com/maticnetwork/bor/rpc"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/maticnetwork/heimdall/file"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
@@ -73,10 +73,8 @@ const (
 	DefaultStakingPollInterval      = 1 * time.Minute
 	DefaultStartListenBlock         = 0
 
-
 	DefaultMainchainMaxGasPrice = 400000000000 // 400 Gwei
 	DefaultTronFeeLimit         = uint64(200000000)
-
 
 	DefaultEthBusyLimitTxs  = 1000
 	DefaultBscBusyLimitTxs  = 1000

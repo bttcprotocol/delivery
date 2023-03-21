@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maticnetwork/bor/common"
+	"github.com/ethereum/go-ethereum/common"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	"github.com/maticnetwork/heimdall/types"
 	"github.com/spf13/viper"
