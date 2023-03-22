@@ -402,14 +402,14 @@ func GetValidChains() []string {
 }
 
 // UpdateTendermintConfig updates tenedermint config with flags and default values if needed.
-func UpdateTendermintConfig(tendermintConfig *cfg.Config, v *viper.Viper) {
+func UpdateTendermintConfig(tendermintConfig *cfg.Config, vipFlag *viper.Viper) {
 	// update tendermintConfig.P2P.Seeds
-	seedsFlagValue := v.GetString(SeedsFlag)
+	seedsFlagValue := vipFlag.GetString(SeedsFlag)
 	if seedsFlagValue != "" {
 		tendermintConfig.P2P.Seeds = seedsFlagValue
 	}
 
-	chain := v.GetString(ChainFlag)
+	chain := vipFlag.GetString(ChainFlag)
 	if tendermintConfig.P2P.Seeds == "" {
 		switch chain {
 		case "mainnet":
