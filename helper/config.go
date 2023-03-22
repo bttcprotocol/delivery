@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	NodeFlag               = "node"
+	TendermintNodeFlag     = "node"
 	WithDeliveryConfigFlag = "with-delivery-config"
 	HomeFlag               = "home"
 	FlagClientHome         = "home-client"
@@ -97,7 +97,7 @@ const (
 
 	DefaultBttcChainID string = "15001"
 
-	DefaultChain string = "mainnet"
+	DefaultChain = "mainnet"
 
 	secretFilePerm = 0600
 )

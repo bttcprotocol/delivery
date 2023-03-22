@@ -44,6 +44,7 @@ import (
 
 	"github.com/maticnetwork/heimdall/app"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
+	hmbridge "github.com/maticnetwork/heimdall/bridge/cmd"
 	"github.com/maticnetwork/heimdall/helper"
 	restServer "github.com/maticnetwork/heimdall/server"
 	hmTypes "github.com/maticnetwork/heimdall/types"
@@ -156,6 +157,7 @@ func main() {
 	rootCmd.AddCommand(showAccountCmd())
 	rootCmd.AddCommand(showPrivateKeyCmd())
 	rootCmd.AddCommand(restServer.ServeCommands(cdc, restServer.RegisterRoutes))
+	rootCmd.AddCommand(hmbridge.BridgeCommands())
 	rootCmd.AddCommand(VerifyGenesis(ctx, cdc))
 	rootCmd.AddCommand(initCmd(ctx, cdc))
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
