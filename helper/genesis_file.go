@@ -10,8 +10,11 @@ import (
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
-//go:embed allocs
-var allocs embed.FS
+// nolint
+var (
+	//go:embed allocs
+	allocs embed.FS
+)
 
 func WriteGenesisFile(chain string, filePath string, cdc *codec.Codec) (bool, error) {
 	switch chain {
