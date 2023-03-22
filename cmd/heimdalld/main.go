@@ -1,41 +1,51 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
+	"github.com/tendermint/tendermint/proxy"
 	tmTypes "github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
 	dbm "github.com/tendermint/tm-db"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/maticnetwork/heimdall/app"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	"github.com/maticnetwork/heimdall/helper"
-	hmserver "github.com/maticnetwork/heimdall/server"
+	restServer "github.com/maticnetwork/heimdall/server"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 	hmModule "github.com/maticnetwork/heimdall/types/module"
 )
@@ -51,8 +61,23 @@ var (
 	flagNodeHostPrefix   = "node-host-prefix"
 )
 
+// Tendermint full-node start flags.
 const (
-	nodeDirPerm = 0755
+	flagAddress      = "address"
+	flagTraceStore   = "trace-store"
+	flagPruning      = "pruning"
+	flagCPUProfile   = "cpu-profile"
+	FlagMinGasPrices = "minimum-gas-prices"
+	FlagHaltHeight   = "halt-height"
+	FlagHaltTime     = "halt-time"
+)
+
+// nolint
+const (
+	nodeDirPerm     = 0755
+	tracerWritePerm = 0666
+	pvKeyFilePerm   = 0777
+	pvStateFilePerm = 0777
 )
 
 var ZeroIntString = big.NewInt(0).String()
@@ -79,6 +104,9 @@ func main() {
 	cdc := app.MakeCodec()
 	ctx := server.NewDefaultContext()
 
+	shutdownCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	rootCmd := &cobra.Command{
 		Use:               "deliveryd",
 		Short:             "Delivery Daemon (server)",
@@ -91,15 +119,43 @@ func main() {
 		"",
 		"Delivery config file path (default <home>/config/delivery-config.toml)",
 	)
+	rootCmd.PersistentFlags().String(
+		helper.ChainFlag,
+		"",
+		fmt.Sprintf("Set one of the chains: [%s]", strings.Join(helper.GetValidChains(), ",")),
+	)
 
 	// bind with-heimdall-config config with root cmd
 	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.Flags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
 		logger.Error("main | BindPFlag | helper.WithDeliveryConfigFlag", "Error", err)
 	}
-	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)
+
+	if err := viper.BindPFlag(helper.ChainFlag, rootCmd.PersistentFlags().Lookup(helper.ChainFlag)); err != nil {
+		logger.Error("main | BindPFlag | helper.ChainFlag", "Error", err)
+	}
+
+	tendermintCmd := &cobra.Command{ // nolint: exhaustivestruct
+		Use:   "tendermint",
+		Short: "Tendermint subcommands",
+	}
+
+	rootCmd.AddCommand(deliveryStart(shutdownCtx, ctx, getNewApp(ctx), cdc)) // New delivery start command
+
+	tendermintCmd.AddCommand(
+		server.ShowNodeIDCmd(ctx),
+		server.ShowValidatorCmd(ctx),
+		server.ShowAddressCmd(ctx),
+		server.VersionCmd(ctx),
+	)
+
+	rootCmd.AddCommand(server.UnsafeResetAllCmd(ctx))
+	rootCmd.AddCommand(tendermintCmd)
+	rootCmd.AddCommand(server.ExportCmd(ctx, cdc, exportAppStateAndTMValidators))
+	rootCmd.AddCommand(version.Cmd)
+
 	rootCmd.AddCommand(showAccountCmd())
 	rootCmd.AddCommand(showPrivateKeyCmd())
-	rootCmd.AddCommand(hmserver.ServeCommands(cdc, hmserver.RegisterRoutes))
+	rootCmd.AddCommand(restServer.ServeCommands(cdc, restServer.RegisterRoutes))
 	rootCmd.AddCommand(VerifyGenesis(ctx, cdc))
 	rootCmd.AddCommand(initCmd(ctx, cdc))
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
@@ -113,16 +169,214 @@ func main() {
 	}
 }
 
-func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	// init heimdall config
-	helper.InitDeliveryConfig("")
-	// create new heimdall app
-	return app.NewHeimdallApp(logger, db, baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))))
+func getNewApp(serverCtx *server.Context) func(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
+	return func(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
+		// init heimdall config
+		helper.InitDeliveryConfig("")
+		helper.UpdateTendermintConfig(serverCtx.Config, viper.GetViper())
+		// create new heimdall app
+		return app.NewHeimdallApp(logger, db,
+			baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))))
+	}
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer, height int64, forZeroHeight bool, jailWhiteList []string) (json.RawMessage, []tmTypes.GenesisValidator, error) {
 	bapp := app.NewHeimdallApp(logger, db)
 	return bapp.ExportAppStateAndValidators()
+}
+
+func deliveryStart(shutdownCtx context.Context,
+	ctx *server.Context, appCreator server.AppCreator, cdc *codec.Codec,
+) *cobra.Command {
+	cmd := &cobra.Command{ // nolint: exhaustivestruct
+		Use:   "start",
+		Short: "Run the full node",
+		Long: `Run the full node application with Tendermint in process.
+Pruning options can be provided via the '--pruning' flag. The options are as follows:
+syncable: only those states not needed for state syncing will be deleted (keeps last 100 + every 10000th)
+nothing: all historic states will be saved, nothing will be deleted (i.e. archiving node)
+everything: all saved states will be deleted, storing only the current state
+Node halting configurations exist in the form of two flags: '--halt-height' and '--halt-time'. During
+the ABCI Commit phase, the node will check if the current block height is greater than or equal to
+the halt-height or if the current block time is greater than or equal to the halt-time. If so, the
+node will attempt to gracefully shutdown and the block will not be committed. In addition, the node
+will not be able to commit subsequent blocks.
+For profiling and benchmarking purposes, CPU profiling can be enabled via the '--cpu-profile' flag
+which accepts a path for the resulting pprof file.
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx.Logger.Info("starting ABCI with Tendermint")
+			err := startInProcess(shutdownCtx, ctx, appCreator, cdc)
+
+			return err
+		},
+	}
+
+	cmd.PersistentFlags().String(helper.LogLevel, ctx.Config.LogLevel, "Log level")
+
+	if err := viper.BindPFlag(helper.LogLevel, cmd.PersistentFlags().Lookup(helper.LogLevel)); err != nil {
+		logger.Error("main | BindPFlag | helper.LogLevel", "Error", err)
+	}
+
+	// core flags for the ABCI application
+	cmd.Flags().String(flagAddress, "tcp://0.0.0.0:26658", "Listen address")
+	cmd.Flags().String(flagTraceStore, "", "Enable KVStore tracing to an output file")
+	cmd.Flags().String(flagPruning, "syncable", "Pruning strategy: syncable, nothing, everything")
+	cmd.Flags().String(
+		FlagMinGasPrices, "",
+		`Minimum gas prices to accept for transactions; Any fee in a tx must meet this minimum 
+		(e.g. 0.01photino;0.0001stake)`,
+	)
+	cmd.Flags().Uint64(FlagHaltHeight, 0,
+		"Height at which to gracefully halt the chain and shutdown the node")
+	cmd.Flags().Uint64(FlagHaltTime, 0,
+		"Minimum block time (in Unix seconds) at which to gracefully halt the chain and shutdown the node")
+	cmd.Flags().String(flagCPUProfile, "",
+		"Enable CPU profiling and write to the provided file")
+
+	// delivery flags
+	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
+	cmd.Flags().String(client.FlagNode, helper.DefaultTendermintNode, "Address of the node to connect to")
+	cmd.Flags().String(helper.FlagClientHome, helper.DefaultCLIHome, "client's home directory")
+
+	// add support for all Tendermint-specific command line options
+	tcmd.AddNodeFlags(cmd)
+
+	return cmd
+}
+
+// nolint: cyclop
+func startInProcess(shutdownCtx context.Context, ctx *server.Context,
+	appCreator server.AppCreator, cdc *codec.Codec,
+) error {
+	cfg := ctx.Config
+	home := cfg.RootDir
+	traceWriterFile := viper.GetString(flagTraceStore)
+
+	// initialize heimdall if needed (do not force!)
+	initConfig := &initDeliveryConfig{
+		chainID:     "", // chain id should be auto generated if chain flag is not set to donau or mainnet
+		chain:       viper.GetString(helper.ChainFlag),
+		validatorID: 1, // default id for validator
+		clientHome:  viper.GetString(helper.FlagClientHome),
+		forceInit:   false,
+	}
+
+	if err := initDelivery(ctx, cdc, initConfig, cfg); err != nil {
+		return fmt.Errorf("failed init delivery: %w", err)
+	}
+
+	database, err := openDB(home)
+	if err != nil {
+		return fmt.Errorf("failed to open DB: %w", err)
+	}
+
+	traceWriter, err := openTraceWriter(traceWriterFile)
+	if err != nil {
+		return fmt.Errorf("failed to open trace writer: %w", err)
+	}
+
+	app := appCreator(ctx.Logger, database, traceWriter)
+
+	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
+	if err != nil {
+		return fmt.Errorf("failed to load or gen node key: %w", err)
+	}
+
+	server.UpgradeOldPrivValFile(cfg)
+
+	// create & start tendermint node
+	tmNode, err := node.NewNode(
+		cfg,
+		privval.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
+		nodeKey,
+		proxy.NewLocalClientCreator(app),
+		node.DefaultGenesisDocProviderFunc(cfg),
+		node.DefaultDBProvider,
+		node.DefaultMetricsProvider(cfg.Instrumentation),
+		ctx.Logger.With("module", "node"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create new node: %w", err)
+	}
+
+	// start Tendermint node here
+	if err = tmNode.Start(); err != nil {
+		return fmt.Errorf("failed to start Tendermint node: %w", err)
+	}
+
+	var cpuProfileCleanup func()
+
+	if cpuProfile := viper.GetString(flagCPUProfile); cpuProfile != "" {
+		file, err := os.Create(cpuProfile)
+		if err != nil {
+			return err
+		}
+
+		ctx.Logger.Info("starting CPU profiler", "profile", cpuProfile)
+
+		if err = pprof.StartCPUProfile(file); err != nil {
+			return err
+		}
+
+		cpuProfileCleanup = func() {
+			ctx.Logger.Info("stopping CPU profiler", "profile", cpuProfile)
+			pprof.StopCPUProfile()
+			file.Close()
+		}
+	}
+
+	// using group context makes sense in case that if one of
+	// the processes produces error the rest will go and shutdown
+	errGroup, gCtx := errgroup.WithContext(shutdownCtx)
+
+	// stop phase for Tendermint node
+	errGroup.Go(func() error {
+		// wait here for interrupt signal or
+		// until something in the group returns non-nil error
+		<-gCtx.Done()
+		ctx.Logger.Info("exiting...")
+
+		if cpuProfileCleanup != nil {
+			cpuProfileCleanup()
+		}
+		if tmNode.IsRunning() {
+			return tmNode.Stop()
+		}
+
+		database.Close()
+
+		return nil
+	})
+
+	// wait here for all go routines to finish,
+	// or something to break
+	if err := errGroup.Wait(); err != nil {
+		ctx.Logger.Error("Error shutting down services", "Error", err)
+
+		return err
+	}
+
+	return nil
+}
+
+// nolint: ireturn
+func openDB(rootDir string) (dbm.DB, error) {
+	dataDir := filepath.Join(rootDir, "data")
+
+	return sdk.NewLevelDB("application", dataDir)
+}
+
+func openTraceWriter(traceWriterFile string) (io.Writer, error) {
+	if traceWriterFile == "" {
+		return nil, nil
+	}
+
+	return os.OpenFile(
+		traceWriterFile,
+		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
+		tracerWritePerm,
+	)
 }
 
 func showAccountCmd() *cobra.Command {
@@ -295,7 +549,6 @@ func writeGenesisFile(genesisTime time.Time, genesisFile, chainID string, appSta
 func InitializeNodeValidatorFiles(
 	config *cfg.Config) (nodeID string, valPubKey crypto.PubKey, priv crypto.PrivKey, err error,
 ) {
-
 	nodeKey, err := p2p.LoadOrGenNodeKey(config.NodeKeyFile())
 	if err != nil {
 		return nodeID, valPubKey, priv, err
@@ -305,12 +558,12 @@ func InitializeNodeValidatorFiles(
 	server.UpgradeOldPrivValFile(config)
 
 	pvKeyFile := config.PrivValidatorKeyFile()
-	if err := common.EnsureDir(filepath.Dir(pvKeyFile), 0777); err != nil {
+	if err := common.EnsureDir(filepath.Dir(pvKeyFile), pvKeyFilePerm); err != nil {
 		return nodeID, valPubKey, priv, err
 	}
 
 	pvStateFile := config.PrivValidatorStateFile()
-	if err := common.EnsureDir(filepath.Dir(pvStateFile), 0777); err != nil {
+	if err := common.EnsureDir(filepath.Dir(pvStateFile), pvStateFilePerm); err != nil {
 		return nodeID, valPubKey, priv, err
 	}
 
