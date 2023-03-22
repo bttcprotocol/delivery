@@ -72,11 +72,12 @@ const (
 	FlagHaltTime     = "halt-time"
 )
 
+// nolint
 const (
-	nodeDirPerm     = 0o755
-	tracerWritePerm = 0o666
-	pvKeyFilePerm   = 0o777
-	pvStateFilePerm = 0o777
+	nodeDirPerm     = 0755
+	tracerWritePerm = 0666
+	pvKeyFilePerm   = 0777
+	pvStateFilePerm = 0777
 )
 
 var ZeroIntString = big.NewInt(0).String()
@@ -138,7 +139,7 @@ func main() {
 		Short: "Tendermint subcommands",
 	}
 
-	rootCmd.AddCommand(deliveryStart(shutdownCtx, ctx, newApp, cdc)) // New delivery start command
+	rootCmd.AddCommand(deliveryStart(shutdownCtx, ctx, getNewApp(ctx), cdc)) // New delivery start command
 
 	tendermintCmd.AddCommand(
 		server.ShowNodeIDCmd(ctx),
@@ -168,11 +169,14 @@ func main() {
 	}
 }
 
-func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	// init heimdall config
-	helper.InitDeliveryConfig("")
-	// create new heimdall app
-	return app.NewHeimdallApp(logger, db, baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))))
+func getNewApp(serverCtx *server.Context) func(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
+	return func(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
+		// init heimdall config
+		helper.InitDeliveryConfig("")
+		helper.UpdateTendermintConfig(serverCtx.Config, viper.GetViper())
+		// create new heimdall app
+		return app.NewHeimdallApp(logger, db, baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))))
+	}
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer, height int64, forZeroHeight bool, jailWhiteList []string) (json.RawMessage, []tmTypes.GenesisValidator, error) {

@@ -26,7 +26,7 @@ func WriteGenesisFile(chain string, filePath string, cdc *codec.Codec) (bool, er
 			err = genDoc.SaveAs(filePath)
 		}
 
-		return err == nil, fmt.Errorf("failed to save file: %w", err)
+		return err == nil, nil
 
 	default:
 		return false, nil

@@ -22,6 +22,7 @@ import (
 	logger "github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/privval"
 
+	cfg "github.com/tendermint/tendermint/config"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -32,6 +33,7 @@ const (
 	FlagClientHome         = "home-client"
 	ChainFlag              = "chain"
 	LogLevel               = "log_level"
+	SeedsFlag              = "seeds"
 
 	// ---
 	// TODO Move these to common client flags
@@ -65,6 +67,11 @@ const (
 
 	DefaultTendermintNode = "tcp://localhost:26657"
 
+	// nolint
+	DefaultMainnetSeeds = "8f485f62d76b2d7243f0a6c15233c9f6cb94fc05@34.239.59.85:26656,e00110ca510c4070b49b5f7c43a75f4fcc56ca3f@18.210.45.92:26656,a2a82484bb5c5d66032677d5043a0d50e32971f7@3.227.175.151:26656,082224e38aa5375bce109ef34895a092611f7706@52.200.33.165:26656"
+	// nolint
+	DefaultDonauSeeds = "19fc837cbf5a2530e565db6ba0564f1de02edd17@204.236.132.157:26656,3f562eed0fcfabc848db5ebed81633e340352c0c@52.53.72.234:26656,65f774fece098327b595c971b507db24356000fd@54.176.105.93:26656,8a8944fcaddb46ff18ec59a3197af1c5763eb824@50.18.50.100:26656"
+
 	NoACKWaitTime = 1800 * time.Second // Time ack service waits to clear buffer and elect new proposer (1800 seconds ~ 30 mins)
 
 	DefaultCheckpointerPollInterval = 30 * time.Minute
@@ -89,6 +96,8 @@ const (
 	DefaultTronMaxQueryBlocks = 5
 
 	DefaultBttcChainID string = "15001"
+
+	DefaultChain string = "mainnet"
 
 	secretFilePerm = 0600
 )
@@ -390,4 +399,23 @@ func GetAddress() []byte {
 // GetValidChains returns all the valid chains.
 func GetValidChains() []string {
 	return []string{"mainnet", "donau", "local"}
+}
+
+// UpdateTendermintConfig updates tenedermint config with flags and default values if needed.
+func UpdateTendermintConfig(tendermintConfig *cfg.Config, v *viper.Viper) {
+	// update tendermintConfig.P2P.Seeds
+	seedsFlagValue := v.GetString(SeedsFlag)
+	if seedsFlagValue != "" {
+		tendermintConfig.P2P.Seeds = seedsFlagValue
+	}
+
+	chain := v.GetString(ChainFlag)
+	if tendermintConfig.P2P.Seeds == "" {
+		switch chain {
+		case "mainnet":
+			tendermintConfig.P2P.Seeds = DefaultMainnetSeeds
+		case "donau":
+			tendermintConfig.P2P.Seeds = DefaultDonauSeeds
+		}
+	}
 }
