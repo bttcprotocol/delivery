@@ -30,6 +30,8 @@ const (
 	WithDeliveryConfigFlag = "with-delivery-config"
 	HomeFlag               = "home"
 	FlagClientHome         = "home-client"
+	ChainFlag              = "chain"
+	LogLevel               = "log_level"
 
 	// ---
 	// TODO Move these to common client flags
@@ -60,6 +62,8 @@ const (
 	DefaultAmqpURL           = "amqp://guest:guest@localhost:5672/"
 	DefaultDeliveryServerURL = "http://0.0.0.0:1317"
 	DefaultTendermintNodeURL = "http://0.0.0.0:26657"
+
+	DefaultTendermintNode = "tcp://localhost:26657"
 
 	NoACKWaitTime = 1800 * time.Second // Time ack service waits to clear buffer and elect new proposer (1800 seconds ~ 30 mins)
 
@@ -381,4 +385,9 @@ func GetPubKey() secp256k1.PubKeySecp256k1 {
 // GetAddress returns address object
 func GetAddress() []byte {
 	return GetPubKey().Address().Bytes()
+}
+
+// GetValidChains returns all the valid chains.
+func GetValidChains() []string {
+	return []string{"mainnet", "donau", "local"}
 }
