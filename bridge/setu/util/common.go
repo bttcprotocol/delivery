@@ -73,8 +73,21 @@ var loggerOnce sync.Once
 // Logger returns logger singleton instance
 func Logger() log.Logger {
 	loggerOnce.Do(func() {
+		defaultLevel := "info"
 		logger = log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-		option, _ := log.AllowLevel(viper.GetString("log_level"))
+		option, err := log.AllowLevel(viper.GetString("log_level"))
+		if err != nil {
+			// cosmos sdk is using different style of log format
+			// and levels don't map well, config.toml
+			// see: https://github.com/cosmos/cosmos-sdk/pull/8072
+			logger.Error("Unable to parse logging level", "Error", err)
+			logger.Info("Using default log level")
+
+			option, err = log.AllowLevel(defaultLevel)
+			if err != nil {
+				logger.Error("failed to allow default log level", "Level", defaultLevel, "Error", err)
+			}
+		}
 		logger = log.NewFilter(logger, option)
 
 		// set no-op logger if log level is not debug for machinery
