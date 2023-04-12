@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"strconv"
 
-	ethCommon "github.com/maticnetwork/bor/common"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 
-	ethTypes "github.com/maticnetwork/bor/core/types"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 

@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/maticnetwork/bor/accounts/abi"
-	"github.com/maticnetwork/bor/common"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/tron/pb"
 	"google.golang.org/grpc"
@@ -109,7 +109,8 @@ func (tc *Client) CurrentHeaderBlock(contractAddress string, childBlockInterval 
 	var (
 		ret0 = new(*big.Int)
 	)
-	if err = tc.rootchainABI.Unpack(ret0, "currentHeaderBlock", data); err != nil {
+
+	if err := tc.rootchainABI.UnpackIntoInterface(ret0, "currentHeaderBlock", data); err != nil {
 		return 0, nil
 	}
 	return (*ret0).Uint64() / childBlockInterval, nil
@@ -132,7 +133,8 @@ func (tc *Client) GetLastChildBlock(contractAddress string) (uint64, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
-	if err = tc.rootchainABI.Unpack(ret0, "getLastChildBlock", data); err != nil {
+
+	if err := tc.rootchainABI.UnpackIntoInterface(ret0, "getLastChildBlock", data); err != nil {
 		return 0, nil
 	}
 	return (*ret0).Uint64(), nil

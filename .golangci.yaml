@@ -5,6 +5,10 @@ linters:
     - scopelint
     - interfacer
     - maligned
+    - gomoddirectives
+    - gci
+    - funlen
+    - wrapcheck
 
 service:
   golangci-lint-version: 1.41

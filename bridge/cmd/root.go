@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -28,9 +26,13 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func BridgeCommands() *cobra.Command {
+	return rootCmd
+}
+
 // InitTendermintViperConfig sets global viper configuration needed to heimdall
 func InitTendermintViperConfig(cmd *cobra.Command) {
-	tendermintNode, _ := cmd.Flags().GetString(helper.NodeFlag)
+	tendermintNode, _ := cmd.Flags().GetString(helper.TendermintNodeFlag)
 	homeValue, _ := cmd.Flags().GetString(helper.HomeFlag)
 	withDeliveryConfigValue, _ := cmd.Flags().GetString(helper.WithDeliveryConfigFlag)
 	bridgeDBValue, _ := cmd.Flags().GetString(bridgeDBFlag)
@@ -43,7 +45,7 @@ func InitTendermintViperConfig(cmd *cobra.Command) {
 	}
 
 	// set to viper
-	viper.Set(helper.NodeFlag, tendermintNode)
+	viper.Set(helper.TendermintNodeFlag, tendermintNode)
 	viper.Set(helper.HomeFlag, homeValue)
 	viper.Set(helper.WithDeliveryConfigFlag, withDeliveryConfigValue)
 	viper.Set(bridgeDBFlag, bridgeDBValue)
@@ -54,19 +56,11 @@ func InitTendermintViperConfig(cmd *cobra.Command) {
 	helper.InitDeliveryConfig("")
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
 func init() {
 	var logger = helper.Logger.With("module", "bridge/cmd/")
-	rootCmd.PersistentFlags().StringP(helper.NodeFlag, "n", "tcp://localhost:26657", "Node to connect to")
-	rootCmd.PersistentFlags().String(helper.HomeFlag, os.ExpandEnv("$HOME/.deliveryd"), "directory for config and data")
+
+	rootCmd.PersistentFlags().StringP(helper.TendermintNodeFlag, "n", helper.DefaultTendermintNode, "Node to connect to")
+	rootCmd.PersistentFlags().String(helper.HomeFlag, helper.DefaultNodeHome, "directory for config and data")
 	rootCmd.PersistentFlags().String(
 		helper.WithDeliveryConfigFlag,
 		"",

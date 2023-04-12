@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
-	"github.com/maticnetwork/bor/accounts/abi"
-	ethTypes "github.com/maticnetwork/bor/core/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/contracts/stakinginfo"

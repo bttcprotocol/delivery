@@ -27,19 +27,13 @@ tests:
 
 build: clean
 	mkdir -p build
-	go build -o build/heimdalld ./cmd/heimdalld
-	go build -o build/heimdallcli ./cmd/heimdallcli
-	go build -o build/bridge bridge/bridge.go
-	mv build/heimdalld build/deliveryd
-	mv build/heimdallcli build/deliverycli
+	go build -o build/deliveryd ./cmd/deliveryd
+	go build -o build/deliverycli ./cmd/deliverycli
 	@echo "====================================================\n==================Build Successful==================\n===================================================="
 
 install:
-	go install $(BUILD_FLAGS) ./cmd/heimdalld
-	go install $(BUILD_FLAGS) ./cmd/heimdallcli
-	go install $(BUILD_FLAGS) bridge/bridge.go
-	mv $(GOPATH)/bin/heimdalld $(GOPATH)/bin/deliveryd
-	mv $(GOPATH)/bin/heimdallcli $(GOPATH)/bin/deliverycli
+	go install $(BUILD_FLAGS) ./cmd/deliveryd
+	go install $(BUILD_FLAGS) ./cmd/deliverycli
 
 contracts:
 	abigen --abi=contracts/rootchain/rootchain.abi --pkg=rootchain --out=contracts/rootchain/rootchain.go
@@ -50,51 +44,6 @@ contracts:
 	abigen --abi=contracts/stakinginfo/stakinginfo.abi --pkg=stakinginfo --out=contracts/stakinginfo/stakinginfo.go
 	abigen --abi=contracts/validatorset/validatorset.abi --pkg=validatorset --out=contracts/validatorset/validatorset.go
 	abigen --abi=contracts/erc20/erc20.abi --pkg=erc20 --out=contracts/erc20/erc20.go
-
-
-init-delivery:
-	./build/deliveryd init
-
-show-account-delivery:
-	./build/deliveryd show-account
-
-show-node-id:
-	./build/deliveryd tendermint show-node-id
-
-run-delivery:
-	./build/deliveryd start
-
-start-delivery:
-	mkdir -p ./logs &
-	./build/deliveryd start > ./logs/deliveryd.log &
-
-reset-delivery:
-	./build/deliveryd unsafe-reset-all
-	./build/bridge purge-queue
-	rm -rf ~/.deliveryd/bridge
-
-run-server:
-	./build/deliveryd rest-server
-
-start-server:
-	mkdir -p ./logs &
-	./build/deliveryd rest-server > ./logs/deliveryd-rest-server.log &
-
-start:
-	mkdir -p ./logs
-	bash docker/start.sh
-
-run-bridge:
-	./build/bridge start --all
-
-start-bridge:
-	mkdir -p logs &
-	./build/bridge start --all > ./logs/bridge.log &
-
-start-all:
-	mkdir -p ./logs
-	bash docker/start-deliveryd.sh
-
 #
 # Code quality
 #
@@ -113,13 +62,9 @@ endif
 build-docker:
 	@echo Fetching latest tag: $(LATEST_GIT_TAG)
 	git checkout $(LATEST_GIT_TAG)
-	docker build -t "maticnetwork/heimdall:$(LATEST_GIT_TAG)" -f docker/Dockerfile .
-
-push-docker:
-	@echo Pushing docker tag image: $(LATEST_GIT_TAG)
-	docker push "maticnetwork/heimdall:$(LATEST_GIT_TAG)"
+	docker build -t "delivery:$(LATEST_GIT_TAG)" -f docker/Dockerfile .
 
 build-docker-develop:
-	docker build -t "maticnetwork/heimdall:develop" -f docker/Dockerfile.develop .
+	docker build -t "delivery:develop" -f docker/Dockerfile.develop .
 
 .PHONY: contracts build

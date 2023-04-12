@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maticnetwork/bor/common"
+	"github.com/ethereum/go-ethereum/common"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	"github.com/maticnetwork/heimdall/types"
 	"github.com/spf13/viper"
@@ -15,7 +15,7 @@ import (
 //  Test - to decode signers from checkpoint sigs data
 func TestCheckpointsigs(t *testing.T) {
 	tendermintNode := "tcp://localhost:26657"
-	viper.Set(NodeFlag, tendermintNode)
+	viper.Set(TendermintNodeFlag, tendermintNode)
 	viper.Set("log_level", "info")
 	InitDeliveryConfig(os.ExpandEnv("$HOME/.deliveryd"))
 

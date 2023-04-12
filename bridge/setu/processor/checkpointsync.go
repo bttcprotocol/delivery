@@ -7,8 +7,8 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/maticnetwork/bor/common"
-	"github.com/maticnetwork/bor/core/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"

@@ -13,12 +13,12 @@ import (
 
 	"github.com/maticnetwork/heimdall/tron"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/maticnetwork/bor/accounts/abi"
-	"github.com/maticnetwork/bor/common"
-	ethTypes "github.com/maticnetwork/bor/core/types"
-	"github.com/maticnetwork/bor/ethclient"
-	"github.com/maticnetwork/bor/rpc"
 	"github.com/maticnetwork/heimdall/contracts/erc20"
 	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/contracts/slashmanager"
@@ -883,7 +883,8 @@ func (c *ContractCaller) GetTronStakingSyncNonce(validatorID uint64, stakingMana
 	var (
 		ret0 = new(*big.Int)
 	)
-	if err = c.StakeManagerABI.Unpack(ret0, "validatorNonce", result); err != nil {
+
+	if err := c.StakeManagerABI.UnpackIntoInterface(ret0, "validatorNonce", result); err != nil {
 		Logger.Error("Error unpack validator nonce", "error", err, "validatorId", validatorID)
 		return 0
 	}
@@ -988,7 +989,7 @@ func (c *ContractCaller) GetTronHeaderInfo(headerID uint64, contractAddress stri
 		CreatedAt *big.Int
 		Proposer  common.Address
 	})
-	if err = c.RootChainABI.Unpack(ret, "headerBlocks", data); err != nil {
+	if err = c.RootChainABI.UnpackIntoInterface(ret, "headerBlocks", data); err != nil {
 		return root, 0, 0, 0, types.HeimdallAddress{}, err
 	}
 
@@ -1013,7 +1014,7 @@ func (c *ContractCaller) GetSyncedCheckpointId(contractAddress string, rootChain
 	// Unpack the results
 	ret := new(*big.Int)
 
-	if err = c.StakeManagerABI.Unpack(ret, "getCurrentSyncedCheckpoint", data); err != nil {
+	if err = c.StakeManagerABI.UnpackIntoInterface(ret, "getCurrentSyncedCheckpoint", data); err != nil {
 		return 0, err
 	}
 
