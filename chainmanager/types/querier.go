@@ -2,8 +2,9 @@ package types
 
 // query endpoints supported by the chain-manager Querier
 const (
-	QueryParams        = "params"
-	QueryNewChainParam = "chain-params"
+	QueryParams                = "params"
+	QueryNewChainParam         = "chain-params"
+	QueryProposalChainParamMap = "proposal-chain-param-map"
 )
 
 // QueryChainParams defines the params for querying accounts.

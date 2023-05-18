@@ -62,18 +62,43 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 // GetChainParams get new chain Params
 func (k *Keeper) GetChainParams(ctx sdk.Context, rootChain string) (types.ChainInfo, error) {
 	var chainInfo types.ChainInfo
+
+	// check whether rootChain exists in ParamsWithMultiChains first
+	// if not exists, use stored params
+	paramMap := k.GetParamsWithMultiChain(ctx).ChainParameterMap
+	paramRaw, ok := paramMap[rootChain]
+
+	if ok {
+		param := paramRaw.Plainify()
+		chainInfo = types.ChainInfo{
+			RootChainType:         rootChain,
+			ActivationHeight:      param.ActivateHeight,
+			TxConfirmations:       param.TxConfirmations,
+			RootChainAddress:      param.RootChainAddress,
+			StateSenderAddress:    param.StateSenderAddress,
+			StakingManagerAddress: param.StakingManagerAddress,
+			StakingInfoAddress:    param.StakingInfoAddress,
+			TimeStamp:             0,
+		}
+
+		return chainInfo, nil
+	}
+
 	store := ctx.KVStore(k.storeKey)
-	key := append(NewChainParamsKey, hmTypes.GetRootChainID(rootChain))
+
+	key := append(NewChainParamsKey, hmTypes.GetRootChainID(rootChain)) //nolint:gocritic
 	if store.Has(key) {
 		err := k.cdc.UnmarshalBinaryBare(store.Get(key), &chainInfo)
 		if err != nil {
 			k.Logger(ctx).Error("Error marshalling chain params from store value",
 				"root", rootChain, "error", err)
+
 			return chainInfo, err
-		} else {
-			return chainInfo, nil
 		}
+
+		return chainInfo, nil
 	}
+
 	return chainInfo, common.ErrNoChainParamsFound(k.Codespace())
 }
 
@@ -147,5 +172,25 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 // GetParams gets the chainmanager module's parameters.
 func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
 	k.paramSpace.GetParamSet(ctx, &params)
+	return
+}
+
+// -----------------------------------------------------------------------------
+// Params with multi chain
+
+// SetParamsWithMultiChain sets the chainmanager module's parameters.
+func (k Keeper) SetParamsWithMultiChain(ctx sdk.Context, params types.ParamsWithMultiChains) {
+	k.paramSpace.SetParamSet(ctx, &params)
+}
+
+// GetParamsWithMultiChain gets the chainmanager module's parameters.
+func (k Keeper) GetParamsWithMultiChain(ctx sdk.Context) (params types.ParamsWithMultiChains) {
+	defer func() {
+		if err := recover(); err != nil {
+			params = types.DefaultParamsWithMultiChains()
+		}
+	}()
+	k.paramSpace.GetParamSet(ctx, &params)
+
 	return
 }
