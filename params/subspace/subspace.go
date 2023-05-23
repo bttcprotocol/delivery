@@ -168,10 +168,31 @@ func (s Subspace) Update(ctx sdk.Context, key []byte, param []byte) error {
 
 	ty := attr.ty
 	dest := reflect.New(ty).Interface()
-	s.GetIfExists(ctx, key, dest)
-	err := s.cdc.UnmarshalJSON(param, dest)
-	if err != nil {
-		return err
+
+	switch string(key) {
+	case string("ParamsWithMultiChains"):
+		inputData := reflect.New(ty).Interface()
+
+		err := s.cdc.UnmarshalJSON(param, inputData)
+		if err != nil {
+			return err
+		}
+
+		originalData := reflect.New(ty).Interface()
+		s.GetIfExists(ctx, key, originalData)
+
+		err = RecursiveMergeOverwrite(inputData, originalData, dest)
+		if err != nil {
+			return err
+		}
+
+	default:
+		s.GetIfExists(ctx, key, dest)
+
+		err := s.cdc.UnmarshalJSON(param, dest)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.Set(ctx, key, dest)

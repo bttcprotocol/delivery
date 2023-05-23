@@ -37,6 +37,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 			GetLastNoACK(cdc),
 			GetHeaderFromIndex(cdc),
 			GetCheckpointCount(cdc),
+			GetQueryActivateHeight(cdc),
 		)...,
 	)
 
@@ -201,4 +202,42 @@ func GetCheckpointCount(cdc *codec.Codec) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func GetQueryActivateHeight(cdc *codec.Codec) *cobra.Command {
+	//nolint: exhaustivestruct
+	return &cobra.Command{
+		Use:   "activate-height",
+		Short: "show the target chain activate height",
+		Long:  strings.TrimSpace("show the target chain activate height"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			if len(args) != 1 {
+				return fmt.Errorf(`expect an arg to figure out chain name:
+%s query checkpoint activate-height <target chain>`, version.ClientName)
+			}
+
+			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointActivation)
+
+			queryParams, err := cliCtx.Codec.MarshalJSON(types.NewQueryCheckpointParams(0, args[0]))
+			if err != nil {
+				return err
+			}
+
+			res, _, err := cliCtx.QueryWithData(route, queryParams)
+			if err != nil {
+				return err
+			}
+
+			var activationHeight uint64
+			if err = json.Unmarshal(res, &activationHeight); err != nil {
+				return err
+			}
+			// nolint
+			fmt.Printf("Target chain activate height, root=%v, activateHeight=%v\n", args[0], activationHeight)
+
+			return nil
+		},
+	}
 }

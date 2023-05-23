@@ -18,7 +18,9 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		case types.QueryParams:
 			return queryParams(ctx, req, keeper)
 		case types.QueryNewChainParam:
-			return queryNewChainParams(ctx, req, keeper)
+			return queryParamsWithTargetChain(ctx, req, keeper)
+		case types.QueryProposalChainParamMap:
+			return queryPropsoalChainParamMap(ctx, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown chainmanager query endpoint")
 		}
@@ -52,5 +54,53 @@ func queryNewChainParams(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) 
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
+	return bz, nil
+}
+
+func queryPropsoalChainParamMap(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
+	bz, err := json.Marshal(keeper.GetParamsWithMultiChain(ctx))
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+
+	return bz, nil
+}
+
+// queryParamsWithTargetChain will always return chain parameters including tron, bttc and target chain.
+func queryParamsWithTargetChain(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryChainParams
+	if err := keeper.cdc.UnmarshalJSON(req.Data, &params); err != nil && len(req.Data) != 0 {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("failed to parse params", err.Error()))
+	}
+
+	// try to get params from multi chain params
+	// use queryNewChainParams if nothing get
+	multiChainParams := keeper.GetParamsWithMultiChain(ctx).ChainParameterMap
+	chainParam, ok := multiChainParams[params.RootChain]
+
+	// tron chain parameters will always be keeped in original param
+	if !ok || params.RootChain == "tron" {
+		return queryNewChainParams(ctx, req, keeper)
+	}
+
+	// baseParam is maintained by original chainmanager param
+	// Tron parameters is always maintained by original chainmanager param
+	baseParam := keeper.GetParams(ctx)
+	plainChainParam := chainParam.Plainify()
+
+	baseParam.MainchainTxConfirmations = plainChainParam.TxConfirmations
+	baseParam.ChainParams.StakingManagerAddress = plainChainParam.StakingManagerAddress
+	baseParam.ChainParams.SlashManagerAddress = plainChainParam.SlashManagerAddress
+	baseParam.ChainParams.RootChainAddress = plainChainParam.RootChainAddress
+	baseParam.ChainParams.StakingInfoAddress = plainChainParam.StakingInfoAddress
+	baseParam.ChainParams.StateSenderAddress = plainChainParam.StateSenderAddress
+
+	response := baseParam
+
+	bz, err := json.Marshal(response)
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+
 	return bz, nil
 }
