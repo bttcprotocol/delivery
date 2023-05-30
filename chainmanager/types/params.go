@@ -28,6 +28,7 @@ var (
 	KeyMaticchainTxConfirmations = []byte("MaticchainTxConfirmations")
 	KeyTronchainTxConfirmations  = []byte("TronchainTxConfirmations")
 	KeyChainParams               = []byte("ChainParams")
+	KeyParamsWithMultiChains     = []byte("ParamsWithMultiChains")
 )
 
 var _ subspace.ParamSet = &Params{}
@@ -167,7 +168,8 @@ func validateHeimdallAddress(key string, value hmTypes.HeimdallAddress) error {
 
 // ParamKeyTable for auth module
 func ParamKeyTable() subspace.KeyTable {
-	return subspace.NewKeyTable().RegisterParamSet(&Params{})
+	//nolint: exhaustivestruct
+	return subspace.NewKeyTable().RegisterParamSet(&Params{}).RegisterParamSet(&ParamsWithMultiChains{})
 }
 
 // DefaultParams returns a default set of parameters.
@@ -182,4 +184,108 @@ func DefaultParams() Params {
 			ValidatorSetAddress:  DefaultValidatorSetAddress,
 		},
 	}
+}
+
+// ----------------------------------------------------------------
+// ParamsWithMultiChains
+
+//nolint: tagliatelle
+type ChainData struct {
+	TxConfirmations *uint64 `json:"tx_confirmations" yaml:"tx_confirmations"`
+	ActivateHeight  *uint64 `json:"activate_height" yaml:"activate_height"`
+
+	// main chain
+	StakingManagerAddress *hmTypes.HeimdallAddress `json:"staking_manager_address" yaml:"staking_manager_address"`
+	SlashManagerAddress   *hmTypes.HeimdallAddress `json:"slash_manager_address" yaml:"slash_manager_address"`
+	RootChainAddress      *hmTypes.HeimdallAddress `json:"root_chain_address" yaml:"root_chain_address"`
+	StakingInfoAddress    *hmTypes.HeimdallAddress `json:"staking_info_address" yaml:"staking_info_address"`
+	StateSenderAddress    *hmTypes.HeimdallAddress `json:"state_sender_address" yaml:"state_sender_address"`
+}
+
+//nolint: tagliatelle
+type ParamsWithMultiChains struct {
+	ChainParameterMap map[string]ChainData `json:"chain_parameter_map" yaml:"chainParameterMap"`
+}
+
+//nolint: tagliatelle
+type PlainChainData struct {
+	TxConfirmations uint64 `json:"tx_confirmations" yaml:"tx_confirmations"`
+	ActivateHeight  uint64 `json:"activate_height" yaml:"activate_height"`
+
+	// main chain
+	StakingManagerAddress hmTypes.HeimdallAddress `json:"staking_manager_address" yaml:"staking_manager_address"`
+	SlashManagerAddress   hmTypes.HeimdallAddress `json:"slash_manager_address" yaml:"slash_manager_address"`
+	RootChainAddress      hmTypes.HeimdallAddress `json:"root_chain_address" yaml:"root_chain_address"`
+	StakingInfoAddress    hmTypes.HeimdallAddress `json:"staking_info_address" yaml:"staking_info_address"`
+	StateSenderAddress    hmTypes.HeimdallAddress `json:"state_sender_address" yaml:"state_sender_address"`
+}
+
+func (cd *ChainData) Plainify() (pc PlainChainData) {
+	if cd.TxConfirmations != nil {
+		pc.TxConfirmations = *cd.TxConfirmations
+	}
+
+	if cd.ActivateHeight != nil {
+		pc.ActivateHeight = *cd.ActivateHeight
+	}
+
+	if cd.StakingManagerAddress != nil {
+		pc.StakingManagerAddress = *cd.StakingManagerAddress
+	}
+
+	if cd.SlashManagerAddress != nil {
+		pc.SlashManagerAddress = *cd.SlashManagerAddress
+	}
+
+	if cd.RootChainAddress != nil {
+		pc.RootChainAddress = *cd.RootChainAddress
+	}
+
+	if cd.StakingInfoAddress != nil {
+		pc.StakingInfoAddress = *cd.StakingInfoAddress
+	}
+
+	if cd.StateSenderAddress != nil {
+		pc.StateSenderAddress = *cd.StateSenderAddress
+	}
+
+	return
+}
+
+// DefaultParams returns a default set of parameters.
+func DefaultParamsWithMultiChains() ParamsWithMultiChains {
+	return ParamsWithMultiChains{
+		ChainParameterMap: make(map[string]ChainData),
+	}
+}
+
+func (pmc *ParamsWithMultiChains) ParamSetPairs() subspace.ParamSetPairs {
+	return subspace.ParamSetPairs{
+		{Key: KeyParamsWithMultiChains, Value: pmc},
+	}
+}
+
+func (pmc ParamsWithMultiChains) String() string {
+	var ret string
+
+	for key, val := range pmc.ChainParameterMap {
+		pVal := val.Plainify()
+
+		ret += fmt.Sprintf(`
+		[chain]: %s
+		TxConfirmations:					%v,
+		ActivateHeight:						%v,
+
+		StakingManagerAddress:				%s,
+		SlashManagerAddress:				%s,
+		RootChainAddress:					%s,
+		StakingInfoAddress:					%s,
+		StateSenderAddress:					%s,
+		`,
+			key, pVal.TxConfirmations, pVal.ActivateHeight,
+			pVal.StakingManagerAddress, pVal.SlashManagerAddress, pVal.RootChainAddress,
+			pVal.StakingInfoAddress, pVal.StateSenderAddress)
+	}
+
+	return ret
 }

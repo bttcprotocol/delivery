@@ -45,6 +45,8 @@ import (
 	"github.com/maticnetwork/heimdall/app"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	hmbridge "github.com/maticnetwork/heimdall/bridge/cmd"
+
+	"github.com/maticnetwork/heimdall/cmd/deliveryd/rollback"
 	"github.com/maticnetwork/heimdall/helper"
 	restServer "github.com/maticnetwork/heimdall/server"
 	hmTypes "github.com/maticnetwork/heimdall/types"
@@ -161,6 +163,9 @@ func main() {
 	rootCmd.AddCommand(VerifyGenesis(ctx, cdc))
 	rootCmd.AddCommand(initCmd(ctx, cdc))
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
+
+	// rollback cmd
+	rootCmd.AddCommand(rollback.RollbackCmd(ctx))
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "HD", os.ExpandEnv("$HOME/.deliveryd"))
