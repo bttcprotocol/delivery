@@ -33,7 +33,45 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
-	if _, err := getValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
+	if _, err := GetValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
+		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by proposer").Result()
+	}
+
+	proposal, err := keeper.SubmitProposal(ctx, msg.Content)
+	if err != nil {
+		return err.Result()
+	}
+
+	err, votingStarted := keeper.AddDeposit(ctx, proposal.ProposalID, msg.Proposer, msg.InitialDeposit, msg.Validator)
+	if err != nil {
+		return err.Result()
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Proposer.String()),
+		),
+	)
+
+	if votingStarted {
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeSubmitProposal,
+				sdk.NewAttribute(types.AttributeKeyVotingPeriodStart, fmt.Sprintf("%d", proposal.ProposalID)),
+			),
+		)
+	}
+
+	return sdk.Result{
+		Data:   keeper.cdc.MustMarshalBinaryLengthPrefixed(proposal.ProposalID),
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+func HandleMsgFeatureChangeProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
+	if _, err := GetValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by proposer").Result()
 	}
 
@@ -71,7 +109,7 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmit
 }
 
 func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg types.MsgDeposit) sdk.Result {
-	if _, err := getValidValidator(ctx, keeper, msg.Depositor, msg.Validator); err != nil {
+	if _, err := GetValidValidator(ctx, keeper, msg.Depositor, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by depositor").Result()
 	}
 
@@ -101,7 +139,7 @@ func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg types.MsgDeposit) sdk.
 }
 
 func handleMsgVote(ctx sdk.Context, keeper Keeper, msg types.MsgVote) sdk.Result {
-	if _, err := getValidValidator(ctx, keeper, msg.Voter, msg.Validator); err != nil {
+	if _, err := GetValidValidator(ctx, keeper, msg.Voter, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by voter").Result()
 	}
 
@@ -126,7 +164,7 @@ func handleMsgVote(ctx sdk.Context, keeper Keeper, msg types.MsgVote) sdk.Result
 //
 
 // checks if validator is active validator by signer and checks if incoming validator id matches with stored validator
-func getValidValidator(ctx sdk.Context, keeper Keeper, signer hmTypes.HeimdallAddress, validator hmTypes.ValidatorID) (hmTypes.Validator, error) {
+func GetValidValidator(ctx sdk.Context, keeper Keeper, signer hmTypes.HeimdallAddress, validator hmTypes.ValidatorID) (hmTypes.Validator, error) {
 	v, err := keeper.sk.GetActiveValidatorInfo(ctx, signer.Bytes())
 	if err != nil {
 		keeper.Logger(ctx).Info("No active validator by signer", "signer", signer.String())
