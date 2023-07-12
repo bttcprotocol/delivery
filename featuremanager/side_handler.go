@@ -104,6 +104,35 @@ func PostHandleMsgSubmitProposal(ctx sdk.Context, keeper Keeper,
 		return common.ErrSideTxValidation(keeper.Codespace()).Result()
 	}
 
+	var err error
+	// add all supported features to featuremanager.
+	if content, ok := msg.Content.(types.FeatureChangeProposal); ok {
+	Changes:
+		for _, change := range content.Changes {
+			chagneMapStr := change.Value
+
+			var changeMap types.FeatureParams
+			_ = keeper.cdc.UnmarshalJSON([]byte(chagneMapStr), &changeMap)
+
+			for key := range changeMap.FeatureParamMap {
+				if err = keeper.AddSupportedFeature(ctx, key); err != nil {
+					break Changes
+				}
+			}
+		}
+	} else {
+		logger.Error("Proposal is not a feature change proposal.")
+
+		return common.ErrSideTxValidation(keeper.Codespace()).Result()
+	}
+
+	// if meets any error, cancel transfer this proposal to gov.
+	if err != nil {
+		logger.Error("Save supported features failed.", "error", err)
+
+		return common.ErrSideTxValidation(keeper.Codespace()).Result()
+	}
+
 	// submit a feature-change-proposal to gov
 	logger.Info("Submitting feature-change-proposal to gov", "msg", msg)
 
@@ -114,5 +143,5 @@ func PostHandleMsgSubmitProposal(ctx sdk.Context, keeper Keeper,
 		Validator:      msg.Validator,
 	}
 
-	return gov.HandleMsgFeatureChangeProposal(ctx, keeper.govKeeper, proposal)
+	return gov.HandleMsgSubmitProposal(ctx, keeper.govKeeper, proposal)
 }

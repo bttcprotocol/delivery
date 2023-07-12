@@ -25,6 +25,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		client.GetCommands(
 			GetTargetFeature(cdc),
 			GetAllFeatures(cdc),
+			GetAllSupportedFeatures(cdc),
 		)...,
 	)
 
@@ -84,7 +85,7 @@ func GetAllFeatures(cdc *codec.Codec) *cobra.Command {
 		Short: "show the current featuremanager parameters information in proposal",
 		Long: strings.TrimSpace(
 			fmt.Sprintf(
-				`Query values set as chain manager parameters.
+				`Query values set as feature manager parameters.
 Example:
 $ %s query featuremanager all-features
 `,
@@ -102,6 +103,42 @@ $ %s query featuremanager all-features
 			}
 
 			var params types.FeatureParams
+			if err = json.Unmarshal(data, &params); err != nil {
+				return err
+			}
+
+			return cliCtx.PrintOutput(params)
+		},
+	}
+}
+
+// GetAllSupportedFeatures implements the supported-features query command.
+func GetAllSupportedFeatures(cdc *codec.Codec) *cobra.Command {
+	//nolint: exhaustivestruct
+	return &cobra.Command{
+		Use:   "supported-features",
+		Args:  cobra.NoArgs,
+		Short: "show the current featuremanager supported features",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(
+				`Query all supported features in feature manager.
+Example:
+$ %s query featuremanager supported-features
+`,
+				version.ClientName,
+			),
+		),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QuerySupportedFeatures)
+
+			data, _, err := cliCtx.QueryWithData(route, nil)
+			if err != nil {
+				return err
+			}
+
+			var params types.FeatureSupport
 			if err = json.Unmarshal(data, &params); err != nil {
 				return err
 			}

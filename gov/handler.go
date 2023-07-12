@@ -6,6 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	hmCommon "github.com/maticnetwork/heimdall/common"
+	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
+	featuremanagerUtil "github.com/maticnetwork/heimdall/featuremanager/util"
 	"github.com/maticnetwork/heimdall/gov/types"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 )
@@ -20,7 +22,7 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleMsgDeposit(ctx, keeper, msg)
 
 		case types.MsgSubmitProposal:
-			return handleMsgSubmitProposal(ctx, keeper, msg)
+			return HandleMsgSubmitProposal(ctx, keeper, msg)
 
 		case types.MsgVote:
 			return handleMsgVote(ctx, keeper, msg)
@@ -32,47 +34,39 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	}
 }
 
-func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
+func HandleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
 	if _, err := GetValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by proposer").Result()
 	}
 
-	proposal, err := keeper.SubmitProposal(ctx, msg.Content)
-	if err != nil {
-		return err.Result()
+	// if the proposal is a feature change proposal, we need to
+	// check whether features in this proposal are all supported.
+	isSupported := true
+	switch content := msg.Content.(type) {
+	case featuremanagerTypes.FeatureChangeProposal:
+	Changes:
+		for _, change := range content.Changes {
+			chagneMapStr := change.Value
+
+			var changeMap featuremanagerTypes.FeatureParams
+			_ = keeper.cdc.UnmarshalJSON([]byte(chagneMapStr), &changeMap)
+
+			for key := range changeMap.FeatureParamMap {
+				isSupported = featuremanagerUtil.GetFeatureConfig().GetSupportedFeature(ctx, key)
+				if !isSupported {
+					keeper.Logger(ctx).Info(
+						"Feature is not supported",
+						"feature", key,
+					)
+
+					break Changes
+				}
+			}
+		}
 	}
 
-	err, votingStarted := keeper.AddDeposit(ctx, proposal.ProposalID, msg.Proposer, msg.InitialDeposit, msg.Validator)
-	if err != nil {
-		return err.Result()
-	}
-
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			sdk.EventTypeMessage,
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute(sdk.AttributeKeySender, msg.Proposer.String()),
-		),
-	)
-
-	if votingStarted {
-		ctx.EventManager().EmitEvent(
-			sdk.NewEvent(
-				types.EventTypeSubmitProposal,
-				sdk.NewAttribute(types.AttributeKeyVotingPeriodStart, fmt.Sprintf("%d", proposal.ProposalID)),
-			),
-		)
-	}
-
-	return sdk.Result{
-		Data:   keeper.cdc.MustMarshalBinaryLengthPrefixed(proposal.ProposalID),
-		Events: ctx.EventManager().Events(),
-	}
-}
-
-func HandleMsgFeatureChangeProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
-	if _, err := GetValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
-		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by proposer").Result()
+	if !isSupported {
+		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "Proposal is not Supported").Result()
 	}
 
 	proposal, err := keeper.SubmitProposal(ctx, msg.Content)

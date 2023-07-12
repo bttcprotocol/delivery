@@ -19,6 +19,9 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		case types.QueryFeatureMap:
 			return queryPropsoalChainParamMap(ctx, keeper)
 
+		case types.QuerySupportedFeatures:
+			return querySupportedFeatures(ctx, keeper)
+
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown featuremanager query endpoint")
 		}
@@ -50,6 +53,15 @@ func queryTargetFeature(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 
 func queryPropsoalChainParamMap(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
 	data, err := json.Marshal(keeper.GetFeatureParams(ctx))
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+
+	return data, nil
+}
+
+func querySupportedFeatures(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
+	data, err := json.Marshal(keeper.GetSupportedFeature(ctx))
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}

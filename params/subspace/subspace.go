@@ -20,13 +20,17 @@ const (
 	// Special keys that contains Map.
 	ParamsWithMultiChains string = "ParamsWithMultiChains"
 	FeatureParams         string = "FeatureParams"
+	SupportFeature        string = "SupportFeature"
 )
 
+// hasMap is used for marshalling and unmarshaling for map.
 func hasMap(key string) bool {
 	switch key {
 	case ParamsWithMultiChains:
 		fallthrough
 	case FeatureParams:
+		fallthrough
+	case SupportFeature:
 		return true
 	}
 
@@ -218,6 +222,8 @@ func (s Subspace) Update(ctx sdk.Context, key []byte, param []byte) error {
 
 	switch string(key) {
 	case ParamsWithMultiChains:
+		fallthrough
+	case SupportFeature:
 		fallthrough
 	case FeatureParams:
 		inputData := reflect.New(ty).Interface()

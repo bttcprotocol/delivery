@@ -74,7 +74,7 @@ func (k Keeper) HasFeature(feature string) bool {
 // Params
 
 // SetParams sets the featuremanager module's parameters.
-func (k Keeper) SeFeatureParams(ctx sdk.Context, params types.FeatureParams) error {
+func (k Keeper) SetFeatureParams(ctx sdk.Context, params types.FeatureParams) error {
 	k.paramSpace.SetParamSet(ctx, &params)
 
 	return nil
@@ -85,6 +85,39 @@ func (k Keeper) GetFeatureParams(ctx sdk.Context) (params types.FeatureParams) {
 	defer func() {
 		if err := recover(); err != nil {
 			params = types.DefaultFeatureParams()
+		}
+	}()
+	k.paramSpace.GetParamSet(ctx, &params)
+
+	return
+}
+
+// -----------------------------------------------------------------------------
+// Supported Features.
+
+// AddSupportedFeature add the featuremanager module's supported features.
+func (k Keeper) AddSupportedFeature(ctx sdk.Context, feature string) error {
+	supportedMap := types.FeatureSupport{
+		FeatureSupportMap: map[string]bool{
+			feature: true,
+		},
+	}
+
+	supportedMapRawData, err := k.cdc.MarshalJSON(supportedMap)
+	if err != nil {
+		return err
+	}
+
+	err = k.paramSpace.Update(ctx, types.KeySupportFeature, supportedMapRawData)
+
+	return err
+}
+
+// GetSupportedFeature gets the featuremanager module's all supported features.
+func (k Keeper) GetSupportedFeature(ctx sdk.Context) (params types.FeatureSupport) {
+	defer func() {
+		if err := recover(); err != nil {
+			params = types.DefaultFeatureSupport()
 		}
 	}()
 	k.paramSpace.GetParamSet(ctx, &params)

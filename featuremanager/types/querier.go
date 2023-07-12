@@ -2,8 +2,9 @@ package types
 
 // query endpoints supported by the chain-manager Querier.
 const (
-	QueryTargetFeature = "target-feature"
-	QueryFeatureMap    = "feature-map"
+	QueryTargetFeature     = "target-feature"
+	QueryFeatureMap        = "feature-map"
+	QuerySupportedFeatures = "supported-features"
 )
 
 // QueryChainParams defines the params for querying accounts.
