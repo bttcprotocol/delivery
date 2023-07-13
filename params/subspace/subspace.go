@@ -189,6 +189,7 @@ func (s Subspace) Set(ctx sdk.Context, key []byte, param interface{}) {
 	s.checkType(store, key, param)
 
 	var data []byte
+
 	var err error
 
 	if hasMap(string(key)) {
