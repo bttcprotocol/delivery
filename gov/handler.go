@@ -6,6 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	hmCommon "github.com/maticnetwork/heimdall/common"
+	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
+	featuremanagerUtil "github.com/maticnetwork/heimdall/featuremanager/util"
 	"github.com/maticnetwork/heimdall/gov/types"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 )
@@ -20,7 +22,7 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleMsgDeposit(ctx, keeper, msg)
 
 		case types.MsgSubmitProposal:
-			return handleMsgSubmitProposal(ctx, keeper, msg)
+			return HandleMsgSubmitProposal(ctx, keeper, msg)
 
 		case types.MsgVote:
 			return handleMsgVote(ctx, keeper, msg)
@@ -32,9 +34,39 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	}
 }
 
-func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
-	if _, err := getValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
+func HandleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmitProposal) sdk.Result {
+	if _, err := GetValidValidator(ctx, keeper, msg.Proposer, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by proposer").Result()
+	}
+
+	// if the proposal is a feature change proposal, we need to
+	// check whether features in this proposal are all supported.
+	isSupported := true
+	switch content := msg.Content.(type) {
+	case featuremanagerTypes.FeatureChangeProposal:
+	Changes:
+		for _, change := range content.Changes {
+			chagneMapStr := change.Value
+
+			var changeMap featuremanagerTypes.FeatureParams
+			_ = keeper.cdc.UnmarshalJSON([]byte(chagneMapStr), &changeMap)
+
+			for key := range changeMap.FeatureParamMap {
+				isSupported = featuremanagerUtil.GetFeatureConfig().GetSupportedFeature(ctx, key)
+				if !isSupported {
+					keeper.Logger(ctx).Info(
+						"Feature is not supported",
+						"feature", key,
+					)
+
+					break Changes
+				}
+			}
+		}
+	}
+
+	if !isSupported {
+		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "Proposal is not Supported").Result()
 	}
 
 	proposal, err := keeper.SubmitProposal(ctx, msg.Content)
@@ -71,7 +103,7 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg types.MsgSubmit
 }
 
 func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg types.MsgDeposit) sdk.Result {
-	if _, err := getValidValidator(ctx, keeper, msg.Depositor, msg.Validator); err != nil {
+	if _, err := GetValidValidator(ctx, keeper, msg.Depositor, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by depositor").Result()
 	}
 
@@ -101,7 +133,7 @@ func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg types.MsgDeposit) sdk.
 }
 
 func handleMsgVote(ctx sdk.Context, keeper Keeper, msg types.MsgVote) sdk.Result {
-	if _, err := getValidValidator(ctx, keeper, msg.Voter, msg.Validator); err != nil {
+	if _, err := GetValidValidator(ctx, keeper, msg.Voter, msg.Validator); err != nil {
 		return hmCommon.ErrInvalidMsg(keeper.Codespace(), "No active validator by voter").Result()
 	}
 
@@ -126,7 +158,7 @@ func handleMsgVote(ctx sdk.Context, keeper Keeper, msg types.MsgVote) sdk.Result
 //
 
 // checks if validator is active validator by signer and checks if incoming validator id matches with stored validator
-func getValidValidator(ctx sdk.Context, keeper Keeper, signer hmTypes.HeimdallAddress, validator hmTypes.ValidatorID) (hmTypes.Validator, error) {
+func GetValidValidator(ctx sdk.Context, keeper Keeper, signer hmTypes.HeimdallAddress, validator hmTypes.ValidatorID) (hmTypes.Validator, error) {
 	v, err := keeper.sk.GetActiveValidatorInfo(ctx, signer.Bytes())
 	if err != nil {
 		keeper.Logger(ctx).Info("No active validator by signer", "signer", signer.String())

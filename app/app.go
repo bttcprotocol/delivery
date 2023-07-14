@@ -26,6 +26,9 @@ import (
 	"github.com/maticnetwork/heimdall/clerk"
 	clerkTypes "github.com/maticnetwork/heimdall/clerk/types"
 	"github.com/maticnetwork/heimdall/common"
+	"github.com/maticnetwork/heimdall/featuremanager"
+	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
+	featuremanagerUtil "github.com/maticnetwork/heimdall/featuremanager/util"
 	gov "github.com/maticnetwork/heimdall/gov"
 	govTypes "github.com/maticnetwork/heimdall/gov/types"
 	"github.com/maticnetwork/heimdall/helper"
@@ -72,6 +75,7 @@ var (
 		bank.AppModuleBasic{},
 		supply.AppModuleBasic{},
 		chainmanager.AppModuleBasic{},
+		featuremanager.AppModuleBasic{},
 		staking.AppModuleBasic{},
 		checkpoint.AppModuleBasic{},
 		bor.AppModuleBasic{},
@@ -110,6 +114,7 @@ type HeimdallApp struct {
 	SupplyKeeper      supply.Keeper
 	GovKeeper         gov.Keeper
 	ChainKeeper       chainmanager.Keeper
+	FeatureKeeper     featuremanager.Keeper
 	CheckpointKeeper  checkpoint.Keeper
 	StakingKeeper     staking.Keeper
 	BorKeeper         bor.Keeper
@@ -239,12 +244,15 @@ func NewHeimdallApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Ba
 	app.subspaces[supplyTypes.ModuleName] = app.ParamsKeeper.Subspace(supplyTypes.DefaultParamspace)
 	app.subspaces[govTypes.ModuleName] = app.ParamsKeeper.Subspace(govTypes.DefaultParamspace).WithKeyTable(govTypes.ParamKeyTable())
 	app.subspaces[chainmanagerTypes.ModuleName] = app.ParamsKeeper.Subspace(chainmanagerTypes.DefaultParamspace)
+	app.subspaces[featuremanagerTypes.ModuleName] = app.ParamsKeeper.Subspace(featuremanagerTypes.DefaultParamspace)
 	app.subspaces[stakingTypes.ModuleName] = app.ParamsKeeper.Subspace(stakingTypes.DefaultParamspace)
 	app.subspaces[slashingTypes.ModuleName] = app.ParamsKeeper.Subspace(slashingTypes.DefaultParamspace)
 	app.subspaces[checkpointTypes.ModuleName] = app.ParamsKeeper.Subspace(checkpointTypes.DefaultParamspace)
 	app.subspaces[borTypes.ModuleName] = app.ParamsKeeper.Subspace(borTypes.DefaultParamspace)
 	app.subspaces[clerkTypes.ModuleName] = app.ParamsKeeper.Subspace(clerkTypes.DefaultParamspace)
 	app.subspaces[topupTypes.ModuleName] = app.ParamsKeeper.Subspace(topupTypes.DefaultParamspace)
+
+	featuremanagerUtil.InitFeatureConfig(app.subspaces[featuremanagerTypes.ModuleName])
 	//
 	// Contract caller
 	//
@@ -333,7 +341,8 @@ func NewHeimdallApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Ba
 	govRouter := gov.NewRouter()
 	govRouter.
 		AddRoute(govTypes.RouterKey, govTypes.ProposalHandler).
-		AddRoute(paramsTypes.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper))
+		AddRoute(paramsTypes.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
+		AddRoute(featuremanagerTypes.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper))
 
 	app.GovKeeper = gov.NewKeeper(
 		app.cdc,
@@ -343,6 +352,14 @@ func NewHeimdallApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Ba
 		app.StakingKeeper,
 		govTypes.DefaultCodespace,
 		govRouter,
+	)
+
+	// create feature keeper
+	app.FeatureKeeper = featuremanager.NewKeeper(
+		app.cdc,
+		app.subspaces[featuremanagerTypes.ModuleName],
+		app.GovKeeper,
+		common.DefaultCodespace,
 	)
 
 	app.CheckpointKeeper = checkpoint.NewKeeper(
@@ -395,6 +412,7 @@ func NewHeimdallApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Ba
 		supply.NewAppModule(app.SupplyKeeper, &app.caller),
 		gov.NewAppModule(app.GovKeeper, app.SupplyKeeper),
 		chainmanager.NewAppModule(app.ChainKeeper, &app.caller),
+		featuremanager.NewAppModule(app.FeatureKeeper),
 		staking.NewAppModule(app.StakingKeeper, &app.caller),
 		slashing.NewAppModule(app.SlashingKeeper, app.StakingKeeper, &app.caller),
 		checkpoint.NewAppModule(app.CheckpointKeeper, app.StakingKeeper, app.TopupKeeper, &app.caller),

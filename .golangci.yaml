@@ -11,6 +11,8 @@ linters:
     - wrapcheck
     - gochecknoglobals
     - goerr113
+    - gochecknoinits
+    - exhaustivestruct
 
 service:
   golangci-lint-version: 1.41
