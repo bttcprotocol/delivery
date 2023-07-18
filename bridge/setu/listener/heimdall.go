@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
-
-	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	"github.com/maticnetwork/heimdall/helper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
+	clerkTypes "github.com/maticnetwork/heimdall/clerk/types"
 	slashingTypes "github.com/maticnetwork/heimdall/slashing/types"
+	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
+	htype "github.com/maticnetwork/heimdall/types"
 )
 
 const (
@@ -26,6 +28,8 @@ const (
 // HeimdallListener - Listens to and process events from heimdall
 type HeimdallListener struct {
 	BaseListener
+
+	stateSyncedInitializationRun uint32 // atomic
 }
 
 // NewHeimdallListener - constructor func
@@ -48,13 +52,16 @@ func (hl *HeimdallListener) Start() error {
 	}
 
 	hl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
-	hl.StartPolling(headerCtx, pollInterval, false)
+
+	go hl.StartPolling(headerCtx, pollInterval, false)
+
+	go hl.StartPollingEventRecord(headerCtx, pollInterval, false)
+
 	return nil
 }
 
 // ProcessHeader -
 func (hl *HeimdallListener) ProcessHeader(*types.Header) {
-
 }
 
 // StartPolling - starts polling for heimdall events
@@ -242,5 +249,269 @@ func (hl *HeimdallListener) sendBlockTask(taskName string, eventBytes []byte, bl
 	_, err := hl.queueConnector.Server.SendTask(signature)
 	if err != nil {
 		hl.Logger.Error("Error sending block level task", "taskName", taskName, "blockHeight", blockHeight, "error", err)
+	}
+}
+
+// StartPollingEventRecord - starts polling for heimdall event records
+// needAlign is used to decide whether the ticker is align to 1970 UTC.
+// if true, the ticker will always tick as it begins at 1970 UTC.
+func (hl *HeimdallListener) StartPollingEventRecord(ctx context.Context, pollInterval time.Duration, needAlign bool) {
+	// How often to fire the passed in function in second
+	interval := pollInterval
+	firstInterval := interval
+
+	if needAlign {
+		now := time.Now()
+		baseTime := time.Unix(0, 0)
+		firstInterval = interval - (now.UTC().Sub(baseTime) % interval)
+	}
+
+	// Setup the ticket and the channel to signal
+	// the ending of the interval
+	ticker := time.NewTicker(firstInterval)
+
+	var tickerOnce sync.Once
+	// start listening
+	for {
+		select {
+		case <-ticker.C:
+			tickerOnce.Do(func() {
+				ticker.Reset(interval)
+			})
+
+			targetFeature, err := util.GetTargetFeatureConfig(hl.cliCtx, "feature-a")
+			if err == nil && targetFeature.IsOpen {
+				hl.loadEventRecords(ctx, pollInterval)
+			}
+
+		case <-ctx.Done():
+			hl.Logger.Info("Polling stopped")
+			ticker.Stop()
+
+			return
+		}
+	}
+}
+
+func (hl *HeimdallListener) loadEventRecords(ctx context.Context, pollInterval time.Duration) {
+	if atomic.LoadUint32(&hl.stateSyncedInitializationRun) == 1 {
+		hl.Logger.Info("IsInitializationDone not finished... goroutine exists")
+
+		return
+	}
+
+	nodeStatus, err := helper.GetNodeStatus(hl.cliCtx)
+	if err != nil {
+		hl.Logger.Error("Error while fetching heimdall node status", "error", err)
+
+		return
+	}
+
+	toBlock := nodeStatus.SyncInfo.LatestBlockHeight
+	toBlockTime := nodeStatus.SyncInfo.LatestBlockTime.Unix()
+
+	eventProcessor := util.NewTokenMapProcessor(hl.cliCtx, hl.storageClient)
+	if eventProcessor != nil {
+		done, err := eventProcessor.IsInitializationDoneWithBlock(toBlock)
+		if err != nil {
+			hl.Logger.Error("Error check IsInitializationDone...skipping events query", "error", err)
+
+			return
+		}
+
+		if !done {
+			go hl.loadHistoricalEventRecords(ctx, eventProcessor, toBlock, toBlockTime, pollInterval)
+		} else {
+			hl.Logger.Info("Fetching new events between",
+				"lastEventID", eventProcessor.TokenMapLastEventID,
+				"endBlock", eventProcessor.TokenMapCheckedEndBlock,
+				"toBlock", toBlock)
+			hl.processEventRecords(ctx, eventProcessor, toBlock, toBlockTime, pollInterval)
+		}
+	} else {
+		hl.Logger.Error("Error construct eventProcessor")
+	}
+}
+
+func (hl *HeimdallListener) loadHistoricalEventRecords(ctx context.Context,
+	eventProcessor *util.TokenMapProcessor,
+	blockHeight, toBlockTime int64, pollInterval time.Duration,
+) {
+	if atomic.CompareAndSwapUint32(&hl.stateSyncedInitializationRun, 0, 1) {
+		hl.Logger.Info("IsInitializationDone not finished... start goroutine")
+
+		defer atomic.StoreUint32(&hl.stateSyncedInitializationRun, 0)
+
+		hl.Logger.Info("Fetching all events between",
+			"lastEventID", eventProcessor.TokenMapLastEventID,
+			"endBlock", eventProcessor.TokenMapCheckedEndBlock,
+			"toBlock", blockHeight)
+		hl.processEventRecords(ctx, eventProcessor, blockHeight, toBlockTime, pollInterval)
+	} else {
+		hl.Logger.Info("IsInitializationDone not finished... goroutine exists")
+	}
+}
+
+func (hl *HeimdallListener) processEventRecords(
+	ctx context.Context,
+	eventProcessor *util.TokenMapProcessor,
+	blockHeight, toBlockTime int64, timeout time.Duration,
+) {
+	epochLen := 500
+	circleLen := 50
+	doneC := make(chan bool)
+	events := make([]*clerkTypes.EventRecord, 0)
+
+	go hl.getNEventRecords(eventProcessor, toBlockTime, circleLen, epochLen, &events, doneC)
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+LOOPS:
+	for {
+		select {
+		case <-doneC:
+			if events != nil {
+				finalEpoch := hl.processEvents(events, epochLen, blockHeight)
+				if !finalEpoch {
+					time.Sleep(time.Duration(1) * time.Second)
+					go hl.getNEventRecords(eventProcessor, toBlockTime, circleLen, epochLen, &events, doneC)
+					timer.Reset(timeout)
+				} else {
+					break LOOPS
+				}
+			} else {
+				hl.Logger.Info("no events")
+
+				break LOOPS
+			}
+
+		case <-timer.C:
+			hl.Logger.Error("job timeout")
+
+			return
+		case <-ctx.Done():
+			hl.Logger.Info("job stopped")
+
+			return
+		}
+	}
+}
+
+func (hl *HeimdallListener) processEvents(events []*clerkTypes.EventRecord,
+	epochLen int, blockHeight int64,
+) bool {
+	finalEpoch := false
+
+	eventsLen := len(events)
+	if eventsLen == 0 {
+		defaultEvent := clerkTypes.NewEventRecord(
+			htype.ZeroHeimdallHash, 0, 0,
+			htype.ZeroHeimdallAddress,
+			nil,
+			"",
+			time.Now(),
+			"",
+		)
+		hl.processEvent(&defaultEvent, 1, blockHeight)
+
+		return true
+	}
+
+	if eventsLen < epochLen {
+		finalEpoch = true
+	}
+
+	for index, event := range events {
+		if finalEpoch && eventsLen == index+1 {
+			hl.processEvent(event, 1, blockHeight)
+
+			return true
+		}
+
+		hl.processEvent(event, 0, blockHeight)
+	}
+
+	return false
+}
+
+func (hl *HeimdallListener) getNEventRecords(
+	eventProcessor *util.TokenMapProcessor, toBlockTime int64,
+	circleLen, epochLen int, events *[]*clerkTypes.EventRecord,
+	doneC chan bool,
+) {
+	defer func() {
+		doneC <- true
+	}()
+
+	*events = make([]*clerkTypes.EventRecord, 0)
+
+	eventsTmp, err := eventProcessor.FetchStateSyncEventsWithTotal(toBlockTime, circleLen, epochLen)
+	if err != nil {
+		hl.Logger.Error("Fetch event failed", "fetcher", hl.name, "error", err)
+
+		return
+	}
+
+	hl.Logger.Info("process event",
+		"fromEventIndex", eventProcessor.TokenMapLastEventID,
+		"fetcher", hl.name, "getEventSize", len(eventsTmp))
+
+	*events = append(*events, eventsTmp...)
+}
+
+func (hl *HeimdallListener) processEvent(event *clerkTypes.EventRecord, final int32, blockHeight int64) {
+	hl.Logger.Info("Received event record from Heimdall",
+		"RootChainType", event.RootChainType,
+		"time", event.RecordTime.UTC().String(),
+		"EventID", event.ID,
+		"TxHash", event.TxHash)
+
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		hl.Logger.Error("Error while parsing block event", "error", err, "TxHash", event.TxHash)
+
+		return
+	}
+
+	hl.sendEventTask("processEventRecordFromHeimdall", eventBytes, hl.name, final, blockHeight)
+}
+
+func (hl *HeimdallListener) sendEventTask(taskName string,
+	eventBytes []byte, chainType string, final int32,
+	blockHeight int64,
+) {
+	// create machinery task
+	signature := &tasks.Signature{
+		Name: taskName,
+		Args: []tasks.Arg{
+			{
+				Type:  "string",
+				Value: chainType,
+			},
+			{
+				Type:  "string",
+				Value: string(eventBytes),
+			},
+			{
+				Type:  "int32",
+				Value: final,
+			},
+			{
+				Type:  "int64",
+				Value: blockHeight,
+			},
+		},
+	}
+	signature.RetryCount = 3
+	signature.RetryTimeout = 3
+
+	hl.Logger.Info("Sending block level task",
+		"taskName", taskName, "eventBytes", eventBytes, "currentTime", time.Now())
+
+	// send task
+	_, err := hl.queueConnector.Server.SendTask(signature)
+	if err != nil {
+		hl.Logger.Error("Error sending block level task", "taskName", taskName, "error", err)
 	}
 }
