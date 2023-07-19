@@ -76,9 +76,7 @@ const (
 	WithdrawToEventSig = "0x67b714876402c93362735688659e2283b4a37fb21bab24bc759ca759ae851fd8"
 )
 
-var (
-	withDrawToTopics = [][]string{{WithdrawToEventSig}}
-)
+var withDrawToTopics = [][]string{{WithdrawToEventSig}}
 
 var (
 	logger     log.Logger
@@ -559,6 +557,7 @@ func getTopics(topicStr [][]string) [][]common.Hash {
 			}
 
 			var h common.Hash
+
 			copy(h[:], topicByte)
 			ret[i] = append(ret[i], h)
 		}

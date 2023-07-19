@@ -464,7 +464,9 @@ func (c *ContractCaller) GetBlockNumberFromTxHash(tx common.Hash) (*big.Int, err
 	return blkNum, nil
 }
 
-func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []common.Address, topics [][]common.Hash) ([]ethTypes.Log, error) {
+func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []common.Address,
+	topics [][]common.Hash,
+) ([]ethTypes.Log, error) {
 	logs, err := c.MaticChainClient.FilterLogs(context.Background(), ethereum.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
@@ -474,6 +476,7 @@ func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []c
 	if err != nil {
 		return nil, err
 	}
+
 	return logs, nil
 }
 

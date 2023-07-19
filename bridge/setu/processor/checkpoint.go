@@ -533,7 +533,9 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	}), nil
 }
 
-func (cp *CheckpointProcessor) filterEthCrossChain(start uint64, end uint64, rootChain string, maxCheckpointLengthParam uint64) bool {
+func (cp *CheckpointProcessor) filterEthCrossChain(start uint64, end uint64, rootChain string,
+	maxCheckpointLengthParam uint64,
+) bool {
 	isOpen, rootChainIsOpen, maxLength := cp.getDynamicCheckpointProposal(rootChain)
 
 	if !isOpen || !rootChainIsOpen {
@@ -541,7 +543,9 @@ func (cp *CheckpointProcessor) filterEthCrossChain(start uint64, end uint64, roo
 	}
 
 	if maxCheckpointLengthParam < uint64(maxLength) {
-		cp.Logger.Error("proposal feature-dynamic-checkpoint maxlength is too long", "maxLength", maxLength, "MaxCheckpointLength", maxCheckpointLengthParam)
+		cp.Logger.Error("proposal feature-dynamic-checkpoint maxlength is too long",
+			"maxLength", maxLength, "MaxCheckpointLength", maxCheckpointLengthParam)
+
 		return true
 	}
 
@@ -1018,8 +1022,10 @@ func (cp *CheckpointProcessor) checkHasCrossChain(start uint64, end uint64, root
 	addrs, canUse := cp.getAddress(rootChain)
 	if !canUse {
 		cp.Logger.Error("mapToken address can't use")
+
 		return true
 	}
+
 	if len(addrs) == 0 {
 		cp.Logger.Error("mapToken address can't use: len=0")
 
@@ -1037,21 +1043,19 @@ func (cp *CheckpointProcessor) checkHasCrossChain(start uint64, end uint64, root
 	logs, err := cp.contractConnector.GetLogs(big.NewInt(int64(start)), big.NewInt(int64(end)), addrs, topics)
 	if err != nil {
 		cp.Logger.Error("Error while GetLogs", "error", err)
+
 		return true
 	}
+
 	cp.Logger.Info("checkHasCrossChain", "start", start, "end", end, "addrLen", len(addrs), "logsLen", len(logs))
 
-	if logs == nil || len(logs) == 0 {
-		return false
-	} else {
-		return true
-	}
+	return len(logs) != 0
 }
 
 func (cp *CheckpointProcessor) getAddress(rootChain string) ([]common.Address, bool) {
 	eventProcessor := util.NewTokenMapProcessor(cp.cliCtx, cp.storageClient)
-	nodeStatus, err := helper.GetNodeStatus(cp.cliCtx)
 
+	nodeStatus, err := helper.GetNodeStatus(cp.cliCtx)
 	if err != nil {
 		cp.Logger.Error("Error while fetching heimdall node status", "error", err)
 
@@ -1059,6 +1063,7 @@ func (cp *CheckpointProcessor) getAddress(rootChain string) ([]common.Address, b
 	}
 
 	toBlock := nodeStatus.SyncInfo.LatestBlockHeight
+
 	done, err := eventProcessor.IsInitializationDoneWithBlock(toBlock)
 	if err != nil {
 		cp.Logger.Error("Error while fetching token map in IsInitializationDoneWithBlock", "toBlock", toBlock, "error", err)
