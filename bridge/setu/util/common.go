@@ -12,6 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
 
 	mLog "github.com/RichardKnop/machinery/v1/log"
@@ -69,6 +72,12 @@ const (
 
 	BridgeDBFlag          = "bridge-db"
 	ProposersURLSizeLimit = 100
+
+	WithdrawToEventSig = "0x67b714876402c93362735688659e2283b4a37fb21bab24bc759ca759ae851fd8"
+)
+
+var (
+	withDrawToTopics = [][]string{{WithdrawToEventSig}}
 )
 
 var (
@@ -531,6 +540,35 @@ func GetValidatorNonce(cliCtx cliContext.CLIContext, validatorID uint64) (uint64
 	logger.Debug("Validator data recieved ", "validator", validator.String())
 
 	return validator.Nonce, result.Height, nil
+}
+
+func GetWithDrawToTopics() [][]common.Hash {
+	return getTopics(withDrawToTopics)
+}
+
+func getTopics(topicStr [][]string) [][]common.Hash {
+	ret := make([][]common.Hash, len(topicStr))
+
+	for i, topics := range topicStr {
+		for _, topic := range topics {
+			topicByte, err := hexutil.Decode(topic)
+			if err != nil {
+				logger.Error("Error while decoding topic", "error", err)
+
+				return nil
+			}
+
+			var h common.Hash
+			copy(h[:], topicByte)
+			ret[i] = append(ret[i], h)
+		}
+	}
+
+	return ret
+}
+
+func GetDynamicCheckpointFeature(cliCtx cliContext.CLIContext) (*featureManagerTypes.PlainFeatureData, error) {
+	return GetTargetFeatureConfig(cliCtx, featureManagerTypes.DynamicCheckpoint)
 }
 
 // GetTargetFeatureConfig return target feature config.

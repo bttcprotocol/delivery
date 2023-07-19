@@ -16,3 +16,7 @@ const (
 	// DefaultParamspace default name for parameter store.
 	DefaultParamspace = ModuleName
 )
+
+const (
+	DynamicCheckpoint = "DynamicCheckpoint"
+)

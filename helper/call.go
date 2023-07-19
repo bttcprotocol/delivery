@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum"
+
 	"github.com/maticnetwork/heimdall/tron"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -460,6 +462,19 @@ func (c *ContractCaller) GetBlockNumberFromTxHash(tx common.Hash) (*big.Int, err
 		return nil, errors.New("unable to set string")
 	}
 	return blkNum, nil
+}
+
+func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []common.Address, topics [][]common.Hash) ([]ethTypes.Log, error) {
+	logs, err := c.MaticChainClient.FilterLogs(context.Background(), ethereum.FilterQuery{
+		FromBlock: fromBlock,
+		ToBlock:   toBlock,
+		Addresses: addrs,
+		Topics:    topics,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return logs, nil
 }
 
 // GetConfirmedTxReceipt returns confirmed tx receipt
