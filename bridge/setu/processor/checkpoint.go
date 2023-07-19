@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -499,6 +500,10 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 		)
 	}
 
+	if !cp.filterEthCrossChain(start, end, rootChain, checkpointParams.MaxCheckpointLength) {
+		end = start
+	}
+
 	// Handle when block producers go down
 	if end == 0 || end == start || (0 < diff && diff < checkpointParams.AvgCheckpointLength) {
 		cp.Logger.Debug("Fetching last header block to calculate time")
@@ -526,6 +531,33 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 		end:    currentCheckpointInfo.end,
 		number: big.NewInt(0).SetUint64(currentCheckpointInfo.number),
 	}), nil
+}
+
+func (cp *CheckpointProcessor) filterEthCrossChain(start uint64, end uint64, rootChain string,
+	maxCheckpointLengthParam uint64,
+) bool {
+	isOpen, rootChainIsOpen, maxLength := cp.getDynamicCheckpointProposal(rootChain)
+
+	if !isOpen || !rootChainIsOpen {
+		return true
+	}
+
+	if maxCheckpointLengthParam < uint64(maxLength) {
+		cp.Logger.Error("proposal feature-dynamic-checkpoint maxlength is too long",
+			"maxLength", maxLength, "MaxCheckpointLength", maxCheckpointLengthParam)
+
+		return true
+	}
+
+	if end-start+1 >= uint64(maxLength) {
+		return true
+	}
+
+	if cp.checkHasCrossChain(start, end, rootChain) {
+		return true
+	}
+
+	return false
 }
 
 // sendCheckpointToHeimdall - creates checkpoint msg and broadcasts to heimdall
@@ -984,4 +1016,92 @@ func (cp *CheckpointProcessor) getCheckpointContext(rootChain string) (*Checkpoi
 		ChainmanagerParams: chainmanagerParams,
 		CheckpointParams:   checkpointParams,
 	}, nil
+}
+
+func (cp *CheckpointProcessor) checkHasCrossChain(start uint64, end uint64, rootChain string) bool {
+	addrs, canUse := cp.getAddress(rootChain)
+	if !canUse {
+		cp.Logger.Error("mapToken address can't use")
+
+		return true
+	}
+
+	if len(addrs) == 0 {
+		cp.Logger.Error("mapToken address can't use: len=0")
+
+		return true
+	}
+
+	topics := util.GetWithDrawToTopics()
+
+	if len(topics) == 0 {
+		cp.Logger.Error("topics can't use: len=0")
+
+		return true
+	}
+
+	logs, err := cp.contractConnector.GetLogs(big.NewInt(int64(start)), big.NewInt(int64(end)), addrs, topics)
+	if err != nil {
+		cp.Logger.Error("Error while GetLogs", "error", err)
+
+		return true
+	}
+
+	cp.Logger.Info("checkHasCrossChain", "start", start, "end", end, "addrLen", len(addrs), "logsLen", len(logs))
+
+	return len(logs) != 0
+}
+
+func (cp *CheckpointProcessor) getAddress(rootChain string) ([]common.Address, bool) {
+	eventProcessor := util.NewTokenMapProcessor(cp.cliCtx, cp.storageClient)
+
+	nodeStatus, err := helper.GetNodeStatus(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Error while fetching heimdall node status", "error", err)
+
+		return nil, false
+	}
+
+	toBlock := nodeStatus.SyncInfo.LatestBlockHeight
+
+	done, err := eventProcessor.IsInitializationDoneWithBlock(toBlock)
+	if err != nil {
+		cp.Logger.Error("Error while fetching token map in IsInitializationDoneWithBlock", "toBlock", toBlock, "error", err)
+
+		return nil, false
+	}
+
+	if !done {
+		cp.Logger.Error("Not done while fetching token map in IsInitializationDoneWithBlock ", "toBlock", toBlock)
+
+		return nil, false
+	}
+
+	mlist, err := eventProcessor.GetTokenMapByRootType(rootChain)
+	if err != nil {
+		cp.Logger.Error("Error while fetching token map in GetTokenMapByRootType", "rootChain", rootChain, "error", err)
+
+		return nil, false
+	}
+
+	cp.Logger.Info("getAddress", "rootChain", rootChain, "mlistLen", len(mlist), "toBlock", toBlock)
+
+	retSlice := make([]common.Address, 0, len(mlist))
+
+	for _, item := range mlist {
+		retSlice = append(retSlice, common.HexToAddress(item.ChildToken))
+	}
+
+	return retSlice, true
+}
+
+func (cp *CheckpointProcessor) getDynamicCheckpointProposal(rootType string) (bool, bool, int) {
+	fea, err := util.GetDynamicCheckpointFeature(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Error while fetching dynamic checkpoint feature", "error", err)
+
+		return false, false, 0
+	}
+
+	return fea.IsOpen, fea.IntConf[strings.ToLower(rootType)] != 0, fea.IntConf["maxLength"]
 }
