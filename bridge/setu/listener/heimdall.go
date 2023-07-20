@@ -16,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
 	clerkTypes "github.com/maticnetwork/heimdall/clerk/types"
+	featureManagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
 	slashingTypes "github.com/maticnetwork/heimdall/slashing/types"
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
 	htype "github.com/maticnetwork/heimdall/types"
@@ -279,7 +280,7 @@ func (hl *HeimdallListener) StartPollingEventRecord(ctx context.Context, pollInt
 				ticker.Reset(interval)
 			})
 
-			targetFeature, err := util.GetTargetFeatureConfig(hl.cliCtx, "feature-a")
+			targetFeature, err := util.GetTargetFeatureConfig(hl.cliCtx, featureManagerTypes.DynamicCheckpoint)
 			if err == nil && targetFeature.IsOpen {
 				hl.loadEventRecords(ctx, pollInterval)
 			}
