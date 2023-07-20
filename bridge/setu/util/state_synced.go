@@ -83,6 +83,21 @@ func NewTokenMapProcessor(cliCtx context.CLIContext, storageClient *leveldb.DB) 
 	return tmp
 }
 
+func (tmp *TokenMapProcessor) ResetParameters() error {
+	tmp.TokenMapLastEventID = uint64(0)
+	tmp.TokenMapCheckedEndBlock = int64(0)
+
+	if err := tmp.UpdateTokenMapLastEventID(tmp.TokenMapLastEventID); err != nil {
+		return err
+	}
+
+	if err := tmp.UpdateTokenMapCheckedEndBlock(tmp.TokenMapCheckedEndBlock); err != nil {
+		return err
+	}
+
+	return tmp.deleteHash()
+}
+
 // IsInitializationDone - check if all the historical records event have been processed.
 func (tmp *TokenMapProcessor) IsInitializationDone() (bool, error) {
 	hashBytes, err := tmp.GetHash()
@@ -97,7 +112,7 @@ func (tmp *TokenMapProcessor) IsInitializationDone() (bool, error) {
 		}
 
 		if !valid {
-			if err := tmp.deleteHash(); err != nil {
+			if err := tmp.ResetParameters(); err != nil {
 				return false, err
 			}
 		}
