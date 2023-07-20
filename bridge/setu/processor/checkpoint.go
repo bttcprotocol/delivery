@@ -500,7 +500,7 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 		)
 	}
 
-	if !cp.filterEthCrossChain(start, end, rootChain, checkpointParams.MaxCheckpointLength) {
+	if !cp.checkCrossChain(start, end, rootChain, checkpointParams.MaxCheckpointLength) {
 		end = start
 	}
 
@@ -533,7 +533,7 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	}), nil
 }
 
-func (cp *CheckpointProcessor) filterEthCrossChain(start uint64, end uint64, rootChain string,
+func (cp *CheckpointProcessor) checkCrossChain(start uint64, end uint64, rootChain string,
 	maxCheckpointLengthParam uint64,
 ) bool {
 	isOpen, rootChainIsOpen, maxLength := cp.getDynamicCheckpointProposal(rootChain)
@@ -553,11 +553,7 @@ func (cp *CheckpointProcessor) filterEthCrossChain(start uint64, end uint64, roo
 		return true
 	}
 
-	if cp.checkHasCrossChain(start, end, rootChain) {
-		return true
-	}
-
-	return false
+	return cp.hasCrossChainTx(start, end, rootChain)
 }
 
 // sendCheckpointToHeimdall - creates checkpoint msg and broadcasts to heimdall
@@ -1018,27 +1014,15 @@ func (cp *CheckpointProcessor) getCheckpointContext(rootChain string) (*Checkpoi
 	}, nil
 }
 
-func (cp *CheckpointProcessor) checkHasCrossChain(start uint64, end uint64, rootChain string) bool {
+func (cp *CheckpointProcessor) hasCrossChainTx(start uint64, end uint64, rootChain string) bool {
 	addrs, canUse := cp.getAddress(rootChain)
-	if !canUse {
-		cp.Logger.Error("mapToken address can't use")
-
-		return true
-	}
-
-	if len(addrs) == 0 {
-		cp.Logger.Error("mapToken address can't use: len=0")
+	if !canUse || len(addrs) == 0 {
+		cp.Logger.Error("mapToken address can't use", "len", len(addrs))
 
 		return true
 	}
 
 	topics := util.GetWithDrawToTopics()
-
-	if len(topics) == 0 {
-		cp.Logger.Error("topics can't use: len=0")
-
-		return true
-	}
 
 	logs, err := cp.contractConnector.GetLogs(big.NewInt(int64(start)), big.NewInt(int64(end)), addrs, topics)
 	if err != nil {
@@ -1047,7 +1031,8 @@ func (cp *CheckpointProcessor) checkHasCrossChain(start uint64, end uint64, root
 		return true
 	}
 
-	cp.Logger.Info("checkHasCrossChain", "start", start, "end", end, "addrLen", len(addrs), "logsLen", len(logs))
+	cp.Logger.Info("hasCrossChainTx getLogs", "rootChain", rootChain, "start", start, "end", end,
+		"addrLen", len(addrs), "logsLen", len(logs))
 
 	return len(logs) != 0
 }
