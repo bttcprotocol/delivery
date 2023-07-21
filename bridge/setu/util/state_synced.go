@@ -76,7 +76,12 @@ func NewTokenMapProcessor(cliCtx context.CLIContext, storageClient *leveldb.DB) 
 		cliCtx:        cliCtx,
 		storageClient: storageClient,
 	}
-	if err := tmp.getTokenMapLastEventIDAndCheckedEndBlock(); err != nil {
+
+	if err := tmp.LoadCheckedEndBlockFromDB(); err != nil {
+		return nil
+	}
+
+	if err := tmp.LoadLastEventIDFromDB(); err != nil {
 		return nil
 	}
 
@@ -310,21 +315,7 @@ func (tmp *TokenMapProcessor) calculateTokenMapHash(items []*TokenMapItem) ([]by
 	return sig, nil
 }
 
-func (tmp *TokenMapProcessor) getTokenMapLastEventIDAndCheckedEndBlock() error {
-	hasLastEventID, _ := tmp.storageClient.Has([]byte(TMapLastEventIDKey), nil)
-	if hasLastEventID {
-		eventIDBytes, err := tmp.storageClient.Get([]byte(TMapLastEventIDKey), nil)
-		if err != nil {
-			return err
-		}
-
-		if result, err := strconv.ParseUint(string(eventIDBytes), DigitBase, DigitBitSize); err == nil {
-			tmp.TokenMapLastEventID = result
-		} else {
-			return err
-		}
-	}
-
+func (tmp *TokenMapProcessor) LoadCheckedEndBlockFromDB() error {
 	hasEndBlockID, _ := tmp.storageClient.Has([]byte(TMapCheckedEndBlockKey), nil)
 	if hasEndBlockID {
 		blockIDBytes, err := tmp.storageClient.Get([]byte(TMapCheckedEndBlockKey), nil)
@@ -334,6 +325,24 @@ func (tmp *TokenMapProcessor) getTokenMapLastEventIDAndCheckedEndBlock() error {
 
 		if result, err := strconv.ParseInt(string(blockIDBytes), DigitBase, DigitBitSize); err == nil {
 			tmp.TokenMapCheckedEndBlock = result
+		} else {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (tmp *TokenMapProcessor) LoadLastEventIDFromDB() error {
+	hasLastEventID, _ := tmp.storageClient.Has([]byte(TMapLastEventIDKey), nil)
+	if hasLastEventID {
+		eventIDBytes, err := tmp.storageClient.Get([]byte(TMapLastEventIDKey), nil)
+		if err != nil {
+			return err
+		}
+
+		if result, err := strconv.ParseUint(string(eventIDBytes), DigitBase, DigitBitSize); err == nil {
+			tmp.TokenMapLastEventID = result
 		} else {
 			return err
 		}

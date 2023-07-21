@@ -45,6 +45,20 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 	}
 
 	eventProcessor := util.NewTokenMapProcessor(rp.cliCtx, rp.storageClient)
+	if eventProcessor == nil {
+		rp.Logger.Error("Error init eventProcessor",
+			"nowEventID", event.ID)
+
+		return nil
+	}
+
+	if event.ID != eventProcessor.TokenMapLastEventID+1 {
+		rp.Logger.Error("Error event ID",
+			"lastEventID", eventProcessor.TokenMapLastEventID,
+			"nowEventID", event.ID)
+
+		return nil
+	}
 
 	if event.ID > 0 {
 		if err := rp.processStateSyncedEvent(eventProcessor, &event, chainType); err != nil {
