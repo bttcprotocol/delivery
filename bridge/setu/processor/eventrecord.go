@@ -52,7 +52,7 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 		return nil
 	}
 
-	if event.ID != eventProcessor.TokenMapLastEventID+1 {
+	if event.ID != 0 && event.ID != eventProcessor.TokenMapLastEventID+1 {
 		rp.Logger.Error("Error event ID",
 			"lastEventID", eventProcessor.TokenMapLastEventID,
 			"nowEventID", event.ID)
