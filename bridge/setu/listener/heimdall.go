@@ -280,10 +280,7 @@ func (hl *HeimdallListener) StartPollingEventRecord(ctx context.Context, pollInt
 				ticker.Reset(interval)
 			})
 
-			targetFeature, err := util.GetTargetFeatureConfig(hl.cliCtx, featureManagerTypes.DynamicCheckpoint)
-			if err == nil && targetFeature.IsOpen {
-				hl.loadEventRecords(ctx, pollInterval)
-			}
+			go hl.loadEventRecords(ctx, pollInterval)
 
 		case <-ctx.Done():
 			hl.Logger.Info("Polling stopped")
@@ -295,8 +292,15 @@ func (hl *HeimdallListener) StartPollingEventRecord(ctx context.Context, pollInt
 }
 
 func (hl *HeimdallListener) loadEventRecords(ctx context.Context, pollInterval time.Duration) {
+	targetFeature, err := util.GetTargetFeatureConfig(hl.cliCtx, featureManagerTypes.DynamicCheckpoint)
+	if err != nil || !targetFeature.IsOpen {
+		hl.Logger.Info("Feature not supported... goroutine exists")
+
+		return
+	}
+
 	if atomic.LoadUint32(&hl.stateSyncedInitializationRun) == 1 {
-		hl.Logger.Info("IsInitializationDone not finished... goroutine exists")
+		hl.Logger.Info("ProcessEventRecords not finished... goroutine exists")
 
 		return
 	}
@@ -313,43 +317,21 @@ func (hl *HeimdallListener) loadEventRecords(ctx context.Context, pollInterval t
 
 	eventProcessor := util.NewTokenMapProcessor(hl.cliCtx, hl.storageClient)
 	if eventProcessor != nil {
-		done, err := eventProcessor.IsInitializationDoneWithBlock(toBlock)
-		if err != nil {
-			hl.Logger.Error("Error check IsInitializationDone...skipping events query", "error", err)
+		if atomic.CompareAndSwapUint32(&hl.stateSyncedInitializationRun, 0, 1) {
+			hl.Logger.Info("ProcessEventRecords not finished... start goroutine")
 
-			return
-		}
+			defer atomic.StoreUint32(&hl.stateSyncedInitializationRun, 0)
 
-		if !done {
-			go hl.loadHistoricalEventRecords(ctx, eventProcessor, toBlock, toBlockTime, pollInterval)
-		} else {
 			hl.Logger.Info("Fetching new events between",
 				"lastEventID", eventProcessor.TokenMapLastEventID,
 				"endBlock", eventProcessor.TokenMapCheckedEndBlock,
 				"toBlock", toBlock)
 			hl.processEventRecords(ctx, eventProcessor, toBlock, toBlockTime, pollInterval)
+		} else {
+			hl.Logger.Info("Last ProcessEventRecords not finished... goroutine exists")
 		}
 	} else {
 		hl.Logger.Error("Error construct eventProcessor")
-	}
-}
-
-func (hl *HeimdallListener) loadHistoricalEventRecords(ctx context.Context,
-	eventProcessor *util.TokenMapProcessor,
-	blockHeight, toBlockTime int64, pollInterval time.Duration,
-) {
-	if atomic.CompareAndSwapUint32(&hl.stateSyncedInitializationRun, 0, 1) {
-		hl.Logger.Info("IsInitializationDone not finished... start goroutine")
-
-		defer atomic.StoreUint32(&hl.stateSyncedInitializationRun, 0)
-
-		hl.Logger.Info("Fetching all events between",
-			"lastEventID", eventProcessor.TokenMapLastEventID,
-			"endBlock", eventProcessor.TokenMapCheckedEndBlock,
-			"toBlock", blockHeight)
-		hl.processEventRecords(ctx, eventProcessor, blockHeight, toBlockTime, pollInterval)
-	} else {
-		hl.Logger.Info("IsInitializationDone not finished... goroutine exists")
 	}
 }
 
