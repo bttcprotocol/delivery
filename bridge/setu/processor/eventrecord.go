@@ -70,6 +70,14 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 
 			return err
 		}
+
+		if final == 1 {
+			if err := eventProcessor.UpdateHash(); err != nil {
+				rp.Logger.Error("Error update token map hash to db", "error", err)
+
+				return err
+			}
+		}
 	}
 
 	if final == 1 {
@@ -77,22 +85,6 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 			rp.Logger.Error("Error update token map checked end block to db", "error", err)
 
 			return err
-		}
-
-		if event.ID > 0 {
-			if err := eventProcessor.UpdateHash(); err != nil {
-				rp.Logger.Error("Error update token map hash to db", "error", err)
-
-				return err
-			}
-		}
-
-		// only for test
-		mmap, _ := eventProcessor.GetTokenMap()
-		for k, v := range mmap {
-			for _, item := range v {
-				rp.Logger.Info("map", "root", k, "item", item)
-			}
 		}
 	}
 
