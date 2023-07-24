@@ -33,7 +33,7 @@ const (
 	// EventRecordURLPath - url path of heimdall for event records.
 	EventRecordURLPath = "clerk/event-record/list"
 
-	BlockDiff    = int64(100)
+	BlockDiff    = int64(25)
 	DigitBase    = 10
 	DigitBitSize = 64
 )
