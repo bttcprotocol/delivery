@@ -52,15 +52,15 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 		return nil
 	}
 
-	if event.ID != 0 && event.ID != eventProcessor.TokenMapLastEventID+1 {
-		rp.Logger.Error("Error event ID",
-			"lastEventID", eventProcessor.TokenMapLastEventID,
-			"nowEventID", event.ID)
-
-		return nil
-	}
-
 	if event.ID > 0 {
+		if event.ID != eventProcessor.TokenMapLastEventID+1 {
+			rp.Logger.Error("Error event ID",
+				"lastEventID", eventProcessor.TokenMapLastEventID,
+				"nowEventID", event.ID)
+
+			return nil
+		}
+
 		if err := rp.processStateSyncedEvent(eventProcessor, &event, chainType); err != nil {
 			return err
 		}
