@@ -300,7 +300,7 @@ func (hl *HeimdallListener) loadEventRecords(ctx context.Context, pollInterval t
 	}
 
 	if atomic.LoadUint32(&hl.stateSyncedInitializationRun) == 1 {
-		hl.Logger.Info("ProcessEventRecords not finished... goroutine exists")
+		hl.Logger.Info("Last ProcessEventRecords not finished... goroutine exists")
 
 		return
 	}
@@ -318,7 +318,7 @@ func (hl *HeimdallListener) loadEventRecords(ctx context.Context, pollInterval t
 	eventProcessor := util.NewTokenMapProcessor(hl.cliCtx, hl.storageClient)
 	if eventProcessor != nil {
 		if atomic.CompareAndSwapUint32(&hl.stateSyncedInitializationRun, 0, 1) {
-			hl.Logger.Info("ProcessEventRecords not finished... start goroutine")
+			hl.Logger.Info("ProcessEventRecords... start goroutine")
 
 			defer atomic.StoreUint32(&hl.stateSyncedInitializationRun, 0)
 
@@ -436,7 +436,7 @@ func (hl *HeimdallListener) getNEventRecords(
 		return
 	}
 
-	hl.Logger.Info("process event",
+	hl.Logger.Info("Process event",
 		"fromEventIndex", eventProcessor.TokenMapLastEventID,
 		"fetcher", hl.name, "getEventSize", len(eventsTmp))
 
@@ -489,12 +489,12 @@ func (hl *HeimdallListener) sendEventTask(taskName string,
 	signature.RetryCount = 3
 	signature.RetryTimeout = 3
 
-	hl.Logger.Info("Sending block level task",
+	hl.Logger.Info("Sending event record task",
 		"taskName", taskName, "eventBytes", eventBytes, "currentTime", time.Now())
 
 	// send task
 	_, err := hl.queueConnector.Server.SendTask(signature)
 	if err != nil {
-		hl.Logger.Error("Error sending block level task", "taskName", taskName, "error", err)
+		hl.Logger.Error("Error sending event record task", "taskName", taskName, "error", err)
 	}
 }
