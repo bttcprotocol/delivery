@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -65,27 +66,39 @@ type TokenMapProcessor struct {
 
 	cliCtx        context.CLIContext
 	storageClient *leveldb.DB
+	eventCache    []*TokenMapItem
+	mlock         sync.Mutex
 }
+
+var (
+	tokenMapProcessorOnce sync.Once
+	tokenMapProcessor     *TokenMapProcessor
+)
 
 // NewTokenMapProcessor - new one.
 func NewTokenMapProcessor(cliCtx context.CLIContext, storageClient *leveldb.DB) *TokenMapProcessor {
-	tmp := &TokenMapProcessor{
-		TokenMapLastEventID:     uint64(0),
-		TokenMapCheckedEndBlock: int64(0),
+	tokenMapProcessorOnce.Do(func() {
+		tokenMapProcessor = &TokenMapProcessor{
+			TokenMapLastEventID:     uint64(0),
+			TokenMapCheckedEndBlock: int64(0),
 
-		cliCtx:        cliCtx,
-		storageClient: storageClient,
+			cliCtx:        cliCtx,
+			storageClient: storageClient,
+			eventCache:    make([]*TokenMapItem, 0),
+		}
+	})
+
+	if tokenMapProcessor.TokenMapLastEventID == 0 {
+		if err := tokenMapProcessor.LoadLastEventIDFromDB(); err != nil {
+			return nil
+		}
 	}
 
-	if err := tmp.LoadCheckedEndBlockFromDB(); err != nil {
+	if err := tokenMapProcessor.LoadCheckedEndBlockFromDB(); err != nil {
 		return nil
 	}
 
-	if err := tmp.LoadLastEventIDFromDB(); err != nil {
-		return nil
-	}
-
-	return tmp
+	return tokenMapProcessor
 }
 
 func (tmp *TokenMapProcessor) ResetParameters() error {
@@ -105,6 +118,9 @@ func (tmp *TokenMapProcessor) ResetParameters() error {
 
 // IsInitializationDone - check if all the historical records event have been processed.
 func (tmp *TokenMapProcessor) IsInitializationDone() (bool, error) {
+	tmp.mlock.Lock()
+	defer tmp.mlock.Unlock()
+
 	hashBytes, err := tmp.GetHash()
 	if err != nil {
 		return false, err
@@ -126,6 +142,16 @@ func (tmp *TokenMapProcessor) IsInitializationDone() (bool, error) {
 	}
 
 	return false, nil
+}
+
+// LockForUpdate...
+func (tmp *TokenMapProcessor) LockForUpdate() {
+	tmp.mlock.Lock()
+}
+
+// UnLockForUpdate...
+func (tmp *TokenMapProcessor) UnLockForUpdate() {
+	tmp.mlock.Unlock()
 }
 
 // GetHash - query token map hash from db.
@@ -279,6 +305,30 @@ func (tmp *TokenMapProcessor) newTokenMapItem(key, value []byte) (*TokenMapItem,
 	return item, nil
 }
 
+// CacheTokenMapItem - cache one item.
+func (tmp *TokenMapProcessor) CacheTokenMapItem(item *TokenMapItem) error {
+	if !item.validate() {
+		return errors.New("key format is wrong")
+	}
+
+	tmp.eventCache = append(tmp.eventCache, item)
+
+	return nil
+}
+
+// PutTokenMapItem - cache one item.
+func (tmp *TokenMapProcessor) FlushCacheTokenMapItem() error {
+	for _, item := range tmp.eventCache {
+		if err := tmp.PutTokenMapItem(item); err != nil {
+			return err
+		}
+	}
+
+	tmp.eventCache = make([]*TokenMapItem, 0)
+
+	return nil
+}
+
 // PutTokenMapItem - store one item to db.
 func (tmp *TokenMapProcessor) PutTokenMapItem(item *TokenMapItem) error {
 	if !item.validate() {
@@ -367,54 +417,11 @@ func (tmp *TokenMapProcessor) UpdateTokenMapCheckedEndBlock(endblock int64) erro
 		nil)
 }
 
-// FetchStateSyncEvents -.
-func (tmp *TokenMapProcessor) FetchStateSyncEvents(
-	toTime int64, stateFetchLimit int,
-) ([]*clerkTypes.EventRecord, error) {
-	fromID := tmp.TokenMapLastEventID + 1
-	eventRecords := make([]*clerkTypes.EventRecord, 0)
-
-	for {
-		queryParams := fmt.Sprintf("from-id=%d&to-time=%d&limit=%d", fromID, toTime, stateFetchLimit)
-
-		response, err := helper.FetchFromAPI(
-			tmp.cliCtx,
-			helper.GetHeimdallServerEndpointWithQuery(EventRecordURLPath, queryParams))
-		if err != nil {
-			return nil, err
-		}
-
-		if response.Result == nil { // status 204
-			break
-		}
-
-		var records []*clerkTypes.EventRecord
-		if err := json.Unmarshal(response.Result, &records); err != nil {
-			return nil, err
-		}
-
-		eventRecords = append(eventRecords, records...)
-
-		if len(records) < stateFetchLimit {
-			break
-		}
-
-		fromID += uint64(stateFetchLimit)
-	}
-
-	sort.SliceStable(eventRecords, func(i, j int) bool {
-		return eventRecords[i].ID < eventRecords[j].ID
-	})
-
-	return eventRecords, nil
-}
-
 // FetchStateSyncEventsWithTotal -.
 func (tmp *TokenMapProcessor) FetchStateSyncEventsWithTotal(
-	toTime int64, stateFetchLimit int,
+	fromID uint64, toTime int64, stateFetchLimit int,
 	total int,
 ) ([]*clerkTypes.EventRecord, error) {
-	fromID := tmp.TokenMapLastEventID + 1
 	eventRecords := make([]*clerkTypes.EventRecord, 0)
 
 	for {
@@ -438,7 +445,6 @@ func (tmp *TokenMapProcessor) FetchStateSyncEventsWithTotal(
 
 		if len(records) > 0 {
 			eventRecords = append(eventRecords, records...)
-			tmp.TokenMapLastEventID += uint64(len(records))
 		}
 
 		if len(records) < stateFetchLimit {
@@ -449,7 +455,11 @@ func (tmp *TokenMapProcessor) FetchStateSyncEventsWithTotal(
 			break
 		}
 
-		fromID += uint64(stateFetchLimit)
+		for _, v := range records {
+			if fromID < v.ID+1 {
+				fromID = v.ID + 1
+			}
+		}
 	}
 
 	if len(eventRecords) > 0 {
