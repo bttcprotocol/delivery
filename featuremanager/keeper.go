@@ -39,7 +39,7 @@ func NewKeeper(
 		featureTable: make(map[string]bool),
 		codespace:    codespace,
 	}
-	keeper.RegistreFeature()
+	keeper.RegisterFeature()
 
 	return keeper
 }
@@ -58,8 +58,8 @@ func (k Keeper) addFeature(feature string) {
 	k.featureTable[feature] = true
 }
 
-// RegistreFeature keeps all adden features to vote for change.
-func (k Keeper) RegistreFeature() {
+// RegisterFeature keeps all adden features to vote for change.
+func (k Keeper) RegisterFeature() {
 	// all new type of features should be registered here.
 	k.addFeature("feature-x")
 	k.addFeature(types.DynamicCheckpoint)
