@@ -97,6 +97,14 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 
 				return err
 			}
+
+			// only for test
+			mmap, _ := eventProcessor.GetTokenMap()
+			for k, v := range mmap {
+				for _, item := range v {
+					rp.Logger.Info("map", "root", k, "item", item)
+				}
+			}
 		}
 	}
 
