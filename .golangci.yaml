@@ -13,6 +13,9 @@ linters:
     - goerr113
     - gochecknoinits
     - exhaustivestruct
+    - cyclop
+    - nestif
+    - gocognit
 
 service:
   golangci-lint-version: 1.41

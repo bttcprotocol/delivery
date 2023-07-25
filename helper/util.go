@@ -851,6 +851,15 @@ func GetHeimdallServerEndpoint(endpoint string) string {
 	return u.String()
 }
 
+// GetHeimdallServerEndpointWithQuery returns heimdall server endpoint with query part.
+func GetHeimdallServerEndpointWithQuery(endpoint string, rawQuery string) string {
+	u, _ := url.Parse(GetConfig().DeliveryServerURL)
+	u.Path = path.Join(u.Path, endpoint)
+	u.RawQuery = rawQuery
+
+	return u.String()
+}
+
 // GetTronGridEndpoint returns tron server endpoint
 func GetTronGridEndpoint(endpoint string) string {
 	u, _ := url.Parse(GetConfig().TronGridUrl)
@@ -869,7 +878,7 @@ func CalculateSequence(blockNumber *big.Int, logIndex uint64, rootChainType stri
 	return sequence
 }
 
-//Package goLang sha256 hash algorithm.
+// Package goLang sha256 hash algorithm.
 func Hash(s []byte) ([]byte, error) {
 	h := sha256.New()
 	_, err := h.Write(s)
