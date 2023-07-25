@@ -315,37 +315,39 @@ func (hl *HeimdallListener) loadEventRecords(ctx context.Context, pollInterval t
 	toBlock := nodeStatus.SyncInfo.LatestBlockHeight
 	toBlockTime := nodeStatus.SyncInfo.LatestBlockTime.Unix()
 
-	eventProcessor := util.NewTokenMapProcessor(hl.cliCtx, hl.storageClient)
-	if eventProcessor != nil {
-		if atomic.CompareAndSwapUint32(&hl.stateSyncedInitializationRun, 0, 1) {
-			hl.Logger.Info("ProcessEventRecords... start goroutine")
-
-			defer atomic.StoreUint32(&hl.stateSyncedInitializationRun, 0)
-
-			hl.Logger.Info("Fetching new events between",
-				"lastEventID", eventProcessor.TokenMapLastEventID,
-				"endBlock", eventProcessor.TokenMapCheckedEndBlock,
-				"toBlock", toBlock)
-			hl.processEventRecords(ctx, eventProcessor, toBlock, toBlockTime, pollInterval)
-		} else {
-			hl.Logger.Info("Last ProcessEventRecords not finished... goroutine exists")
-		}
+	if atomic.CompareAndSwapUint32(&hl.stateSyncedInitializationRun, 0, 1) {
+		hl.Logger.Info("ProcessEventRecords... start goroutine")
+		defer atomic.StoreUint32(&hl.stateSyncedInitializationRun, 0)
+		hl.processEventRecords(ctx, toBlock, toBlockTime, pollInterval)
 	} else {
-		hl.Logger.Error("Error construct eventProcessor")
+		hl.Logger.Info("Last ProcessEventRecords not finished... goroutine exists")
 	}
 }
 
 func (hl *HeimdallListener) processEventRecords(
 	ctx context.Context,
-	eventProcessor *util.TokenMapProcessor,
 	blockHeight, toBlockTime int64, timeout time.Duration,
 ) {
+	eventProcessor := util.NewTokenMapProcessor(hl.cliCtx, hl.storageClient)
+	if eventProcessor == nil {
+		hl.Logger.Error("Error construct eventProcessor")
+
+		return
+	}
+
+	hl.Logger.Info("Fetching new events between",
+		"lastEventID", eventProcessor.TokenMapLastEventID,
+		"endBlock", eventProcessor.TokenMapCheckedEndBlock,
+		"toBlock", blockHeight)
+
 	epochLen := 500
 	circleLen := 50
 	doneC := make(chan bool)
 	events := make([]*clerkTypes.EventRecord, 0)
 
-	go hl.getNEventRecords(eventProcessor, toBlockTime, circleLen, epochLen, &events, doneC)
+	go hl.getNEventRecords(
+		eventProcessor, eventProcessor.TokenMapLastEventID+1,
+		toBlockTime, circleLen, epochLen, &events, doneC)
 
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
@@ -355,10 +357,10 @@ LOOPS:
 		select {
 		case <-doneC:
 			if events != nil {
-				finalEpoch := hl.processEvents(events, epochLen, blockHeight)
+				finalEpoch, lastEventID := hl.processEvents(events, epochLen, blockHeight)
 				if !finalEpoch {
 					time.Sleep(time.Duration(1) * time.Second)
-					go hl.getNEventRecords(eventProcessor, toBlockTime, circleLen, epochLen, &events, doneC)
+					go hl.getNEventRecords(eventProcessor, lastEventID+1, toBlockTime, circleLen, epochLen, &events, doneC)
 					timer.Reset(timeout)
 				} else {
 					break LOOPS
@@ -383,8 +385,9 @@ LOOPS:
 
 func (hl *HeimdallListener) processEvents(events []*clerkTypes.EventRecord,
 	epochLen int, blockHeight int64,
-) bool {
+) (bool, uint64) {
 	finalEpoch := false
+	lastEventID := uint64(0)
 
 	eventsLen := len(events)
 	if eventsLen == 0 {
@@ -398,7 +401,7 @@ func (hl *HeimdallListener) processEvents(events []*clerkTypes.EventRecord,
 		)
 		hl.processEvent(&defaultEvent, 1, blockHeight)
 
-		return true
+		return true, lastEventID
 	}
 
 	if eventsLen < epochLen {
@@ -406,20 +409,24 @@ func (hl *HeimdallListener) processEvents(events []*clerkTypes.EventRecord,
 	}
 
 	for index, event := range events {
+		if lastEventID < event.ID {
+			lastEventID = event.ID
+		}
+
 		if finalEpoch && eventsLen == index+1 {
 			hl.processEvent(event, 1, blockHeight)
 
-			return true
+			return true, lastEventID
 		}
 
 		hl.processEvent(event, 0, blockHeight)
 	}
 
-	return false
+	return false, lastEventID
 }
 
 func (hl *HeimdallListener) getNEventRecords(
-	eventProcessor *util.TokenMapProcessor, toBlockTime int64,
+	eventProcessor *util.TokenMapProcessor, fromEventID uint64, toBlockTime int64,
 	circleLen, epochLen int, events *[]*clerkTypes.EventRecord,
 	doneC chan bool,
 ) {
@@ -429,7 +436,7 @@ func (hl *HeimdallListener) getNEventRecords(
 
 	*events = make([]*clerkTypes.EventRecord, 0)
 
-	eventsTmp, err := eventProcessor.FetchStateSyncEventsWithTotal(toBlockTime, circleLen, epochLen)
+	eventsTmp, err := eventProcessor.FetchStateSyncEventsWithTotal(fromEventID, toBlockTime, circleLen, epochLen)
 	if err != nil {
 		hl.Logger.Error("Fetch event failed", "fetcher", hl.name, "error", err)
 

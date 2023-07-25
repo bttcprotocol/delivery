@@ -52,6 +52,9 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 		return nil
 	}
 
+	eventProcessor.LockForUpdate()
+	defer eventProcessor.UnLockForUpdate()
+
 	if event.ID > 0 {
 		if event.ID != eventProcessor.TokenMapLastEventID+1 {
 			rp.Logger.Error("Error event ID",
@@ -61,19 +64,36 @@ func (rp *EventRecordProcessor) processEventRecordFromHeimdall(
 			return nil
 		}
 
+		rp.Logger.Info("Process event ID",
+			"lastEventID", eventProcessor.TokenMapLastEventID,
+			"nowEventID", event.ID,
+			"final", final)
+
 		if err := rp.processStateSyncedEvent(eventProcessor, &event, chainType); err != nil {
 			return err
 		}
 
-		if err := eventProcessor.UpdateTokenMapLastEventID(event.ID); err != nil {
-			rp.Logger.Error("Error update token map last event id to db", "error", err)
-
-			return err
-		}
-
 		if final == 1 {
+			if err := eventProcessor.FlushCacheTokenMapItem(); err != nil {
+				rp.Logger.Error("Error update token map hash to db", "error", err)
+
+				return err
+			}
+
 			if err := eventProcessor.UpdateHash(); err != nil {
 				rp.Logger.Error("Error update token map hash to db", "error", err)
+
+				return err
+			}
+
+			if err := eventProcessor.UpdateTokenMapLastEventID(event.ID); err != nil {
+				rp.Logger.Error("Error update last event id to db", "error", err)
+
+				return err
+			}
+
+			if err := eventProcessor.LoadLastEventIDFromDB(); err != nil {
+				rp.Logger.Error("Error update last event id from db", "error", err)
 
 				return err
 			}
@@ -110,12 +130,16 @@ func (rp *EventRecordProcessor) processStateSyncedEvent(
 			return err
 		}
 
-		if err := eventProcessor.PutTokenMapItem(item); err != nil {
-			rp.Logger.Error("Error store token map item to db", "error", err)
+		rp.Logger.Info("Process event, chached", "eventID", event.ID)
+
+		if err := eventProcessor.CacheTokenMapItem(item); err != nil {
+			rp.Logger.Error("Error cache token map item to db", "error", err)
 
 			return err
 		}
 	}
+
+	eventProcessor.TokenMapLastEventID = event.ID
 
 	return nil
 }
