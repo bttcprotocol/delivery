@@ -1,6 +1,7 @@
 package subspace
 
 import (
+	"encoding/json"
 	"reflect"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -15,7 +16,26 @@ const (
 
 	// TStoreKey is the string store key for the param transient store
 	TStoreKey = "transient_params"
+
+	// Special keys that contains Map.
+	ParamsWithMultiChains string = "ParamsWithMultiChains"
+	FeatureParams         string = "FeatureParams"
+	SupportFeature        string = "SupportFeature"
 )
+
+// hasMap is used for marshalling and unmarshaling for map.
+func hasMap(key string) bool {
+	switch key {
+	case ParamsWithMultiChains:
+		fallthrough
+	case FeatureParams:
+		fallthrough
+	case SupportFeature:
+		return true
+	}
+
+	return false
+}
 
 // Individual parameter store for each keeper
 // Transient store persists for a block, so we use it for
@@ -85,7 +105,18 @@ func (s Subspace) transientStore(ctx sdk.Context) sdk.KVStore {
 func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	store := s.kvStore(ctx)
 	bz := store.Get(key)
-	err := s.cdc.UnmarshalJSON(bz, ptr)
+
+	var err error
+
+	if hasMap(string(key)) {
+		err = json.Unmarshal(bz, ptr)
+		if err != nil {
+			err = s.cdc.UnmarshalJSON(bz, ptr)
+		}
+	} else {
+		err = s.cdc.UnmarshalJSON(bz, ptr)
+	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -98,7 +129,18 @@ func (s Subspace) GetIfExists(ctx sdk.Context, key []byte, ptr interface{}) {
 	if bz == nil {
 		return
 	}
-	err := s.cdc.UnmarshalJSON(bz, ptr)
+
+	var err error
+
+	if hasMap(string(key)) {
+		err = json.Unmarshal(bz, ptr)
+		if err != nil {
+			err = s.cdc.UnmarshalJSON(bz, ptr)
+		}
+	} else {
+		err = s.cdc.UnmarshalJSON(bz, ptr)
+	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -146,11 +188,21 @@ func (s Subspace) Set(ctx sdk.Context, key []byte, param interface{}) {
 
 	s.checkType(store, key, param)
 
-	bz, err := s.cdc.MarshalJSON(param)
+	var data []byte
+
+	var err error
+
+	if hasMap(string(key)) {
+		data, err = json.Marshal(param)
+	} else {
+		data, err = s.cdc.MarshalJSON(param)
+	}
+
 	if err != nil {
 		panic(err)
 	}
-	store.Set(key, bz)
+
+	store.Set(key, data)
 
 	tstore := s.transientStore(ctx)
 	tstore.Set(key, []byte{})
@@ -170,7 +222,11 @@ func (s Subspace) Update(ctx sdk.Context, key []byte, param []byte) error {
 	dest := reflect.New(ty).Interface()
 
 	switch string(key) {
-	case string("ParamsWithMultiChains"):
+	case ParamsWithMultiChains:
+		fallthrough
+	case SupportFeature:
+		fallthrough
+	case FeatureParams:
 		inputData := reflect.New(ty).Interface()
 
 		err := s.cdc.UnmarshalJSON(param, inputData)

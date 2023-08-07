@@ -12,6 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	stakingTypes "github.com/maticnetwork/heimdall/staking/types"
 
 	mLog "github.com/RichardKnop/machinery/v1/log"
@@ -25,19 +28,23 @@ import (
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
 	chainManagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	checkpointTypes "github.com/maticnetwork/heimdall/checkpoint/types"
+	featureManagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
 	"github.com/maticnetwork/heimdall/helper"
 	"github.com/maticnetwork/heimdall/types"
 	hmtypes "github.com/maticnetwork/heimdall/types"
 )
 
 const (
-	AccountDetailsURL         = "/auth/accounts/%v"
-	LastNoAckURL              = "/checkpoints/last-no-ack"
-	CurrentEpochURL           = "/checkpoints/epoch"
-	CheckpointParamsURL       = "/checkpoints/params"
-	CheckpointActivationURL   = "/checkpoints/activation-height/%v"
-	ChainManagerParamsURL     = "/chainmanager/params"
-	ChainNewParamsURL         = "/chainmanager/newparams/%v" //for new eth forkChain such as bsc, replace address of params
+	AccountDetailsURL       = "/auth/accounts/%v"
+	LastNoAckURL            = "/checkpoints/last-no-ack"
+	CurrentEpochURL         = "/checkpoints/epoch"
+	CheckpointParamsURL     = "/checkpoints/params"
+	CheckpointActivationURL = "/checkpoints/activation-height/%v"
+	ChainManagerParamsURL   = "/chainmanager/params"
+	// for new eth forkChain such as bsc, replace address of params.
+	ChainNewParamsURL         = "/chainmanager/newparams/%v"
+	TaragetFeatureConfigURL   = "/featuremanager/target-feature/%v"
+	AllFeatureConfigURL       = "/featuremanager/feature-map"
 	ProposersURL              = "/staking/proposer/%v"
 	BufferedCheckpointURL     = "/checkpoints/buffer/%v"
 	BufferedCheckpointSyncURL = "/checkpoints/sync/%v"
@@ -65,10 +72,16 @@ const (
 
 	BridgeDBFlag          = "bridge-db"
 	ProposersURLSizeLimit = 100
+
+	WithdrawToEventSig = "0x67b714876402c93362735688659e2283b4a37fb21bab24bc759ca759ae851fd8"
 )
 
-var logger log.Logger
-var loggerOnce sync.Once
+var withDrawToTopics = [][]string{{WithdrawToEventSig}}
+
+var (
+	logger     log.Logger
+	loggerOnce sync.Once
+)
 
 // Logger returns logger singleton instance
 func Logger() log.Logger {
@@ -108,7 +121,6 @@ func IsProposerByIndex(cliCtx cliContext.CLIContext, index uint64) (bool, error)
 	result, err := helper.FetchFromAPI(cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(ProposersURL, strconv.FormatUint(count, 10))),
 	)
-
 	if err != nil {
 		logger.Error("Error fetching proposers", "url", ProposersURL, "error", err)
 		return false, err
@@ -190,7 +202,7 @@ func IsInProposerList(cliCtx cliContext.CLIContext, count uint64) (bool, error) 
 	return false, nil
 }
 
-//default offset 0
+// default offset 0.
 func CalculateTaskDelay(cliCtx cliContext.CLIContext) (bool, time.Duration) {
 	return CalculateTaskDelayWithOffset(cliCtx, 0)
 }
@@ -276,8 +288,8 @@ func IsEventSender(cliCtx cliContext.CLIContext, validatorID uint64) bool {
 	return bytes.Equal(validator.Signer.Bytes(), helper.GetAddress())
 }
 
-//CreateURLWithQuery receives the uri and parameters in key value form
-//it will return the new url with the given query from the parameter
+// CreateURLWithQuery receives the uri and parameters in key value form
+// it will return the new url with the given query from the parameter.
 func CreateURLWithQuery(uri string, param map[string]interface{}) (string, error) {
 	urlObj, err := url.Parse(uri)
 	if err != nil {
@@ -360,7 +372,6 @@ func GetChainmanagerParams(cliCtx cliContext.CLIContext) (*chainManagerTypes.Par
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(ChainManagerParamsURL),
 	)
-
 	if err != nil {
 		logger.Error("Error fetching chainmanager params", "err", err)
 		return nil, err
@@ -381,7 +392,6 @@ func GetNewChainParams(cliCtx cliContext.CLIContext, rootChain string) (*chainMa
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(ChainNewParamsURL, rootChain)),
 	)
-
 	if err != nil {
 		logger.Error("Error fetching chainmanager params", "root", rootChain, "err", err)
 		return nil, err
@@ -402,7 +412,6 @@ func GetCheckpointParams(cliCtx cliContext.CLIContext) (*checkpointTypes.Params,
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(CheckpointParamsURL),
 	)
-
 	if err != nil {
 		logger.Error("Error fetching Checkpoint params", "err", err)
 		return nil, err
@@ -423,7 +432,6 @@ func GetBufferedCheckpoint(cliCtx cliContext.CLIContext, rootChain string) (*hmt
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(BufferedCheckpointURL, rootChain)),
 	)
-
 	if err != nil {
 		logger.Debug("Error fetching buffered checkpoint", "err", err)
 		return nil, err
@@ -444,7 +452,6 @@ func GetBufferedCheckpointSync(cliCtx cliContext.CLIContext, rootChain string) (
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(BufferedCheckpointSyncURL, rootChain)),
 	)
-
 	if err != nil {
 		logger.Debug("Error fetching buffered checkpoint sync", "root", rootChain, "err", err)
 		return nil, err
@@ -465,7 +472,6 @@ func GetlastestCheckpoint(cliCtx cliContext.CLIContext, rootChain string) (*hmty
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(LatestCheckpointURL, rootChain)),
 	)
-
 	if err != nil {
 		logger.Debug("Error fetching latest checkpoint", "err", err)
 		return nil, err
@@ -496,7 +502,6 @@ func GetNextStakingRecord(cliCtx cliContext.CLIContext, rootChain string) (*stak
 		cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(NextStakingRecordURL, rootChain)),
 	)
-
 	if err != nil {
 		logger.Debug("Error fetching next stake record", "err", err)
 		return nil, err
@@ -519,7 +524,6 @@ func GetValidatorNonce(cliCtx cliContext.CLIContext, validatorID uint64) (uint64
 	result, err := helper.FetchFromAPI(cliCtx,
 		helper.GetHeimdallServerEndpoint(fmt.Sprintf(ValidatorURL, strconv.FormatUint(validatorID, 10))),
 	)
-
 	if err != nil {
 		logger.Error("Error fetching validator data", "error", err)
 		return 0, 0, err
@@ -534,4 +538,80 @@ func GetValidatorNonce(cliCtx cliContext.CLIContext, validatorID uint64) (uint64
 	logger.Debug("Validator data recieved ", "validator", validator.String())
 
 	return validator.Nonce, result.Height, nil
+}
+
+func GetWithDrawToTopics() [][]common.Hash {
+	return getTopics(withDrawToTopics)
+}
+
+func getTopics(topicStr [][]string) [][]common.Hash {
+	ret := make([][]common.Hash, len(topicStr))
+
+	for i, topics := range topicStr {
+		for _, topic := range topics {
+			topicByte, err := hexutil.Decode(topic)
+			if err != nil {
+				logger.Error("Error while decoding topic", "error", err)
+
+				return nil
+			}
+
+			var h common.Hash
+
+			copy(h[:], topicByte)
+			ret[i] = append(ret[i], h)
+		}
+	}
+
+	return ret
+}
+
+func GetDynamicCheckpointFeature(cliCtx cliContext.CLIContext) (*featureManagerTypes.PlainFeatureData, error) {
+	return GetTargetFeatureConfig(cliCtx, featureManagerTypes.DynamicCheckpoint)
+}
+
+// GetTargetFeatureConfig return target feature config.
+func GetTargetFeatureConfig(
+	cliCtx cliContext.CLIContext, feature string,
+) (*featureManagerTypes.PlainFeatureData, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(fmt.Sprintf(TaragetFeatureConfigURL, feature)),
+	)
+	if err != nil {
+		logger.Error("Error fetching target feature", "feature", feature, "err", err)
+
+		return nil, err
+	}
+
+	var params featureManagerTypes.PlainFeatureData
+	if err := json.Unmarshal(response.Result, &params); err != nil {
+		logger.Error("Error unmarshalling feature data", "feature", feature, "url", TaragetFeatureConfigURL, "err", err)
+
+		return nil, err
+	}
+
+	return &params, nil
+}
+
+// GetFeatureMap return all features in a map.
+func GetFeatureMap(cliCtx cliContext.CLIContext) (*featureManagerTypes.FeatureParams, error) {
+	response, err := helper.FetchFromAPI(
+		cliCtx,
+		helper.GetHeimdallServerEndpoint(AllFeatureConfigURL),
+	)
+	if err != nil {
+		logger.Error("Error fetching feature params", "err", err)
+
+		return nil, err
+	}
+
+	var params featureManagerTypes.FeatureParams
+	if err := json.Unmarshal(response.Result, &params); err != nil {
+		logger.Error("Error unmarshalling feature params", "url", TaragetFeatureConfigURL, "err", err)
+
+		return nil, err
+	}
+
+	return &params, nil
 }

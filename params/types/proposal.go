@@ -52,7 +52,7 @@ func (pcp ParameterChangeProposal) ValidateBasic() sdk.Error {
 		return err
 	}
 
-	return ValidateChanges(pcp.Changes)
+	return ValidateParamChanges(pcp.Changes)
 }
 
 // String implements the Stringer interface.
@@ -98,7 +98,7 @@ func (pc ParamChange) String() string {
 
 // ValidateChange performs basic validation checks over a set of ParamChange. It
 // returns an error if any ParamChange is invalid.
-func ValidateChanges(changes []ParamChange) sdk.Error {
+func ValidateParamChanges(changes []ParamChange) sdk.Error {
 	if len(changes) == 0 {
 		return ErrEmptyChanges(DefaultCodespace)
 	}

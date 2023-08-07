@@ -87,17 +87,30 @@ func RecursiveMergeOverwrite(from, to, dst interface{}) error {
 					fromValue := fromData.MapIndex(k).Interface()
 					toValue := reflect.ValueOf(val.Value).Interface()
 
-					err := RecursiveMergeOverwrite(fromValue, toValue, &toValue)
-					if err != nil {
-						return err
+					if reflect.TypeOf(toValue).Kind() == reflect.Struct {
+						// if map's value is a struct, then merge the value recursively
+						err := RecursiveMergeOverwrite(fromValue, toValue, &toValue)
+						if err != nil {
+							return err
+						}
+					} else {
+						// if map's value is not a struct, then merge the value
+						innerData := reflect.ValueOf(&toValue).Elem()
+						innerData.Set(reflect.ValueOf(fromValue))
 					}
-					val.Value = toValue
 
+					val.Value = toValue
 					toDataCache[k.String()] = val
 				}
 			}
+
 			// write back to field
 			newInstance := reflect.ValueOf(fromValue)
+			if newInstance.IsNil() {
+				fromValue = toMap[k]
+				newInstance = reflect.ValueOf(fromValue)
+			}
+
 			for _, v := range toDataCache {
 				key := reflect.ValueOf(v.Key)
 				value := reflect.ValueOf(v.Value)
