@@ -46,6 +46,17 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	r.HandleFunc("/checkpoints/{root}/{number}", checkpointByNumberHandlerFunc(cliCtx)).Methods("GET")
 }
 
+// nolint: tagliatelle
+type CheckpointWithID struct {
+	ID         uint64                  `json:"id"`
+	Proposer   hmTypes.HeimdallAddress `json:"proposer"`
+	StartBlock uint64                  `json:"start_block"`
+	EndBlock   uint64                  `json:"end_block"`
+	RootHash   hmTypes.HeimdallHash    `json:"root_hash"`
+	BorChainID string                  `json:"bor_chain_id"`
+	TimeStamp  uint64                  `json:"timestamp"`
+}
+
 // HTTP request handler to query the auth params values
 func paramsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +171,9 @@ func checkpointCountHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		//
 
 		RestLogger.Debug("Fetching number of checkpoints from state")
-		ackCountBytes, height, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), queryParams)
+
+		ackCountBytes, height, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -450,7 +463,8 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		// Get ack count
 		//
 
-		ackcountBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), queryParams)
+		ackcountBytes, height, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAckCount), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -496,7 +510,33 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		rest.PostProcessResponse(w, cliCtx, res)
+		var checkpointUnmarshal hmTypes.Checkpoint
+		if err = json.Unmarshal(res, &checkpointUnmarshal); err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		}
+
+		checkpointWithID := &CheckpointWithID{
+			ID:         ackCount,
+			Proposer:   checkpointUnmarshal.Proposer,
+			StartBlock: checkpointUnmarshal.StartBlock,
+			EndBlock:   checkpointUnmarshal.EndBlock,
+			RootHash:   checkpointUnmarshal.RootHash,
+			BorChainID: checkpointUnmarshal.BorChainID,
+			TimeStamp:  checkpointUnmarshal.TimeStamp,
+		}
+
+		resWithID, err := json.Marshal(checkpointWithID)
+		if err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		}
+
+		// error if no checkpoint found
+		if ok := hmRest.ReturnNotFoundIfNoContent(w, resWithID, "No checkpoint found"); !ok {
+			return
+		}
+
+		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, resWithID)
 	}
 }
 
@@ -529,7 +569,8 @@ func checkpointByNumberHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		// query checkpoint
-		res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpoint), queryParams)
+		res, height, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpoint), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -540,7 +581,28 @@ func checkpointByNumberHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		rest.PostProcessResponse(w, cliCtx, res)
+		var checkpointUnmarshal hmTypes.Checkpoint
+		if err = json.Unmarshal(res, &checkpointUnmarshal); err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		}
+
+		checkpointWithID := &CheckpointWithID{
+			ID:         number,
+			Proposer:   checkpointUnmarshal.Proposer,
+			StartBlock: checkpointUnmarshal.StartBlock,
+			EndBlock:   checkpointUnmarshal.EndBlock,
+			RootHash:   checkpointUnmarshal.RootHash,
+			BorChainID: checkpointUnmarshal.BorChainID,
+			TimeStamp:  checkpointUnmarshal.TimeStamp,
+		}
+
+		resWithID, err := json.Marshal(checkpointWithID)
+		if err != nil {
+			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		}
+
+		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, resWithID)
 	}
 }
 
