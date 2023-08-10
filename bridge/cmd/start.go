@@ -52,6 +52,7 @@ func StartBridge(shutdownCtx context.Context, isStandAlone bool) error {
 		// go routine to catch signal
 		catchSignal := make(chan os.Signal, 1)
 		signal.Notify(catchSignal, os.Interrupt, syscall.SIGTERM)
+
 		cancelCtx, cancel := context.WithCancel(shutdownCtx)
 		shutdownCtx = cancelCtx
 

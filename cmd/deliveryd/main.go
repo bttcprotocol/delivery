@@ -76,10 +76,10 @@ const (
 
 // nolint
 const (
-	nodeDirPerm     = 0o755
-	tracerWritePerm = 0o666
-	pvKeyFilePerm   = 0o777
-	pvStateFilePerm = 0o777
+	nodeDirPerm     = 0755
+	tracerWritePerm = 0666
+	pvKeyFilePerm   = 0777
+	pvStateFilePerm = 0777
 )
 
 var ZeroIntString = big.NewInt(0).String()
