@@ -513,6 +513,8 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		var checkpointUnmarshal hmTypes.Checkpoint
 		if err = json.Unmarshal(res, &checkpointUnmarshal); err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+
+			return
 		}
 
 		checkpointWithID := &CheckpointWithID{
@@ -528,6 +530,8 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		resWithID, err := json.Marshal(checkpointWithID)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+
+			return
 		}
 
 		// error if no checkpoint found
@@ -584,6 +588,8 @@ func checkpointByNumberHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		var checkpointUnmarshal hmTypes.Checkpoint
 		if err = json.Unmarshal(res, &checkpointUnmarshal); err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+
+			return
 		}
 
 		checkpointWithID := &CheckpointWithID{
@@ -599,6 +605,8 @@ func checkpointByNumberHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		resWithID, err := json.Marshal(checkpointWithID)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+
+			return
 		}
 
 		cliCtx = cliCtx.WithHeight(height)
