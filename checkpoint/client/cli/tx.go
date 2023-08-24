@@ -229,7 +229,12 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 			var rootChainAddress common.Address
 			switch rootChain {
 			case hmTypes.RootChainTypeEth, hmTypes.RootChainTypeBsc:
-				receipt, err = contractCallerObj.GetConfirmedTxReceipt(txHash.EthHash(), chainmanagerParams.MainchainTxConfirmations, rootChain)
+				finalizedEthOpen := false
+				if rootChain == hmTypes.RootChainTypeEth {
+					finalizedEthOpen = util.GetFinalizedEthOpen(cliCtx)
+				}
+				receipt, err = contractCallerObj.GetConfirmedTxReceipt(txHash.EthHash(),
+					chainmanagerParams.MainchainTxConfirmations, rootChain, finalizedEthOpen)
 				if err != nil || receipt == nil {
 					return errors.New("transaction is not confirmed yet. Please wait for sometime and try again")
 				}
