@@ -18,5 +18,6 @@ const (
 )
 
 const (
-	DynamicCheckpoint = "DynamicCheckpoint"
+	SupportMapMarshaling = "SupportMapMarshaling"
+	DynamicCheckpoint    = "DynamicCheckpoint"
 )
