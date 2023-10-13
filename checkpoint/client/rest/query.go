@@ -404,7 +404,9 @@ func overviewHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		// last no ack
 		var lastNoACKTime uint64
-		lastNoACKBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryLastNoAck), nil)
+
+		lastNoACKBytes, height, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryLastNoAck), nil)
 		if err == nil {
 			// check content
 			if ok := hmRest.ReturnNotFoundIfNoContent(w, lastNoACKBytes, "No last-no-ack count found"); ok {
@@ -433,6 +435,8 @@ func overviewHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
+		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, result)
 	}
 }
@@ -499,7 +503,8 @@ func latestCheckpointHandlerFunc(cliCtx context.CLIContext) http.HandlerFunc {
 		// Get checkpoint
 		//
 
-		res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpoint), queryParams)
+		res, _, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpoint), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -652,7 +657,8 @@ func checkpointListhandlerFn(
 		}
 
 		// query checkpoint
-		res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointList), queryParams)
+		res, height, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointList), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -663,6 +669,7 @@ func checkpointListhandlerFn(
 			return
 		}
 
+		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, res)
 	}
 }
@@ -724,7 +731,8 @@ func checkpointActivationHeightHandlerFunc(cliCtx context.CLIContext) http.Handl
 		}
 
 		// query checkpoint
-		activationHeightBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointActivation), queryParams)
+		activationHeightBytes, height, err := cliCtx.QueryWithData(
+			fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryCheckpointActivation), queryParams)
 		if err != nil {
 			hmRest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -746,6 +754,7 @@ func checkpointActivationHeightHandlerFunc(cliCtx context.CLIContext) http.Handl
 			return
 		}
 
+		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, result)
 	}
 }
