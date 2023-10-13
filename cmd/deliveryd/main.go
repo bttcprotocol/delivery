@@ -16,13 +16,13 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	bridgeCmd "github.com/maticnetwork/heimdall/bridge/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -44,7 +44,6 @@ import (
 
 	"github.com/maticnetwork/heimdall/app"
 	authTypes "github.com/maticnetwork/heimdall/auth/types"
-	hmbridge "github.com/maticnetwork/heimdall/bridge/cmd"
 
 	"github.com/maticnetwork/heimdall/cmd/deliveryd/rollback"
 	"github.com/maticnetwork/heimdall/helper"
@@ -159,7 +158,7 @@ func main() {
 	rootCmd.AddCommand(showAccountCmd())
 	rootCmd.AddCommand(showPrivateKeyCmd())
 	rootCmd.AddCommand(restServer.ServeCommands(cdc, restServer.RegisterRoutes))
-	rootCmd.AddCommand(hmbridge.BridgeCommands())
+	rootCmd.AddCommand(bridgeCmd.BridgeCommands(viper.GetViper(), logger, "main"))
 	rootCmd.AddCommand(VerifyGenesis(ctx, cdc))
 	rootCmd.AddCommand(initCmd(ctx, cdc))
 	rootCmd.AddCommand(testnetCmd(ctx, cdc))
@@ -213,17 +212,41 @@ which accepts a path for the resulting pprof file.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx.Logger.Info("starting ABCI with Tendermint")
-			err := startInProcess(shutdownCtx, ctx, appCreator, cdc)
+
+			startRestServer, _ := cmd.Flags().GetBool(helper.RestServerFlag)
+			startBridge, _ := cmd.Flags().GetBool(helper.BridgeFlag)
+
+			err := startInProcess(shutdownCtx, ctx, cmd, appCreator, cdc, startRestServer, startBridge)
 
 			return err
 		},
 	}
+
+	cmd.Flags().Bool(
+		helper.RestServerFlag,
+		false,
+		"Start rest service",
+	)
+
+	cmd.Flags().Bool(
+		helper.BridgeFlag,
+		false,
+		"Start bridge service",
+	)
 
 	cmd.PersistentFlags().String(helper.LogLevel, ctx.Config.LogLevel, "Log level")
 
 	if err := viper.BindPFlag(helper.LogLevel, cmd.PersistentFlags().Lookup(helper.LogLevel)); err != nil {
 		logger.Error("main | BindPFlag | helper.LogLevel", "Error", err)
 	}
+
+	// bridge flags =  start flags (all, only) + root bridge cmd flags.
+	cmd.Flags().Bool("all", false, "start all bridge services")
+	cmd.Flags().StringSlice("only", []string{}, "comma separated bridge services to start")
+	bridgeCmd.DecorateWithBridgeRootFlags(cmd, viper.GetViper(), logger, "main")
+
+	// rest server flags
+	restServer.DecorateWithRestFlags(cmd)
 
 	// core flags for the ABCI application
 	cmd.Flags().String(flagAddress, "tcp://0.0.0.0:26658", "Listen address")
@@ -241,9 +264,6 @@ which accepts a path for the resulting pprof file.
 	cmd.Flags().String(flagCPUProfile, "",
 		"Enable CPU profiling and write to the provided file")
 
-	// delivery flags
-	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
-	cmd.Flags().String(client.FlagNode, helper.DefaultTendermintNode, "Address of the node to connect to")
 	cmd.Flags().String(helper.FlagClientHome, helper.DefaultCLIHome, "client's home directory")
 
 	// add support for all Tendermint-specific command line options
@@ -253,8 +273,8 @@ which accepts a path for the resulting pprof file.
 }
 
 // nolint: cyclop
-func startInProcess(shutdownCtx context.Context, ctx *server.Context,
-	appCreator server.AppCreator, cdc *codec.Codec,
+func startInProcess(shutdownCtx context.Context, ctx *server.Context, cmd *cobra.Command,
+	appCreator server.AppCreator, cdc *codec.Codec, startRestServer bool, startBridge bool,
 ) error {
 	cfg := ctx.Config
 	home := cfg.RootDir
@@ -334,8 +354,29 @@ func startInProcess(shutdownCtx context.Context, ctx *server.Context,
 	}
 
 	// using group context makes sense in case that if one of
-	// the processes produces error the rest will go and shutdown
+	// the processes produces error the rest will go and shutdown.
 	errGroup, gCtx := errgroup.WithContext(shutdownCtx)
+
+	// start rest server.
+	if startRestServer {
+		waitForRest := make(chan struct{})
+
+		errGroup.Go(func() error {
+			return restServer.StartRestServer(gCtx, cdc, restServer.RegisterRoutes, waitForRest)
+		})
+
+		// Start rest server first, then start bridge.
+		<-waitForRest
+	}
+
+	// start bridge.
+	if startBridge {
+		bridgeCmd.AdjustBridgeDBValue(cmd, viper.GetViper())
+
+		errGroup.Go(func() error {
+			return bridgeCmd.StartBridge(gCtx, false)
+		})
+	}
 
 	// stop phase for Tendermint node
 	errGroup.Go(func() error {
