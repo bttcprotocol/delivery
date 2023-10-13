@@ -63,6 +63,8 @@ func (k Keeper) RegisterFeature() {
 	// all new type of features should be registered here.
 	k.addFeature("feature-x")
 	k.addFeature(types.DynamicCheckpoint)
+	k.addFeature(types.SupportMapMarshaling)
+	k.addFeature(types.FinalizedEth)
 }
 
 func (k Keeper) HasFeature(feature string) bool {
