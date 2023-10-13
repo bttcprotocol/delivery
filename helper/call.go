@@ -34,6 +34,9 @@ import (
 	hmTypes "github.com/maticnetwork/heimdall/types"
 )
 
+// ContractsABIsMap is a cached map holding the ABIs of the contracts.
+var ContractsABIsMap = make(map[string]*abi.ABI)
+
 // IContractCaller represents contract caller
 type IContractCaller interface {
 	GetHeaderInfo(headerID uint64, rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error)
@@ -141,6 +144,10 @@ type rpcTransaction struct {
 	txExtraInfo
 }
 
+const (
+	LRUCapacity = 5000
+)
+
 // NewContractCaller contract caller
 func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainClient = GetMainClient()
@@ -150,47 +157,20 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
 	contractCallerObj.BscChainRPC = GetBscChainRPCClient()
 	contractCallerObj.MaticChainRPC = GetMaticRPCClient()
-	contractCallerObj.ReceiptCache, _ = NewLru(5000)
+	contractCallerObj.ReceiptCache, err = NewLru(LRUCapacity)
 
-	//
-	// ABIs
-	//
-
-	if contractCallerObj.RootChainABI, err = getABI(string(rootchain.RootchainABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.StakingInfoABI, err = getABI(string(stakinginfo.StakinginfoABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.ValidatorSetABI, err = getABI(string(validatorset.ValidatorsetABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.StateReceiverABI, err = getABI(string(statereceiver.StatereceiverABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.StateSenderABI, err = getABI(string(statesender.StatesenderABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.StakeManagerABI, err = getABI(string(stakemanager.StakemanagerABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.SlashManagerABI, err = getABI(string(slashmanager.SlashmanagerABI)); err != nil {
-		return
-	}
-
-	if contractCallerObj.MaticTokenABI, err = getABI(string(erc20.Erc20ABI)); err != nil {
-		return
+	if err != nil {
+		return contractCallerObj, err
 	}
 
 	contractCallerObj.ContractInstanceCache = make(map[string]interface{})
 
-	return
+	// package global cache (string->ABI)
+	if err = populateABIs(&contractCallerObj); err != nil {
+		return contractCallerObj, err
+	}
+
+	return contractCallerObj, nil
 }
 
 // GetRootChainInstance returns RootChain contract instance for selected base chain
@@ -770,7 +750,6 @@ func (c *ContractCaller) DecodeUnJailedEvent(contractAddress common.Address, rec
 // CurrentAccountStateRoot get current account root from on chain
 func (c *ContractCaller) CurrentAccountStateRoot(stakingInfoInstance *stakinginfo.Stakinginfo) ([32]byte, error) {
 	accountStateRoot, err := stakingInfoInstance.GetAccountStateRoot(nil)
-
 	if err != nil {
 		Logger.Error("Unable to get current account state roor", "Error", err)
 		var emptyArr [32]byte
@@ -853,9 +832,10 @@ func (c *ContractCaller) GetMaticTxReceipt(txHash common.Hash) (*ethTypes.Receip
 func (c *ContractCaller) getTxReceipt(client *ethclient.Client, txHash common.Hash) (*ethTypes.Receipt, error) {
 	return client.TransactionReceipt(context.Background(), txHash)
 }
+
 func (c *ContractCaller) GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error) {
 	// create filter
-	var txIDs = []string{txID}
+	txIDs := []string{txID}
 	queryFilter := tron.FilterOtherParams{
 		BaseQueryParam: tron.GetDefaultBaseParm(),
 		Method:         tron.GetTransactionByHash,
@@ -875,6 +855,76 @@ func (c *ContractCaller) GetTronTransactionReceipt(txID string) (*ethTypes.Recei
 		return nil, err
 	}
 	return &transactionReceipt.Result, nil
+}
+
+// utility and helper methods
+
+// populateABIs fills the package level cache for contracts' ABIs
+// When called the first time, ContractsABIsMap will be filled and getABI method won't be invoked the next times
+// This reduces the number of calls to json decode methods made by the contract caller
+// It uses ABIs' definitions instead of contracts addresses, as the latter might not be available at init time.
+func populateABIs(contractCallerObj *ContractCaller) error {
+	var ccAbi *abi.ABI
+
+	var err error
+
+	contractsABIs := [8]string{
+		rootchain.RootchainABI, stakinginfo.StakinginfoABI, validatorset.ValidatorsetABI,
+		statereceiver.StatereceiverABI, statesender.StatesenderABI, stakemanager.StakemanagerABI,
+		slashmanager.SlashmanagerABI, erc20.Erc20ABI,
+	}
+
+	// iterate over supported ABIs
+	for _, contractABI := range contractsABIs {
+		ccAbi, err = chooseContractCallerABI(contractCallerObj, contractABI)
+		if err != nil {
+			Logger.Error("Error while fetching contract caller ABI", "error", err)
+
+			return err
+		}
+
+		if ContractsABIsMap[contractABI] == nil {
+			// fills cached abi map
+			if *ccAbi, err = getABI(contractABI); err != nil {
+				Logger.Error("Error while getting ABI for contract caller", "name", contractABI, "error", err)
+
+				return err
+			}
+
+			ContractsABIsMap[contractABI] = ccAbi
+
+			Logger.Debug("ABI initialized", "name", contractABI)
+		} else {
+			// use cached abi
+			*ccAbi = *ContractsABIsMap[contractABI]
+		}
+	}
+
+	return nil
+}
+
+// chooseContractCallerABI extracts and returns the abo.ABI object from the contractCallerObj based on its abi string.
+func chooseContractCallerABI(contractCallerObj *ContractCaller, abi string) (*abi.ABI, error) {
+	switch abi {
+	case rootchain.RootchainABI:
+		return &contractCallerObj.RootChainABI, nil
+	case stakinginfo.StakinginfoABI:
+		return &contractCallerObj.StakingInfoABI, nil
+	case validatorset.ValidatorsetABI:
+		return &contractCallerObj.ValidatorSetABI, nil
+	case statereceiver.StatereceiverABI:
+		return &contractCallerObj.StateReceiverABI, nil
+	case statesender.StatesenderABI:
+		return &contractCallerObj.StateSenderABI, nil
+	case stakemanager.StakemanagerABI:
+		return &contractCallerObj.StakeManagerABI, nil
+	case slashmanager.SlashmanagerABI:
+		return &contractCallerObj.SlashManagerABI, nil
+	case erc20.Erc20ABI:
+		return &contractCallerObj.MaticTokenABI, nil
+	}
+
+	return nil, errors.New("no ABI associated with such data")
 }
 
 //
@@ -932,9 +982,8 @@ func (c *ContractCaller) GetTronStakingSyncNonce(validatorID uint64, stakingMana
 		return 0
 	}
 	// Unpack the results
-	var (
-		ret0 = new(*big.Int)
-	)
+
+	ret0 := new(*big.Int)
 
 	if err := c.StakeManagerABI.UnpackIntoInterface(ret0, "validatorNonce", result); err != nil {
 		Logger.Error("Error unpack validator nonce", "error", err, "validatorId", validatorID)
@@ -948,7 +997,7 @@ func (c *ContractCaller) GetTronEventsByContractAddress(address []string, from, 
 	for _, adr := range address {
 		decodedAddress = append(decodedAddress, adr[2:])
 	}
-	//create filter
+	// create filter
 	filter := tron.NewFilter{
 		Address:   decodedAddress,
 		FromBlock: "0x" + strconv.FormatInt(from, 16),
@@ -1019,7 +1068,8 @@ func (c *ContractCaller) GetStartListenBlock(rootChainType string) uint64 {
 }
 
 func (c *ContractCaller) GetTronHeaderInfo(headerID uint64, contractAddress string, childBlockInterval uint64) (
-	root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error) {
+	root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error,
+) {
 	// Pack the input
 	btsPack, err := c.RootChainABI.Pack("headerBlocks",
 		big.NewInt(0).Mul(big.NewInt(0).SetUint64(headerID), big.NewInt(0).SetUint64(childBlockInterval)))
