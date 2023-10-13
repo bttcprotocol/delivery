@@ -32,6 +32,8 @@ const (
 	HomeFlag               = "home"
 	FlagClientHome         = "home-client"
 	ChainFlag              = "chain"
+	RestServerFlag         = "rest-server"
+	BridgeFlag             = "bridge"
 	LogLevel               = "log_level"
 	SeedsFlag              = "seeds"
 
@@ -97,7 +99,8 @@ const (
 
 	DefaultBttcChainID string = "15001"
 
-	DefaultChain = "mainnet"
+	DefaultLogsType = "json"
+	DefaultChain    = "mainnet"
 
 	secretFilePerm = 0600
 )
