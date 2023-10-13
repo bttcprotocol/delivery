@@ -503,6 +503,8 @@ github.com/markbates/oncer v0.0.0-20181203154359-bf2de49a0be2/go.mod h1:Ld9puTsI
 github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kNSCBdG0=
 github.com/maticnetwork/bor v0.2.16 h1:pz3MNdTotTWlcFXKnTSDolJ3VEmrYL+sqz6FsaWtJAQ=
 github.com/maticnetwork/bor v0.2.16/go.mod h1:tskr68Tlk2R6NLBQW2gaiQKx3BCdRvsGkcnhFUPKyh4=
+github.com/maticnetwork/bor v0.2.18-0.20220922050621-c91d4ca1fa4f h1:GJwlDTapZGPFhVNjflv2lOPSp0qB0p2PJ137qbaJRcY=
+github.com/maticnetwork/bor v0.2.18-0.20220922050621-c91d4ca1fa4f/go.mod h1:tskr68Tlk2R6NLBQW2gaiQKx3BCdRvsGkcnhFUPKyh4=
 github.com/maticnetwork/cosmos-sdk v0.37.5-0.20220311095845-81690c6a53e7 h1:8NoEtDFvY0r9KTow/jgEwOfTCPnXOs6MlEdUhRUQY78=
 github.com/maticnetwork/cosmos-sdk v0.37.5-0.20220311095845-81690c6a53e7/go.mod h1:uW55Ru86N5o3L8SVkVL1TPE+mV/WRM2la8sC3TR/Ajc=
 github.com/maticnetwork/tendermint v0.26.0-dev0.0.20220803122020-9c20f6000900 h1:mtI3GQCzvC5tRIGSUKo+PfS1FIUAGmMGXHUMxhPsV68=

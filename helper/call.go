@@ -48,7 +48,7 @@ type IContractCaller interface {
 	GetCheckpointSign(txHash common.Hash) ([]byte, []byte, []byte, error)
 	GetMainChainBlock(*big.Int, string) (*ethTypes.Header, error)
 	GetMaticChainBlock(*big.Int) (*ethTypes.Header, error)
-	GetConfirmedTxReceipt(common.Hash, uint64, string) (*ethTypes.Receipt, error)
+	GetConfirmedTxReceipt(common.Hash, uint64, string, bool) (*ethTypes.Receipt, error)
 	GetBlockNumberFromTxHash(common.Hash) (*big.Int, error)
 
 	// decode header event
@@ -435,6 +435,18 @@ func (c *ContractCaller) GetMainChainBlock(blockNum *big.Int, rootChain string) 
 	return latestBlock, nil
 }
 
+func (c *ContractCaller) GetEthFinalizedBlock() (header *ethTypes.Header, err error) {
+	finalizedHeader, err := c.MainChainClient.HeaderByNumber(context.Background(),
+		big.NewInt(int64(rpc.FinalizedBlockNumber)))
+	if err != nil {
+		Logger.Error("Unable to connect to main chain", "Error", err)
+
+		return
+	}
+
+	return finalizedHeader, nil
+}
+
 // GetMaticChainBlock returns child chain block header
 func (c *ContractCaller) GetMaticChainBlock(blockNum *big.Int) (header *ethTypes.Header, err error) {
 	latestBlock, err := c.MaticChainClient.HeaderByNumber(context.Background(), blockNum)
@@ -481,8 +493,9 @@ func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []c
 }
 
 // GetConfirmedTxReceipt returns confirmed tx receipt
-func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmations uint64, rootChain string) (*ethTypes.Receipt, error) {
-
+func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmations uint64,
+	rootChain string, ethFinalizedOpen bool,
+) (*ethTypes.Receipt, error) {
 	var receipt *ethTypes.Receipt = nil
 	receiptCache, ok := c.ReceiptCache.Get(tx.String())
 
@@ -501,27 +514,48 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 		receipt, _ = receiptCache.(*ethTypes.Receipt)
 	}
 
+	receiptBlockNumber := receipt.BlockNumber.Uint64()
 	Logger.Debug("Tx included in block", "root", rootChain, "block", receipt.BlockNumber.Uint64(), "tx", tx)
 
-	latestBlkNumber := c.LatestBlockCache[rootChain]
-	if latestBlkNumber-receipt.BlockNumber.Uint64() >= requiredConfirmations {
-		Logger.Debug("receipt block is confirmed by cache",
-			"root", rootChain, "latestBlockCached", latestBlkNumber, "receiptBlock", receipt.BlockNumber.Uint64())
-		return receipt, nil
-	}
-	// get main chain block
-	latestBlk, err := c.GetMainChainBlock(nil, rootChain)
-	if err != nil {
-		Logger.Error("error getting latest block from main chain", "Error", err)
-		return nil, err
-	}
-	Logger.Debug("Latest block on main chain obtained", "root", rootChain, "Block", latestBlk.Number.Uint64())
-	c.LatestBlockCache[rootChain] = latestBlk.Number.Uint64()
-	diff := latestBlk.Number.Uint64() - receipt.BlockNumber.Uint64()
-	if diff < requiredConfirmations {
-		return nil, errors.New("not enough confirmations")
+	var latestFinalizedBlock *ethTypes.Header
+
+	if rootChain == hmTypes.RootChainTypeEth && ethFinalizedOpen {
+		var err error
+
+		latestFinalizedBlock, err = c.GetEthFinalizedBlock()
+		if err != nil {
+			Logger.Error("error getting latest finalized block from main chain", "error", err)
+		}
 	}
 
+	if latestFinalizedBlock != nil {
+		if receiptBlockNumber > latestFinalizedBlock.Number.Uint64() {
+			Logger.Error("receipt block is not finalized", "receiptBlockNumber", receiptBlockNumber)
+
+			return nil, errors.New("not enough confirmations")
+		}
+	} else {
+		latestBlkNumber := c.LatestBlockCache[rootChain]
+		if latestBlkNumber-receipt.BlockNumber.Uint64() >= requiredConfirmations {
+			Logger.Debug("receipt block is confirmed by cache",
+				"root", rootChain, "latestBlockCached", latestBlkNumber, "receiptBlock", receipt.BlockNumber.Uint64())
+
+			return receipt, nil
+		}
+		// get main chain block
+		latestBlk, err := c.GetMainChainBlock(nil, rootChain)
+		if err != nil {
+			Logger.Error("error getting latest block from main chain", "Error", err)
+
+			return nil, err
+		}
+		Logger.Debug("Latest block on main chain obtained", "root", rootChain, "Block", latestBlk.Number.Uint64())
+		c.LatestBlockCache[rootChain] = latestBlk.Number.Uint64()
+		diff := latestBlk.Number.Uint64() - receipt.BlockNumber.Uint64()
+		if diff < requiredConfirmations {
+			return nil, errors.New("not enough confirmations")
+		}
+	}
 	return receipt, nil
 }
 
