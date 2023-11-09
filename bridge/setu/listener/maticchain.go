@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/helper"
 )
 
@@ -33,9 +34,16 @@ func (ml *MaticChainListener) Start() error {
 	// start header process
 	go ml.StartHeaderProcess(headerCtx)
 
-	ml.Logger.Info("Start polling for header blocks", "pollInterval", helper.GetConfig().CheckpointerPollInterval)
-
-	go ml.StartPolling(ctx, helper.GetConfig().CheckpointerPollInterval, true, nil)
+	// subscribe to new head
+	subscription, err := ml.contractConnector.MaticChainClient.SubscribeNewHead(ctx, ml.HeaderChannel)
+	if err != nil {
+		// start go routine to poll for new header using client object
+		ml.Logger.Info("Start polling for header blocks", "pollInterval", helper.GetConfig().CheckpointerPollInterval)
+		go ml.StartPolling(ctx, helper.GetConfig().CheckpointerPollInterval, true)
+	} else {
+		// start go routine to listen new header using subscription
+		go ml.StartSubscription(ctx, subscription)
+	}
 
 	// subscribed to new head
 	ml.Logger.Info("Subscribed to new head")
@@ -44,8 +52,7 @@ func (ml *MaticChainListener) Start() error {
 }
 
 // ProcessHeader - process headerblock from maticchain
-func (ml *MaticChainListener) ProcessHeader(newBlockHeader *blockHeader) {
-	newHeader := newBlockHeader.header
+func (ml *MaticChainListener) ProcessHeader(newHeader *types.Header) {
 	ml.Logger.Debug("New block detected", "blockNumber", newHeader.Number)
 	// Marshall header block and publish to queue
 	headerBytes, err := newHeader.MarshalJSON()

@@ -120,7 +120,6 @@ func (c *ContractCaller) SendCheckpoint(signedData []byte, sigs [][3]*big.Int,
 	Logger.Debug("Sending new checkpoint",
 		"sigs", strings.Join(s, ","),
 		"data", hex.EncodeToString(signedData),
-		"rootChain", rootChain,
 	)
 
 	tx, err := rootChainInstance.SubmitCheckpoint(auth, signedData, sigs)
@@ -128,8 +127,7 @@ func (c *ContractCaller) SendCheckpoint(signedData []byte, sigs [][3]*big.Int,
 		Logger.Error("Error while submitting checkpoint", "error", err)
 		return err
 	}
-
-	Logger.Info("Submitted new checkpoint to rootchain successfully", "rootChain", rootChain, "txHash", tx.Hash().String())
+	Logger.Info("Submitted new checkpoint to rootchain successfully", "txHash", tx.Hash().String())
 	return
 }
 

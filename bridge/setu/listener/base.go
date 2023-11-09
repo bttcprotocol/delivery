@@ -29,11 +29,11 @@ type Listener interface {
 
 	StartHeaderProcess(context.Context)
 
-	StartPolling(context.Context, time.Duration, bool, *big.Int)
+	StartPolling(context.Context, time.Duration, bool)
 
 	StartSubscription(context.Context, ethereum.Subscription)
 
-	ProcessHeader(*blockHeader)
+	ProcessHeader(*types.Header)
 
 	Stop()
 
@@ -54,7 +54,7 @@ type BaseListener struct {
 	chainClient *ethclient.Client
 
 	// header channel
-	HeaderChannel chan *blockHeader
+	HeaderChannel chan *types.Header
 
 	// cancel function for poll/subscription
 	cancelSubscription context.CancelFunc
@@ -73,11 +73,6 @@ type BaseListener struct {
 
 	// storage client
 	storageClient *leveldb.DB
-}
-
-type blockHeader struct {
-	header      *types.Header // block header
-	isFinalized bool          // if the block is a finalized block or not
 }
 
 // NewBaseListener creates a new BaseListener.
@@ -108,7 +103,7 @@ func NewBaseListener(cdc *codec.Codec, queueConnector *queue.QueueConnector, htt
 		contractConnector: contractCaller,
 		chainClient:       chainClient,
 
-		HeaderChannel: make(chan *blockHeader),
+		HeaderChannel: make(chan *types.Header),
 	}
 }
 
@@ -164,7 +159,7 @@ func (bl *BaseListener) StartHeaderProcess(ctx context.Context) {
 // startPolling starts polling
 // needAlign is used to decide whether the ticker is align to 1970 UTC.
 // if true, the ticker will always tick as it begins at 1970 UTC.
-func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool, number *big.Int) {
+func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
 	firstInterval := interval
@@ -187,36 +182,10 @@ func (bl *BaseListener) StartPolling(ctx context.Context, pollInterval time.Dura
 				ticker.Reset(interval)
 			})
 
-			var bHeader *blockHeader
-
-			header, err := bl.chainClient.HeaderByNumber(ctx, number)
+			header, err := bl.chainClient.HeaderByNumber(ctx, nil)
 			if err == nil && header != nil {
-				if number != nil {
-					// finalized was requested
-					bHeader = &blockHeader{header: header, isFinalized: true}
-				} else {
-					// latest was requested
-					bHeader = &blockHeader{header: header, isFinalized: false}
-				}
-			}
-
-			// if error occurred and finalized was requested, fall back to latest block
-			if err != nil && number != nil {
-				bl.Logger.Error("Error in fetching finalized block header while polling", "err", err)
-
-				header, err = bl.chainClient.HeaderByNumber(ctx, nil)
-				if err == nil && header != nil {
-					bHeader = &blockHeader{header: header, isFinalized: false}
-				}
-			}
-
-			if err != nil {
-				bl.Logger.Error("Error in fetching block header while polling", "err", err)
-			}
-
-			// push data to the channel
-			if bHeader != nil {
-				bl.HeaderChannel <- bHeader
+				// send data to channel
+				bl.HeaderChannel <- header
 			}
 
 		case <-ctx.Done():

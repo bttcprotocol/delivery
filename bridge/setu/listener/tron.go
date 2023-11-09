@@ -72,14 +72,14 @@ func (tl *TronListener) Start() error {
 
 	tl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
 	// poll for new header using client object
-	go tl.StartPolling(headerCtx, pollInterval, false, nil)
+	go tl.StartPolling(headerCtx, pollInterval, false)
 	return nil
 }
 
 // startPolling starts polling
 // needAlign is used to decide whether the ticker is align to 1970 UTC.
 // if true, the ticker will always tick as it begins at 1970 UTC.
-func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool, number *big.Int) {
+func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
 	firstInterval := interval
@@ -105,10 +105,8 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 			headerNum, err := tl.contractConnector.GetTronLatestBlockNumber()
 			if err == nil {
 				// send data to channel
-				tl.HeaderChannel <- &(blockHeader{
-					header: &ethTypes.Header{
-						Number: big.NewInt(headerNum),
-					},
+				tl.HeaderChannel <- &(ethTypes.Header{
+					Number: big.NewInt(headerNum),
 				})
 			}
 
@@ -121,8 +119,7 @@ func (tl *TronListener) StartPolling(ctx context.Context, pollInterval time.Dura
 }
 
 // ProcessHeader - process headerblock from rootchain
-func (tl *TronListener) ProcessHeader(newBlockHeader *blockHeader) {
-	newHeader := newBlockHeader.header
+func (tl *TronListener) ProcessHeader(newHeader *ethTypes.Header) {
 	tl.Logger.Debug("New block detected", "blockNumber", newHeader.Number)
 
 	busyLimit := helper.GetConfig().TronUnconfirmedTxsBusyLimit
@@ -146,16 +143,13 @@ func (tl *TronListener) ProcessHeader(newBlockHeader *blockHeader) {
 	latestNumber := newHeader.Number
 	// confirmation
 	confirmationBlocks := big.NewInt(int64(chainManagerParams.TronchainTxConfirmations))
-	if !newBlockHeader.isFinalized {
-		if latestNumber.Cmp(confirmationBlocks) <= 0 {
-			tl.Logger.Error("Block number less than Confirmations required", "blockNumber",
-				latestNumber.Uint64, "confirmationsRequired", confirmationBlocks.Uint64)
 
-			return
-		}
-
-		latestNumber = latestNumber.Sub(latestNumber, confirmationBlocks)
+	if latestNumber.Cmp(confirmationBlocks) <= 0 {
+		tl.Logger.Error("Block number less than Confirmations required", "blockNumber", latestNumber.Uint64, "confirmationsRequired", confirmationBlocks.Uint64)
+		return
 	}
+	latestNumber = latestNumber.Sub(latestNumber, confirmationBlocks)
+
 	// default fromBlock
 	fromBlock := latestNumber
 

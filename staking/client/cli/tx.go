@@ -90,10 +90,10 @@ func SendValidatorJoinTx(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			finalizedEthOpen := util.GetFinalizedEthOpen(cliCtx)
+
 			// get main tx receipt
 			receipt, err := contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(txhash).EthHash(),
-				chainmanagerParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth, finalizedEthOpen)
+				chainmanagerParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth)
 			if err != nil || receipt == nil {
 				return errors.New("Transaction is not confirmed yet. Please wait for sometime and try again")
 			}

@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
-	"github.com/maticnetwork/heimdall/featuremanager/util"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -103,21 +100,18 @@ func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 	chainParams := keeper.chainKeeper.GetParams(ctx)
 	var receipt *ethTypes.Receipt
 	var err error
-
 	// get main tx receipt
 	switch params.RootChainType {
 	case hmTypes.RootChainTypeEth:
-		targetFeature := util.GetFeatureConfig().GetFeature(ctx, featuremanagerTypes.FinalizedEth)
-		finalizedEth := targetFeature.IsOpen
 		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
-			chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth, finalizedEth)
+			chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth)
 	case hmTypes.RootChainTypeBsc:
 		bscChain, err := keeper.chainKeeper.GetChainParams(ctx, hmTypes.RootChainTypeBsc)
 		if err != nil {
 			return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "plealse pass correct chainType like bsc"))
 		}
 		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
-			bscChain.TxConfirmations, hmTypes.RootChainTypeBsc, false)
+			bscChain.TxConfirmations, hmTypes.RootChainTypeBsc)
 	case hmTypes.RootChainTypeTron:
 		receipt, err = contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
 	default:

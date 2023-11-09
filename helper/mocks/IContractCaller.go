@@ -456,7 +456,7 @@ func (_m *IContractCaller) GetCheckpointSign(txHash common.Hash) ([]byte, []byte
 }
 
 // GetConfirmedTxReceipt provides a mock function with given fields: _a0, _a1, _a2
-func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64, _a2 string, _a3 bool) (*types.Receipt, error) {
+func (_m *IContractCaller) GetConfirmedTxReceipt(_a0 common.Hash, _a1 uint64, _a2 string) (*types.Receipt, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *types.Receipt

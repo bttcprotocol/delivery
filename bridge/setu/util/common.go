@@ -570,17 +570,6 @@ func GetDynamicCheckpointFeature(cliCtx cliContext.CLIContext) (*featureManagerT
 	return GetTargetFeatureConfig(cliCtx, featureManagerTypes.DynamicCheckpoint)
 }
 
-func GetFinalizedEthOpen(cliCtx cliContext.CLIContext) bool {
-	feature, err := GetTargetFeatureConfig(cliCtx, featureManagerTypes.FinalizedEth)
-	if err != nil {
-		logger.Error("Error fetching finalized root chain feature", "err", err)
-
-		return false
-	}
-
-	return feature.IsOpen
-}
-
 // GetTargetFeatureConfig return target feature config.
 func GetTargetFeatureConfig(
 	cliCtx cliContext.CLIContext, feature string,

@@ -5,9 +5,6 @@ import (
 	"math/big"
 	"strconv"
 
-	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
-	"github.com/maticnetwork/heimdall/featuremanager/util"
-
 	ethCommon "github.com/ethereum/go-ethereum/common"
 
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -69,13 +66,10 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	var err error
 	// get main tx receipt
 	var contractAddress ethCommon.Address
-
 	switch msg.RootChainType {
 	case hmTypes.RootChainTypeEth:
-		targetFeature := util.GetFeatureConfig().GetFeature(ctx, featuremanagerTypes.FinalizedEth)
-		finalizedEth := targetFeature.IsOpen
 		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), params.MainchainTxConfirmations,
-			hmTypes.RootChainTypeEth, finalizedEth)
+			hmTypes.RootChainTypeEth)
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
@@ -87,7 +81,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWrongRootChainType)
 		}
 		receipt, err = contractCaller.GetConfirmedTxReceipt(msg.TxHash.EthHash(), bscChain.TxConfirmations,
-			hmTypes.RootChainTypeBsc, false)
+			hmTypes.RootChainTypeBsc)
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}

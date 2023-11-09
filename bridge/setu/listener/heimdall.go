@@ -3,13 +3,13 @@ package listener
 import (
 	"context"
 	"encoding/json"
-	"math/big"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	"github.com/maticnetwork/heimdall/helper"
 
@@ -54,7 +54,7 @@ func (hl *HeimdallListener) Start() error {
 
 	hl.Logger.Info("Start polling for events", "pollInterval", pollInterval)
 
-	go hl.StartPolling(headerCtx, pollInterval, false, nil)
+	go hl.StartPolling(headerCtx, pollInterval, false)
 
 	go hl.StartPollingEventRecord(headerCtx, pollInterval, false)
 
@@ -62,14 +62,13 @@ func (hl *HeimdallListener) Start() error {
 }
 
 // ProcessHeader -
-func (hl *HeimdallListener) ProcessHeader(header *blockHeader) {
+func (hl *HeimdallListener) ProcessHeader(*types.Header) {
 }
 
 // StartPolling - starts polling for heimdall events
 // needAlign is used to decide whether the ticker is align to 1970 UTC.
 // if true, the ticker will always tick as it begins at 1970 UTC.
-func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool,
-	number *big.Int) {
+func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.Duration, needAlign bool) {
 	// How often to fire the passed in function in second
 	interval := pollInterval
 	firstInterval := interval

@@ -21,38 +21,16 @@ const (
 	ParamsWithMultiChains string = "ParamsWithMultiChains"
 	FeatureParams         string = "FeatureParams"
 	SupportFeature        string = "SupportFeature"
-
-	MainChain  string = "delivery-199"
-	DonaoChain string = "delivery-1029"
-	InnerChain string = ":delivery-22125"
 )
 
 // hasMap is used for marshalling and unmarshaling for map.
-func hasMap(ctx sdk.Context, s Subspace, key string) bool {
+func hasMap(key string) bool {
 	switch key {
 	case ParamsWithMultiChains:
-		// This is a patch fix for ParamsWithMultiChains.
-		// Previously, ParamsWithMultiChains use codec for marshaling but
-		// codec cannot marshal map in fix order which may trigger consensus issues.
-
-		// hasMap aims to judge whether we should marshal struct with json.
-		// After featuremanager is activatated (SupportFeature is not empty, e.g.
-		// propose SupportMapMarshaling feature to activate featuremanager),
-		// ParamsWithMultiChains will use json format to marshal and unmarshal to
-		// fix above issues.
-
-		switch ctx.ChainID() {
-		case MainChain, DonaoChain, InnerChain:
-			store := s.kvStore(ctx)
-
-			if bz := store.Get([]byte(SupportFeature)); bz == nil {
-				return false
-			}
-		}
-
 		fallthrough
-
-	case FeatureParams, SupportFeature:
+	case FeatureParams:
+		fallthrough
+	case SupportFeature:
 		return true
 	}
 
@@ -130,7 +108,7 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 
 	var err error
 
-	if hasMap(ctx, s, string(key)) {
+	if hasMap(string(key)) {
 		err = json.Unmarshal(bz, ptr)
 		if err != nil {
 			err = s.cdc.UnmarshalJSON(bz, ptr)
@@ -154,7 +132,7 @@ func (s Subspace) GetIfExists(ctx sdk.Context, key []byte, ptr interface{}) {
 
 	var err error
 
-	if hasMap(ctx, s, string(key)) {
+	if hasMap(string(key)) {
 		err = json.Unmarshal(bz, ptr)
 		if err != nil {
 			err = s.cdc.UnmarshalJSON(bz, ptr)
@@ -214,7 +192,7 @@ func (s Subspace) Set(ctx sdk.Context, key []byte, param interface{}) {
 
 	var err error
 
-	if hasMap(ctx, s, string(key)) {
+	if hasMap(string(key)) {
 		data, err = json.Marshal(param)
 	} else {
 		data, err = s.cdc.MarshalJSON(param)

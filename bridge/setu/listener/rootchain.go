@@ -7,14 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ethereum/go-ethereum/rpc"
-
 	hmtypes "github.com/maticnetwork/heimdall/types"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	chainmanagerTypes "github.com/maticnetwork/heimdall/chainmanager/types"
 	"github.com/maticnetwork/heimdall/helper"
@@ -103,15 +102,16 @@ func (rl *RootChainListener) Start() error {
 	// start header process
 	go rl.StartHeaderProcess(headerCtx)
 
-	if rl.rootChainType == hmtypes.RootChainTypeEth {
-		var number *big.Int
-		if util.GetFinalizedEthOpen(rl.cliCtx) {
-			number = big.NewInt(int64(rpc.FinalizedBlockNumber))
-		}
-
-		go rl.StartPolling(ctx, rl.pollInterval, false, number)
+	// subscribe to new head
+	subscription, err := rl.chainClient.SubscribeNewHead(ctx, rl.HeaderChannel)
+	if err != nil {
+		// start go routine to poll for new header using client object
+		rl.Logger.Info("Start polling for root chain header blocks",
+			"root", rl.rootChainType, "pollInterval", rl.pollInterval)
+		go rl.StartPolling(ctx, rl.pollInterval, false)
 	} else {
-		go rl.StartPolling(ctx, rl.pollInterval, false, nil)
+		// start go routine to listen new header using subscription
+		go rl.StartSubscription(ctx, subscription)
 	}
 
 	// subscribed to new head
@@ -121,8 +121,7 @@ func (rl *RootChainListener) Start() error {
 }
 
 // ProcessHeader - process headerblock from rootchain
-func (rl *RootChainListener) ProcessHeader(newBlockHeader *blockHeader) {
-	newHeader := newBlockHeader.header
+func (rl *RootChainListener) ProcessHeader(newHeader *ethTypes.Header) {
 	rl.Logger.Debug("New block detected", "root", rl.rootChainType, "blockNumber", newHeader.Number)
 
 	// check if heimdall is busy
@@ -156,24 +155,19 @@ func (rl *RootChainListener) ProcessHeader(newBlockHeader *blockHeader) {
 	}
 	requiredConfirmations := rootchainContext.ChainmanagerParams.MainchainTxConfirmations
 	latestNumber := newHeader.Number
-	fromBlock := latestNumber
 
-	if !newBlockHeader.isFinalized {
-		// confirmation
-		confirmationBlocks := big.NewInt(0).SetUint64(requiredConfirmations)
+	// confirmation
+	confirmationBlocks := big.NewInt(0).SetUint64(requiredConfirmations)
 
-		if latestNumber.Cmp(confirmationBlocks) <= 0 {
-			rl.Logger.Error("Block number less than Confirmations required",
-				"root", rl.rootChainType, "blockNumber", latestNumber.Uint64, "confirmationsRequired", confirmationBlocks.Uint64)
-
-			return
-		}
-
-		latestNumber = latestNumber.Sub(latestNumber, confirmationBlocks)
-
-		// default fromBlock
-		fromBlock = latestNumber
+	if latestNumber.Cmp(confirmationBlocks) <= 0 {
+		rl.Logger.Error("Block number less than Confirmations required",
+			"root", rl.rootChainType, "blockNumber", latestNumber.Uint64, "confirmationsRequired", confirmationBlocks.Uint64)
+		return
 	}
+	latestNumber = latestNumber.Sub(latestNumber, confirmationBlocks)
+
+	// default fromBlock
+	fromBlock := latestNumber
 
 	// get last block from storage
 	hasLastBlock, _ := rl.storageClient.Has([]byte(rl.blockKey), nil)
@@ -192,6 +186,7 @@ func (rl *RootChainListener) ProcessHeader(newBlockHeader *blockHeader) {
 				fromBlock = big.NewInt(0).SetUint64(result + 1)
 			}
 		}
+
 	}
 
 	// to block
