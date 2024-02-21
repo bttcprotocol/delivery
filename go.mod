@@ -15,7 +15,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1
-	github.com/prysmaticlabs/prysm v0.0.0-20190507024903-1be950f90cad
 	github.com/rakyll/statik v0.1.6
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
