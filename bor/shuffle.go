@@ -4,8 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"golang.org/x/crypto/sha3"
 )
 
 const seedSize = int8(32)
@@ -86,9 +85,9 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle 
 	copy(buf[:32], seed[:])
 	for {
 		buf[seedSize] = round
-		hash := hashutil.Hash(buf[:pivotViewSize])
+		hash := sha256Hash(buf[:pivotViewSize])
 		hash8 := hash[:8]
-		hash8Int := bytesutil.FromBytes8(hash8)
+		hash8Int := FromBytes8(hash8)
 		pivot := hash8Int % indexCount
 		flip := (pivot + indexCount - index) % indexCount
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
@@ -100,7 +99,7 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle 
 		// it will be used later to select a bit from the resulting hash.
 		position4bytes := ToBytes(position>>8, 4)
 		copy(buf[pivotViewSize:], position4bytes[:])
-		source := hashutil.Hash(buf)
+		source := sha256Hash(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
 		byteV := source[(position&0xff)>>3]
@@ -183,11 +182,11 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	copy(buf[:seedSize], seed[:])
 	for {
 		buf[seedSize] = r
-		ph := hashutil.Hash(buf[:pivotViewSize])
-		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
+		ph := sha256Hash(buf[:pivotViewSize])
+		pivot := FromBytes8(ph[:8]) % listSize
 		mirror := (pivot + 1) >> 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
-		source := hashutil.Hash(buf)
+		source := sha256Hash(buf)
 		byteV := source[(pivot&0xff)>>3]
 		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
 			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
@@ -196,7 +195,7 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 		mirror = (pivot + listSize + 1) >> 1
 		end := listSize - 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(end>>8))
-		source = hashutil.Hash(buf)
+		source = sha256Hash(buf)
 		byteV = source[(end&0xff)>>3]
 		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
 			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
@@ -222,7 +221,7 @@ func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64, j uint64, sourc
 	if j&0xff == 0xff {
 		// just overwrite the last part of the buffer, reuse the start (seed, round)
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))
-		source = hashutil.Hash(buf)
+		source = sha256Hash(buf)
 	}
 	if j&0x7 == 0x7 {
 		byteV = source[(j&0xff)>>3]
@@ -247,4 +246,29 @@ func ToBytes(x uint64, length int) []byte {
 	bytes := make([]byte, makeLength)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:length]
+}
+
+// FromBytes8 returns an integer which is stored in the little-endian format(8, 'little')
+// from a byte array.
+func FromBytes8(x []byte) uint64 {
+	if len(x) < 8 {
+		return 0
+	}
+	return binary.LittleEndian.Uint64(x)
+}
+
+func sha256Hash(data []byte) [32]byte {
+	var hash [32]byte
+
+	h := sha3.NewLegacyKeccak256()
+
+	// The hash interface never returns an error, for that reason
+	// we are not handling the error below. For reference, it is
+	// stated here https://golang.org/pkg/hash/#Hash
+
+	// #nosec G104
+	h.Write(data)
+	h.Sum(hash[:0])
+
+	return hash
 }
