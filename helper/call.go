@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -111,13 +111,14 @@ type IContractCaller interface {
 
 // ContractCaller contract caller
 type ContractCaller struct {
-	MainChainClient  *ethclient.Client
-	MainChainRPC     *rpc.Client
-	TronChainRPC     *tron.Client
-	MaticChainClient *ethclient.Client
-	MaticChainRPC    *rpc.Client
-	BscChainClient   *ethclient.Client
-	BscChainRPC      *rpc.Client
+	MainChainClient   *ethclient.Client
+	MainChainRPC      *rpc.Client
+	TronChainRPC      *tron.Client
+	MaticChainClient  *ethclient.Client
+	MaticChainRPC     *rpc.Client
+	BscChainClient    *ethclient.Client
+	BscChainRPC       *rpc.Client
+	MaticChainTimeout time.Duration
 
 	RootChainABI     abi.ABI
 	StakingInfoABI   abi.ABI
@@ -152,6 +153,7 @@ const (
 func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainClient = GetMainClient()
 	contractCallerObj.MaticChainClient = GetMaticClient()
+	contractCallerObj.MaticChainTimeout = conf.BttcRPCTimeout
 	contractCallerObj.BscChainClient = GetBscClient()
 	contractCallerObj.TronChainRPC = GetTronChainRPCClient()
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
@@ -429,7 +431,10 @@ func (c *ContractCaller) GetEthFinalizedBlock() (header *ethTypes.Header, err er
 
 // GetMaticChainBlock returns child chain block header
 func (c *ContractCaller) GetMaticChainBlock(blockNum *big.Int) (header *ethTypes.Header, err error) {
-	latestBlock, err := c.MaticChainClient.HeaderByNumber(context.Background(), blockNum)
+	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
+	defer cancel()
+
+	latestBlock, err := c.MaticChainClient.HeaderByNumber(ctx, blockNum)
 	if err != nil {
 		Logger.Error("Unable to connect to matic chain", "Error", err)
 		return
@@ -799,14 +804,26 @@ func (c *ContractCaller) CurrentStateCounter(stateSenderInstance *statesender.St
 // CheckIfBlocksExist - check if the given block exists on local chain
 func (c *ContractCaller) CheckIfBlocksExist(end uint64) bool {
 	// Get block by number.
-	var block *ethTypes.Header
+	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
+	defer cancel()
 
-	err := c.MaticChainRPC.Call(&block, "eth_getBlockByNumber", fmt.Sprintf("0x%x", end), false)
-	if err != nil {
+	header := c.GetHeaderByNumber(ctx, end)
+	if header == nil {
 		return false
 	}
 
-	return end == block.Number.Uint64()
+	return end == header.Number.Uint64()
+}
+
+// GetHeaderByNumber returns blocks by number from child chain (bor)
+func (c *ContractCaller) GetHeaderByNumber(ctx context.Context, blockNumber uint64) *ethTypes.Header {
+	header, err := c.MaticChainClient.HeaderByNumber(ctx, big.NewInt(int64(blockNumber)))
+	if err != nil {
+		Logger.Error("Unable to fetch header by number from child chain", "number", blockNumber, "err", err)
+		return nil
+	}
+
+	return header
 }
 
 //
