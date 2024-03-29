@@ -63,7 +63,7 @@ func (bs *BlockStore) LoadBlock(height int64) *types.Block {
 
 	var block = new(types.Block)
 	buf := []byte{}
-	for i := 0; i < blockMeta.BlockID.PartsHeader.Total; i++ {
+	for i := 0; uint32(i) < blockMeta.BlockID.PartsHeader.Total; i++ {
 		part := bs.LoadBlockPart(height, i)
 		buf = append(buf, part.Bytes...)
 	}
@@ -216,9 +216,10 @@ func calcSeenCommitKey(height int64) []byte {
 // SaveBlock persists the given block, blockParts, and seenCommit to the underlying db.
 // blockParts: Must be parts of the block
 // seenCommit: The +2/3 precommits that were seen which committed at height.
-//             If all the nodes restart after committing a block,
-//             we need this to reload the precommits to catch-up nodes to the
-//             most recent height.  Otherwise they'd stall at H-1.
+//
+//	If all the nodes restart after committing a block,
+//	we need this to reload the precommits to catch-up nodes to the
+//	most recent height.  Otherwise they'd stall at H-1.
 func (bs *BlockStore) SaveBlock(block *types.Block, blockParts *types.PartSet, seenCommit *types.Commit) {
 	if block == nil {
 		panic("BlockStore can only save a non-nil block")
@@ -237,7 +238,7 @@ func (bs *BlockStore) SaveBlock(block *types.Block, blockParts *types.PartSet, s
 	bs.db.Set(calcBlockMetaKey(height), metaBytes)
 
 	// Save block parts
-	for i := 0; i < blockParts.Total(); i++ {
+	for i := 0; uint32(i) < blockParts.Total(); i++ {
 		part := blockParts.GetPart(i)
 		bs.saveBlockPart(height, i, part)
 	}
