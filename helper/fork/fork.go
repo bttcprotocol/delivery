@@ -39,20 +39,23 @@ func UpdateForkConfig(chainId string) {
 	var err error
 	switch chainId {
 	case MainChainId:
+		//multiChain proposal:5  voting_end_time:2023-07-11T07:44:13
 		newMarshalForkHeight = 8604000
 		// 0：no need to fork
 		multiChainForkHeight = 0
 		multiChainForkVal = []byte{}
 	case DonauChainId:
-		newMarshalForkHeight = 13030000
+		//multiChain proposal:14
 		multiChainForkHeight = 12836458
+		newMarshalForkHeight = multiChainForkHeight + 1
 		multiChainForkVal, err = hexutil.Decode(donauMultiChain)
 		if err != nil {
 			log.Fatalln("decode donau multiChain value err", err)
 		}
 	case InnerChainId:
-		newMarshalForkHeight = 12280000
+		//multiChain proposal:42
 		multiChainForkHeight = 11853137
+		newMarshalForkHeight = multiChainForkHeight + 1
 		multiChainForkVal, err = hexutil.Decode(innerMultiChain)
 		if err != nil {
 			log.Fatalln("decode test multiChain value err", err)
