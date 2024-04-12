@@ -40,7 +40,7 @@ func hasMap(ctx sdk.Context, s Subspace, key string) bool {
 		// fix above issues.
 
 		switch ctx.ChainID() {
-		case fork.MainChainId, fork.DonauChainId, fork.InnerChainId:
+		case fork.MainChainID, fork.DonauChainID, fork.InnerChainID:
 			return s.isMultiParamsSupportNewMarshal(ctx)
 		}
 
