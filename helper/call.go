@@ -334,7 +334,10 @@ func (c *ContractCaller) GetRootHash(start uint64, end uint64, checkpointLength 
 		return nil, errors.New("number of headers requested exceeds")
 	}
 
-	rootHash, err := c.MaticChainClient.GetRootHash(context.Background(), start, end)
+	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
+	defer cancel()
+
+	rootHash, err := c.MaticChainClient.GetRootHash(ctx, start, end)
 	if err != nil {
 		return nil, errors.New("Could not fetch roothash from matic chain")
 	}
@@ -464,7 +467,10 @@ func (c *ContractCaller) GetBlockNumberFromTxHash(tx common.Hash) (*big.Int, err
 func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []common.Address,
 	topics [][]common.Hash,
 ) ([]ethTypes.Log, error) {
-	logs, err := c.MaticChainClient.FilterLogs(context.Background(), ethereum.FilterQuery{
+	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
+	defer cancel()
+
+	logs, err := c.MaticChainClient.FilterLogs(ctx, ethereum.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
 		Addresses: addrs,
@@ -804,10 +810,7 @@ func (c *ContractCaller) CurrentStateCounter(stateSenderInstance *statesender.St
 // CheckIfBlocksExist - check if the given block exists on local chain
 func (c *ContractCaller) CheckIfBlocksExist(end uint64) bool {
 	// Get block by number.
-	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
-	defer cancel()
-
-	header := c.GetHeaderByNumber(ctx, end)
+	header := c.GetHeaderByNumber(end)
 	if header == nil {
 		return false
 	}
@@ -816,7 +819,10 @@ func (c *ContractCaller) CheckIfBlocksExist(end uint64) bool {
 }
 
 // GetHeaderByNumber returns blocks by number from child chain (bor)
-func (c *ContractCaller) GetHeaderByNumber(ctx context.Context, blockNumber uint64) *ethTypes.Header {
+func (c *ContractCaller) GetHeaderByNumber(blockNumber uint64) *ethTypes.Header {
+	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
+	defer cancel()
+
 	header, err := c.MaticChainClient.HeaderByNumber(ctx, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		Logger.Error("Unable to fetch header by number from child chain", "number", blockNumber, "err", err)
@@ -843,7 +849,10 @@ func (c *ContractCaller) GetMainTxReceipt(txHash common.Hash, rootChain string) 
 
 // GetMaticTxReceipt returns matic tx receipt
 func (c *ContractCaller) GetMaticTxReceipt(txHash common.Hash) (*ethTypes.Receipt, error) {
-	return c.getTxReceipt(c.MaticChainClient, txHash)
+	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
+	defer cancel()
+
+	return c.MaticChainClient.TransactionReceipt(ctx, txHash)
 }
 
 func (c *ContractCaller) getTxReceipt(client *ethclient.Client, txHash common.Hash) (*ethTypes.Receipt, error) {
