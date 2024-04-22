@@ -470,7 +470,7 @@ func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []c
 	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
 	defer cancel()
 
-	logs, err := c.MaticChainClient.FilterLogs(ctx, ethereum.FilterQuery{
+	logs, err := c.MaticChainClient.FilterLogs(ctx, ethereum.FilterQuery{ //nolint:typecheck
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
 		Addresses: addrs,
