@@ -7,7 +7,7 @@ require (
 	github.com/cbergoon/merkletree v0.2.0
 	github.com/cosmos/cosmos-sdk v0.37.4
 	github.com/ethereum/go-ethereum v1.10.4
-	github.com/go-kit/kit v0.9.0
+	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
@@ -20,7 +20,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
 	github.com/streadway/amqp v1.0.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/crypto v0.0.0-20191022145703-50d29ede1e15
 	github.com/tendermint/go-amino v0.15.0
@@ -34,7 +34,7 @@ require (
 	golang.org/x/sync v0.3.0
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20230711160842-782d3b101e98 // indirect
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v2 v2.4.0
 )
