@@ -51,9 +51,9 @@ contracts:
 LINT_COMMAND := $(shell command -v golangci-lint 2> /dev/null)
 lint:
 ifndef LINT_COMMAND
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.41.1
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
 endif
-	golangci-lint run
+	golangci-lint run --config ./.golangci.yml
 
 #
 # docker commands
