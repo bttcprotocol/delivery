@@ -61,6 +61,7 @@ var (
 	flagOutputDir        = "output-dir"
 	flagNodeDaemonHome   = "node-daemon-home"
 	flagNodeHostPrefix   = "node-host-prefix"
+	testnoUse            = "xx"
 )
 
 // Tendermint full-node start flags.
@@ -72,6 +73,7 @@ const (
 	FlagMinGasPrices = "minimum-gas-prices"
 	FlagHaltHeight   = "halt-height"
 	FlagHaltTime     = "halt-time"
+	FlagNoUse        = "noUse"
 )
 
 // nolint
