@@ -16,14 +16,9 @@ linters:
     - cyclop
     - nestif
     - gocognit
-    - structcheck
-    - ifshort
-    - nosnakecase
-    - deadcode
-    - varcheck
 
 service:
-  golangci-lint-version: 1.53.3
+  golangci-lint-version: 1.41
 
 run:
   skip-dirs:
