@@ -42,5 +42,3 @@ linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: false
-  gosimple:
-    check-annotations: false
