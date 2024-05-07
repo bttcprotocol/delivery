@@ -25,18 +25,15 @@ linters:
 service:
   golangci-lint-version: 1.57.2
 
-run:
-  skip-dirs:
+issues:
+  new: true
+  exclude-dirs:
     - gov/simulation
     - gov/client
     - simulation
-
-  skip-files:
+  exclude-files:
     - _test.go
     - "test_.*"
-
-issues:
-  new: true
 
 linters-settings:
   errcheck:
