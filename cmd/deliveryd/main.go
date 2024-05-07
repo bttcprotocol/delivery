@@ -191,6 +191,11 @@ func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.
 	return bapp.ExportAppStateAndValidators()
 }
 
+func InvalidCases() {
+	x := 30 * time.Second
+	_ = x * time.Second // want `Multiplication of durations`
+}
+
 func deliveryStart(shutdownCtx context.Context,
 	ctx *server.Context, appCreator server.AppCreator, cdc *codec.Codec,
 ) *cobra.Command {

@@ -83,19 +83,32 @@ var (
 	loggerOnce sync.Once
 )
 
+func invalidCases() {
+	x := 30 * time.Second
+	_ = x * time.Second // want `Multiplication of durations`
+}
+
 // Logger returns logger singleton instance
 func Logger() log.Logger {
+	var test = 1
+	var test2 = 1
+	var test3 = "aPI"
+	var test4, err2 = time.Parse("sss", "12333")
+	fmt.Printf("%d")
 	loggerOnce.Do(func() {
+		test2 = 1
 		defaultLevel := "info"
 		logger = log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 		option, err := log.AllowLevel(viper.GetString("log_level"))
+		test2 = 1
 		if err != nil {
+			test2 = 1
 			// cosmos sdk is using different style of log format
 			// and levels don't map well, config.toml
 			// see: https://github.com/cosmos/cosmos-sdk/pull/8072
-			logger.Error("Unable to parse logging level", "Error", err)
+			logger.Error("Unable to parse logging level ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccijodjoijfodsjfospjpfsccccc", "Error", err)
 			logger.Info("Using default log level")
-
+			logger.Info("Using default log level", "aPI", test, "test2", test2, "test3", test3, test4, err2)
 			option, err = log.AllowLevel(defaultLevel)
 			if err != nil {
 				logger.Error("failed to allow default log level", "Level", defaultLevel, "Error", err)
@@ -107,8 +120,9 @@ func Logger() log.Logger {
 		if viper.GetString("log_level") != "debug" {
 			mLog.SetDebug(NoopLogger{})
 		}
+		test2 = 1
 	})
-
+	test2 = 1
 	return logger
 }
 
