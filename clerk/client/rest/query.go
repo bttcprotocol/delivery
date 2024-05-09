@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/maticnetwork/heimdall/helper"
+
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
@@ -67,6 +69,8 @@ func recordListHandlerFn(
 	cliCtx context.CLIContext,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var logger = helper.Logger.With("module", "/clerk/event-record/list")
+		logger.Info("Serving event record list")
 		vars := r.URL.Query()
 
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
@@ -83,6 +87,7 @@ func recordListHandlerFn(
 
 			page = _page
 		}
+		logger.Info("Serving event record list", "page", page)
 
 		limit := uint64(50) // default limit
 		if vars.Get("limit") != "" {
@@ -96,6 +101,7 @@ func recordListHandlerFn(
 				limit = _limit
 			}
 		}
+		logger.Info("Serving event record list", "limit", limit)
 
 		var res []byte
 		var err error
@@ -113,6 +119,8 @@ func recordListHandlerFn(
 				return
 			}
 
+			logger.Info("Serving event record list", "from-time", fromTime, "to-time", toTime)
+
 			// get result by time-range query
 			res, err = timeRangeQuery(cliCtx, fromTime, toTime, page, limit)
 
@@ -129,6 +137,8 @@ func recordListHandlerFn(
 				return
 			}
 
+			logger.Info("Serving event record list", "from-id", fromID, "to-time", toTime)
+
 			// get result by till time-range query
 			res, err = tillTimeRangeQuery(cliCtx, fromID, toTime, limit)
 		} else {
@@ -138,15 +148,18 @@ func recordListHandlerFn(
 
 		// send internal server error if error occured during the query
 		if err != nil {
+			logger.Error("Error while querying event record list", "error", err.Error())
 			hmRest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// check content
 		if ok := hmRest.ReturnNotFoundIfNoContent(w, res, "No records found"); !ok {
+			logger.Error("Error while querying event record list", "error", "No records found")
 			return
 		}
 
+		logger.Info("Served event record list successfully")
 		rest.PostProcessResponse(w, cliCtx, res)
 	}
 }
