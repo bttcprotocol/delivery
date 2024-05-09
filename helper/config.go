@@ -51,10 +51,9 @@ const (
 	// immediately.
 	BroadcastAsync = "async"
 
-	DefaultMainRPCUrl     = "http://localhost:9545"
-	DefaultBttcRPCUrl     = "http://localhost:8545"
-	DefaultBscRPCUrl      = "http://localhost:7545"
-	DefaultBttcRPCTimeout = 5 * time.Second
+	DefaultMainRPCUrl = "http://localhost:9545"
+	DefaultBttcRPCUrl = "http://localhost:8545"
+	DefaultBscRPCUrl  = "http://localhost:7545"
 
 	// tron
 	DefaultTronRPCUrl  = "http://localhost:50051"
@@ -122,12 +121,11 @@ func init() {
 
 // Configuration represents heimdall config
 type Configuration struct {
-	EthRPCUrl        string        `mapstructure:"eth_rpc_url"`        // RPC endpoint for main chain
-	TronRPCUrl       string        `mapstructure:"tron_rpc_url"`       // RPC endpoint for tron chain
-	BscRPCUrl        string        `mapstructure:"bsc_rpc_url"`        // RPC endpoint for bsc chain
-	BttcRPCUrl       string        `mapstructure:"bttc_rpc_url"`       // RPC endpoint for bttc chain
-	BttcRPCTimeout   time.Duration `mapstructure:"bttc_rpc_timeout"`   // timeout for bor rpc
-	TendermintRPCUrl string        `mapstructure:"tendermint_rpc_url"` // tendemint node url
+	EthRPCUrl        string `mapstructure:"eth_rpc_url"`        // RPC endpoint for main chain
+	TronRPCUrl       string `mapstructure:"tron_rpc_url"`       // RPC endpoint for tron chain
+	BscRPCUrl        string `mapstructure:"bsc_rpc_url"`        // RPC endpoint for bsc chain
+	BttcRPCUrl       string `mapstructure:"bttc_rpc_url"`       // RPC endpoint for bttc chain
+	TendermintRPCUrl string `mapstructure:"tendermint_rpc_url"` // tendemint node url
 
 	TronGridUrl       string `mapstructure:"tron_grid_url"`        // tron grid url
 	AmqpURL           string `mapstructure:"amqp_url"`             // amqp url
@@ -241,12 +239,6 @@ func InitDeliveryConfigWith(homeDir string, deliveryConfigFilePath string) {
 		log.Fatalln("Unable to unmarshall config", "Error", err)
 	}
 
-	if conf.BttcRPCTimeout == 0 {
-		// fallback to default
-		Logger.Debug("Missing Bttc RPC timeout or invalid value provided, falling back to default", "timeout", DefaultBttcRPCTimeout)
-		conf.BttcRPCTimeout = DefaultBttcRPCTimeout
-	}
-
 	if mainRPCClient, err = rpc.Dial(conf.EthRPCUrl); err != nil {
 		log.Fatalln("Unable to dial via ethClient", "URL=", conf.EthRPCUrl, "chain=eth", "Error", err)
 	}
@@ -289,7 +281,6 @@ func GetDefaultHeimdallConfig() Configuration {
 		BttcRPCUrl:       DefaultBttcRPCUrl,
 		BscRPCUrl:        DefaultBscRPCUrl,
 		TendermintRPCUrl: DefaultTendermintNodeURL,
-		BttcRPCTimeout:   DefaultBttcRPCTimeout,
 
 		TronGridUrl:       DefaultTronGridUrl,
 		AmqpURL:           DefaultAmqpURL,

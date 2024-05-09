@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -111,14 +111,13 @@ type IContractCaller interface {
 
 // ContractCaller contract caller
 type ContractCaller struct {
-	MainChainClient   *ethclient.Client
-	MainChainRPC      *rpc.Client
-	TronChainRPC      *tron.Client
-	MaticChainClient  *ethclient.Client
-	MaticChainRPC     *rpc.Client
-	BscChainClient    *ethclient.Client
-	BscChainRPC       *rpc.Client
-	MaticChainTimeout time.Duration
+	MainChainClient  *ethclient.Client
+	MainChainRPC     *rpc.Client
+	TronChainRPC     *tron.Client
+	MaticChainClient *ethclient.Client
+	MaticChainRPC    *rpc.Client
+	BscChainClient   *ethclient.Client
+	BscChainRPC      *rpc.Client
 
 	RootChainABI     abi.ABI
 	StakingInfoABI   abi.ABI
@@ -153,7 +152,6 @@ const (
 func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.MainChainClient = GetMainClient()
 	contractCallerObj.MaticChainClient = GetMaticClient()
-	contractCallerObj.MaticChainTimeout = conf.BttcRPCTimeout
 	contractCallerObj.BscChainClient = GetBscClient()
 	contractCallerObj.TronChainRPC = GetTronChainRPCClient()
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
@@ -334,10 +332,7 @@ func (c *ContractCaller) GetRootHash(start uint64, end uint64, checkpointLength 
 		return nil, errors.New("number of headers requested exceeds")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
-	defer cancel()
-
-	rootHash, err := c.MaticChainClient.GetRootHash(ctx, start, end)
+	rootHash, err := c.MaticChainClient.GetRootHash(context.Background(), start, end)
 	if err != nil {
 		return nil, errors.New("Could not fetch roothash from matic chain")
 	}
@@ -434,10 +429,7 @@ func (c *ContractCaller) GetEthFinalizedBlock() (header *ethTypes.Header, err er
 
 // GetMaticChainBlock returns child chain block header
 func (c *ContractCaller) GetMaticChainBlock(blockNum *big.Int) (header *ethTypes.Header, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
-	defer cancel()
-
-	latestBlock, err := c.MaticChainClient.HeaderByNumber(ctx, blockNum)
+	latestBlock, err := c.MaticChainClient.HeaderByNumber(context.Background(), blockNum)
 	if err != nil {
 		Logger.Error("Unable to connect to matic chain", "Error", err)
 		return
@@ -467,10 +459,7 @@ func (c *ContractCaller) GetBlockNumberFromTxHash(tx common.Hash) (*big.Int, err
 func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []common.Address,
 	topics [][]common.Hash,
 ) ([]ethTypes.Log, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
-	defer cancel()
-
-	logs, err := c.MaticChainClient.FilterLogs(ctx, ethereum.FilterQuery{ //nolint:typecheck
+	logs, err := c.MaticChainClient.FilterLogs(context.Background(), ethereum.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
 		Addresses: addrs,
@@ -810,26 +799,14 @@ func (c *ContractCaller) CurrentStateCounter(stateSenderInstance *statesender.St
 // CheckIfBlocksExist - check if the given block exists on local chain
 func (c *ContractCaller) CheckIfBlocksExist(end uint64) bool {
 	// Get block by number.
-	header := c.GetHeaderByNumber(end)
-	if header == nil {
+	var block *ethTypes.Header
+
+	err := c.MaticChainRPC.Call(&block, "eth_getBlockByNumber", fmt.Sprintf("0x%x", end), false)
+	if err != nil {
 		return false
 	}
 
-	return end == header.Number.Uint64()
-}
-
-// GetHeaderByNumber returns blocks by number from child chain (bor)
-func (c *ContractCaller) GetHeaderByNumber(blockNumber uint64) *ethTypes.Header {
-	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
-	defer cancel()
-
-	header, err := c.MaticChainClient.HeaderByNumber(ctx, big.NewInt(int64(blockNumber)))
-	if err != nil {
-		Logger.Error("Unable to fetch header by number from child chain", "number", blockNumber, "err", err)
-		return nil
-	}
-
-	return header
+	return end == block.Number.Uint64()
 }
 
 //
@@ -849,10 +826,7 @@ func (c *ContractCaller) GetMainTxReceipt(txHash common.Hash, rootChain string) 
 
 // GetMaticTxReceipt returns matic tx receipt
 func (c *ContractCaller) GetMaticTxReceipt(txHash common.Hash) (*ethTypes.Receipt, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
-	defer cancel()
-
-	return c.MaticChainClient.TransactionReceipt(ctx, txHash)
+	return c.getTxReceipt(c.MaticChainClient, txHash)
 }
 
 func (c *ContractCaller) getTxReceipt(client *ethclient.Client, txHash common.Hash) (*ethTypes.Receipt, error) {
