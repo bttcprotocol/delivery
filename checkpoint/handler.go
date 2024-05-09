@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
+	"github.com/maticnetwork/heimdall/featuremanager/util"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/maticnetwork/heimdall/checkpoint/types"
@@ -231,6 +234,18 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 	if lastCheckpointTime.After(currentTime) || (currentTime.Sub(lastCheckpointTime) < bufferTime) {
 		logger.Debug("Invalid No ACK -- Waiting for last checkpoint ACK")
 		return common.ErrInvalidNoACK(k.Codespace()).Result()
+	}
+
+	//Hardfork to check the validaty of the NoAckProposer
+	targetFeature := util.GetFeatureConfig().GetFeature(ctx, featuremanagerTypes.NoAckValidatorCheck)
+	if targetFeature.IsOpen {
+		logger.Debug("NoAckValidatorCheck is open")
+		currentValidatorSet := k.sk.GetValidatorSet(ctx)
+		//If NoAck sender is not the valid proposer, return error
+		if !currentValidatorSet.HasAddress(msg.From.Bytes()) {
+			logger.Debug("Invalid No ACK -- Invalid No ACK Proposer")
+			return common.ErrInvalidNoACKProposer(k.Codespace()).Result()
+		}
 	}
 
 	// Check last no ack - prevents repetitive no-ack

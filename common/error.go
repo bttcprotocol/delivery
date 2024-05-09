@@ -149,6 +149,10 @@ func ErrInvalidNoACK(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeInvalidNoACK, "Invalid No ACK -- Waiting for last checkpoint ACK")
 }
 
+func ErrInvalidNoACKProposer(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeInvalidNoACK, "Invalid No ACK Proposer")
+}
+
 func ErrTooManyNoACK(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeTooManyNoAck, "Too many no-acks")
 }
