@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/go-kit/kit/log"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,7 +36,7 @@ func StartRestServer(mainCtx context.Context, cdc *codec.Codec,
 
 	go restServerHealthCheck(restCh)
 
-	logger := tmLog.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "rest-server")
+	logger := tmLog.NewTMLogger(tmLog.NewSyncWriter(os.Stdout)).With("module", "rest-server")
 
 	err := restServer.Start(
 		viper.GetString(client.FlagListenAddr),
