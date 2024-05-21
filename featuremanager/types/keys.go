@@ -21,4 +21,5 @@ const (
 	SupportMapMarshaling = "SupportMapMarshaling"
 	DynamicCheckpoint    = "DynamicCheckpoint"
 	FinalizedEth         = "FinalizedEth"
+	NoAckValidatorCheck  = "NoAckValidatorCheck"
 )
