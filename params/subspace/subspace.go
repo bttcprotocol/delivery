@@ -2,6 +2,7 @@ package subspace
 
 import (
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/log"
 	"reflect"
 
 	"github.com/maticnetwork/heimdall/helper/fork"
@@ -222,6 +223,7 @@ func (s Subspace) Set(ctx sdk.Context, key []byte, param interface{}) {
 		//set multiChain fork val
 		forkHeight := fork.GetMultiChainForkHeight()
 		if string(key) == ParamsWithMultiChains && forkHeight != 0 && forkHeight == ctx.BlockHeight() {
+			log.Info("set ParamsWithMultiChains in", "height", forkHeight)
 			data = fork.GetMultiChainForkVal()
 		}
 	}

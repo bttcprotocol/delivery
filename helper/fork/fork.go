@@ -49,7 +49,7 @@ func UpdateForkConfig(chainID string) {
 		multiChainForkVal = []byte{}
 	case DonauChainID:
 		// multiChain proposal:14.
-		multiChainForkHeight = 12836458
+		multiChainForkHeight = 12836457
 		newMarshalForkHeight = multiChainForkHeight + 1
 
 		multiChainForkVal, err = hexutil.Decode(donauMultiChain)
@@ -58,7 +58,7 @@ func UpdateForkConfig(chainID string) {
 		}
 	case InnerChainID:
 		// multiChain proposal:42.
-		multiChainForkHeight = 11853137
+		multiChainForkHeight = 11853136
 		newMarshalForkHeight = multiChainForkHeight + 1
 
 		multiChainForkVal, err = hexutil.Decode(innerMultiChain)
