@@ -88,7 +88,12 @@ func main() {
 
 	// chain id
 	rootCmd.PersistentFlags().String(client.FlagChainID, "", "Chain ID of tendermint node")
-
+	rootCmd.PersistentFlags().String(
+		helper.WithDeliveryConfigFlag,
+		"",
+		"Override of delivery config file (default <home>/.deliveryd/config/delivery-config.toml)",
+	)
+	
 	// add query/post commands (custom to binary)
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
@@ -112,7 +117,7 @@ func main() {
 	)
 
 	// bind with-heimdall-config config with root cmd
-	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.Flags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
+	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.PersistentFlags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
 		logger.Error("main | BindPFlag | helper.WithDeliveryConfigFlag", "Error", err)
 	}
 
