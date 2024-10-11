@@ -7,7 +7,7 @@ Validator node for Bittorrent Chain Network. It uses peppermint, customized [Ten
 
 ### Install from source 
 
-Make sure your have go1.11+ already installed
+Make sure your have go1.21.9+ already installed
 
 ### Install 
 ```bash 
