@@ -128,7 +128,7 @@ func main() {
 	)
 
 	// bind with-heimdall-config config with root cmd
-	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.Flags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
+	if err := viper.BindPFlag(helper.WithDeliveryConfigFlag, rootCmd.PersistentFlags().Lookup(helper.WithDeliveryConfigFlag)); err != nil {
 		logger.Error("main | BindPFlag | helper.WithDeliveryConfigFlag", "Error", err)
 	}
 

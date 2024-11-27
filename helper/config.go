@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maticnetwork/heimdall/helper/fork"
+
 	"github.com/maticnetwork/heimdall/tron"
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -279,6 +281,8 @@ func InitDeliveryConfigWith(homeDir string, deliveryConfigFilePath string) {
 	privVal := privval.LoadFilePV(filepath.Join(configDir, "priv_validator_key.json"), filepath.Join(configDir, "priv_validator_key.json"))
 	cdc.MustUnmarshalBinaryBare(privVal.Key.PrivKey.Bytes(), &privObject)
 	cdc.MustUnmarshalBinaryBare(privObject.PubKey().Bytes(), &pubObject)
+
+	fork.UpdateForkConfig(GenesisDoc.ChainID)
 }
 
 // GetDefaultHeimdallConfig returns configration with default params

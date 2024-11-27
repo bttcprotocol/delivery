@@ -2,7 +2,10 @@ package subspace
 
 import (
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/log"
 	"reflect"
+
+	"github.com/maticnetwork/heimdall/helper/fork"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,10 +24,6 @@ const (
 	ParamsWithMultiChains string = "ParamsWithMultiChains"
 	FeatureParams         string = "FeatureParams"
 	SupportFeature        string = "SupportFeature"
-
-	MainChain  string = "delivery-199"
-	DonaoChain string = "delivery-1029"
-	InnerChain string = ":delivery-22125"
 )
 
 // hasMap is used for marshalling and unmarshaling for map.
@@ -42,12 +41,8 @@ func hasMap(ctx sdk.Context, s Subspace, key string) bool {
 		// fix above issues.
 
 		switch ctx.ChainID() {
-		case MainChain, DonaoChain, InnerChain:
-			store := s.kvStore(ctx)
-
-			if bz := store.Get([]byte(SupportFeature)); bz == nil {
-				return false
-			}
+		case fork.MainChainID, fork.DonauChainID, fork.InnerChainID:
+			return s.isMultiParamsSupportNewMarshal(ctx)
 		}
 
 		fallthrough
@@ -203,6 +198,13 @@ func (s Subspace) checkType(store sdk.KVStore, key []byte, param interface{}) {
 	}
 }
 
+func (s Subspace) isMultiParamsSupportNewMarshal(ctx sdk.Context) bool {
+	if ctx.BlockHeight() < fork.GetNewMarshalForkHeight() {
+		return false
+	}
+	return true
+}
+
 // Set stores the parameter. It returns error if stored parameter has different type from input.
 // It also set to the transient store to record change.
 func (s Subspace) Set(ctx sdk.Context, key []byte, param interface{}) {
@@ -218,6 +220,12 @@ func (s Subspace) Set(ctx sdk.Context, key []byte, param interface{}) {
 		data, err = json.Marshal(param)
 	} else {
 		data, err = s.cdc.MarshalJSON(param)
+		//set multiChain fork val
+		forkHeight := fork.GetMultiChainForkHeight()
+		if string(key) == ParamsWithMultiChains && forkHeight != 0 && forkHeight == ctx.BlockHeight() {
+			log.Info("set ParamsWithMultiChains in", "height", forkHeight)
+			data = fork.GetMultiChainForkVal()
+		}
 	}
 
 	if err != nil {
