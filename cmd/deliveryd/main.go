@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -61,6 +62,7 @@ var (
 	flagOutputDir        = "output-dir"
 	flagNodeDaemonHome   = "node-daemon-home"
 	flagNodeHostPrefix   = "node-host-prefix"
+	testnoUse            = "xx"
 )
 
 // Tendermint full-node start flags.
@@ -72,6 +74,7 @@ const (
 	FlagMinGasPrices = "minimum-gas-prices"
 	FlagHaltHeight   = "halt-height"
 	FlagHaltTime     = "halt-time"
+	FlagNoUse        = "noUse"
 )
 
 // nolint
@@ -189,6 +192,68 @@ func getNewApp(serverCtx *server.Context) func(logger log.Logger, db dbm.DB, sto
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer, height int64, forZeroHeight bool, jailWhiteList []string) (json.RawMessage, []tmTypes.GenesisValidator, error) {
 	bapp := app.NewHeimdallApp(logger, db)
 	return bapp.ExportAppStateAndValidators()
+}
+
+const (
+	timeout = 10 * time.Second
+	foo     = 10
+)
+
+type myStruct struct {
+	fieldA int
+	fieldB time.Duration
+	fieldC *int
+}
+
+func invalidCases() {
+	x := 30 * time.Second
+	ms := myStruct{fieldA: 10, fieldB: 10 * time.Second}
+	tdArr := []time.Duration{1}
+
+	_ = x * time.Second // want `Multiplication of durations`
+
+	_ = time.Second * x // want `Multiplication of durations`
+
+	_ = timeout * time.Millisecond // want `Multiplication of durations`
+
+	_ = someDuration() * time.Second // want `Multiplication of durations`
+
+	_ = time.Millisecond * someDuration() // want `Multiplication of durations`
+
+	_ = *somePointerDuration() * time.Second // want `Multiplication of durations`
+
+	_ = time.Millisecond * *somePointerDuration() // want `Multiplication of durations`
+
+	_ = (30 * time.Second) * time.Millisecond // want `Multiplication of durations`
+
+	_ = time.Millisecond * (30 * time.Second) // want `Multiplication of durations`
+
+	_ = time.Millisecond * time.Second * 1 // want `Multiplication of durations`
+
+	_ = 1 * time.Second * (time.Second) // want `Multiplication of durations`
+
+	_ = ms.fieldB * time.Second // want `Multiplication of durations`
+
+	_ = time.Second * ms.fieldB // want `Multiplication of durations`
+
+	_ = time.Duration(tdArr[0]) * time.Second // want `Multiplication of durations`
+}
+func someDuration() time.Duration {
+	return 10 * time.Second
+}
+
+func someDurationMillis() int {
+	return 10
+}
+
+func somePointerDuration() *time.Duration {
+	v := 10 * time.Second
+	return &v
+}
+
+func somePointerDurationMillis() *int {
+	v := 10
+	return &v
 }
 
 func deliveryStart(shutdownCtx context.Context,
