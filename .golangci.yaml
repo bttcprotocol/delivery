@@ -16,22 +16,24 @@ linters:
     - cyclop
     - nestif
     - gocognit
+    - structcheck
+    - ifshort
+    - nosnakecase
+    - deadcode
+    - varcheck
 
 service:
-  golangci-lint-version: 1.41
-
-run:
-  skip-dirs:
-    - gov/simulation
-    - gov/client
-    - simulation
-
-  skip-files:
-    - _test.go
-    - "test_.*"
+  golangci-lint-version: 1.57.2
 
 issues:
   new: true
+  exclude-dirs:
+    - gov/simulation
+    - gov/client
+    - simulation
+  exclude-files:
+    - _test.go
+    - "test_.*"
 
 linters-settings:
   errcheck:
