@@ -2,17 +2,16 @@ name: Lint Check
 
 on: [pull_request]
 jobs:
-  build:
+  golangci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Go
-        uses: actions/setup-go@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.17
+          go-version: '1.22'
       - name: "Run lint"
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.41
+          version: v1.53.3
           args: --timeout=10m
           only-new-issues: true
