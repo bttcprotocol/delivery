@@ -262,17 +262,21 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			TimeStamp:  1749546051,
 		}
 
-		// 创建 checkpoint 消息，使用 bridge 中的方式
-		msg := types.NewMsgCheckpointBlock(
-			testCheckpoint.Proposer,
-			testCheckpoint.StartBlock,
-			testCheckpoint.EndBlock,
-			testCheckpoint.RootHash,
-			testCheckpoint.RootHash, // 使用 RootHash 作为 AccountRootHash
-			testCheckpoint.BorChainID,
-			req.CheckpointNumber, // 使用请求的 checkpoint number
-			"tron",
+		// 创建 MsgRepairCheckpointTest 消息
+		msg := types.NewMsgRepairCheckpointTest(
+			from,
+			req.CheckpointNumber,
+			"tron", // rootChain
+			req.TestMessage,
+			testCheckpoint,
 		)
+
+		// 验证消息
+		if err := msg.ValidateBasic(); err != nil {
+			helper.Logger.Error("repairCheckpointTestHandler, 消息验证失败", "error", err)
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
 		// 创建 TxBroadcaster 实例，使用 bridge 中的方式
 		txBroadcaster := broadcaster.NewTxBroadcaster(cliCtx.Codec)

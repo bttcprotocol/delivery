@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# 测试使用 bridge 广播方式的 repair-test 接口
-echo "=== 测试 repair-test 接口（使用 bridge 广播方式）==="
+# 测试使用 bridge 广播方式的 repair-test 接口（使用 MsgRepairCheckpointTest）
+echo "=== 测试 repair-test 接口（使用 MsgRepairCheckpointTest 消息类型）==="
 
 # 设置变量
 REST_URL="http://localhost:1317"
 ACCOUNT_ADDRESS="0xd4d14396282a000234862eaf2527c17ed680e58e"
-CHECKPOINT_NUMBER="1"
-TEST_MESSAGE="test_bridge_broadcast"
+CHECKPOINT_NUMBER="60191"
+TEST_MESSAGE="快速测试_MsgRepairCheckpointTest"
 
 # 获取账户序列号
 echo "获取账户序列号..."
@@ -32,6 +32,7 @@ REQUEST_BODY=$(cat <<EOF
         "simulate": false
     },
     "checkpoint_number": "$CHECKPOINT_NUMBER",
+    "from": "$ACCOUNT_ADDRESS",
     "test_message": "$TEST_MESSAGE"
 }
 EOF
@@ -57,6 +58,11 @@ if echo "$RESPONSE" | jq -e '.success' > /dev/null; then
     echo "✅ 测试成功！"
     echo "checkpoint_number: $(echo "$RESPONSE" | jq -r '.checkpoint_number')"
     echo "test_message: $(echo "$RESPONSE" | jq -r '.test_message')"
+    echo ""
+    echo "请检查服务日志，应该能看到以下日志："
+    echo "1. repairCheckpointTestHandler, 开始广播测试消息"
+    echo "2. repairCheckpointTestHandler, 广播成功"
+    echo "3. handleMsgRepairCheckpointTest 中的日志"
 else
     echo ""
     echo "❌ 测试失败！"
