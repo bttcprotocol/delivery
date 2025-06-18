@@ -233,11 +233,6 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		req.BaseReq = req.BaseReq.Sanitize()
-		if !req.BaseReq.ValidateBasic(w) {
-			return
-		}
-
 		// 获取发送者地址
 		var from hmTypes.HeimdallAddress
 		if req.From != "" {
@@ -250,6 +245,42 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		// 直接使用 REST API 获取账户信息
+		accountURL := fmt.Sprintf("http://localhost:1317/auth/accounts/%s", from.String())
+		resp, err := http.Get(accountURL)
+		if err != nil {
+			helper.Logger.Error("repairCheckpointTestHandler, 获取账户信息失败", "error", err)
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, "获取账户信息失败")
+			return
+		}
+		defer resp.Body.Close()
+
+		var accountResponse struct {
+			Result struct {
+				Value struct {
+					AccountNumber uint64 `json:"account_number"`
+					Sequence      uint64 `json:"sequence"`
+				} `json:"value"`
+			} `json:"result"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&accountResponse); err != nil {
+			helper.Logger.Error("repairCheckpointTestHandler, 解析账户信息失败", "error", err)
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, "解析账户信息失败")
+			return
+		}
+
+		// 更新 BaseReq 中的序列号和账户号
+		req.BaseReq.From = from.String()
+		req.BaseReq.AccountNumber = accountResponse.Result.Value.AccountNumber
+		req.BaseReq.Sequence = accountResponse.Result.Value.Sequence
+
+		// 验证 BaseReq
+		req.BaseReq = req.BaseReq.Sanitize()
+		if !req.BaseReq.ValidateBasic(w) {
+			return
+		}
+
 		// 生成唯一标识，用于防重
 		uniqueID := fmt.Sprintf("%d_%s_%s", time.Now().UnixNano(), from.String(), req.TestMessage)
 
@@ -258,6 +289,8 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			"checkpointNumber", req.CheckpointNumber,
 			"testMessage", req.TestMessage,
 			"uniqueID", uniqueID,
+			"accountNumber", accountResponse.Result.Value.AccountNumber,
+			"sequence", accountResponse.Result.Value.Sequence,
 		)
 
 		// 创建一个测试 checkpoint 消息
@@ -307,6 +340,8 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			"checkpointNumber", req.CheckpointNumber,
 			"testMessage", req.TestMessage,
 			"uniqueID", uniqueID,
+			"accountNumber", accountResponse.Result.Value.AccountNumber,
+			"sequence", accountResponse.Result.Value.Sequence,
 		)
 
 		// 返回成功响应，避免 Unregistered interface 错误
@@ -318,6 +353,8 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			"checkpoint_number": req.CheckpointNumber,
 			"test_message":      req.TestMessage,
 			"unique_id":         uniqueID,
+			"account_number":    accountResponse.Result.Value.AccountNumber,
+			"sequence":          accountResponse.Result.Value.Sequence,
 			"note":              "消息已成功广播到链上，请查看服务日志确认 handler 处理",
 		}
 		json.NewEncoder(w).Encode(response)
