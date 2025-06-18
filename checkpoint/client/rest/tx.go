@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 
+	"github.com/maticnetwork/heimdall/bridge/setu/broadcaster"
 	"github.com/maticnetwork/heimdall/checkpoint/types"
 	restClient "github.com/maticnetwork/heimdall/client/rest"
 	"github.com/maticnetwork/heimdall/helper"
@@ -245,7 +246,13 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		// 创建一个模拟的 checkpoint 用于测试
+		// 记录开始广播的日志
+		helper.Logger.Info("repairCheckpointTestHandler, 开始广播测试消息",
+			"checkpointNumber", req.CheckpointNumber,
+			"testMessage", req.TestMessage,
+		)
+
+		// 创建一个测试 checkpoint 消息
 		testCheckpoint := hmTypes.Checkpoint{
 			StartBlock: 50080768,
 			EndBlock:   50089983,
@@ -255,30 +262,23 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			TimeStamp:  1749546051,
 		}
 
-		// 创建测试消息
-		msg := types.NewMsgRepairCheckpointTest(
-			from,
-			req.CheckpointNumber,
-			"tron", // rootChain
-			req.TestMessage,
-			testCheckpoint,
+		// 创建 checkpoint 消息，使用 bridge 中的方式
+		msg := types.NewMsgCheckpointBlock(
+			testCheckpoint.Proposer,
+			testCheckpoint.StartBlock,
+			testCheckpoint.EndBlock,
+			testCheckpoint.RootHash,
+			testCheckpoint.RootHash, // 使用 RootHash 作为 AccountRootHash
+			testCheckpoint.BorChainID,
+			req.CheckpointNumber, // 使用请求的 checkpoint number
+			"tron",
 		)
 
-		// 验证消息
-		if err := msg.ValidateBasic(); err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
+		// 创建 TxBroadcaster 实例，使用 bridge 中的方式
+		txBroadcaster := broadcaster.NewTxBroadcaster(cliCtx.Codec)
 
-		// 记录开始广播的日志
-		helper.Logger.Info("repairCheckpointTestHandler, 开始广播测试消息",
-			"checkpointNumber", req.CheckpointNumber,
-			"testMessage", req.TestMessage,
-		)
-
-		// 使用项目中标准的广播方式，真正广播到链上
-		err := helper.BroadcastMsgsWithCLI(cliCtx, []sdk.Msg{msg})
-		if err != nil {
+		// 使用 bridge 中的广播方法
+		if err := txBroadcaster.BroadcastToHeimdall(&msg); err != nil {
 			helper.Logger.Error("repairCheckpointTestHandler, 广播失败", "error", err)
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
