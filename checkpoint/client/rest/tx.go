@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -294,13 +295,17 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			"testMessage", req.TestMessage,
 		)
 
-		// 返回成功响应
-		rest.PostProcessResponse(w, cliCtx, map[string]interface{}{
+		// 返回成功响应，避免 Unregistered interface 错误
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		response := map[string]interface{}{
 			"success":           true,
 			"message":           "测试消息广播成功",
 			"checkpoint_number": req.CheckpointNumber,
 			"test_message":      req.TestMessage,
-		})
+			"note":              "消息已成功广播到链上，请查看服务日志确认 handler 处理",
+		}
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
