@@ -28,6 +28,12 @@ func NewHandler(k Keeper, contractCaller helper.IContractCaller) sdk.Handler {
 			return handleMsgCheckpointSync(ctx, msg, k)
 		case types.MsgCheckpointSyncAck:
 			return handleMsgCheckpointSyncAck(ctx, msg, k)
+		case types.MsgRepairCheckpoint:
+			return handleMsgRepairCheckpoint(ctx, msg, k)
+		case types.MsgRepairCheckpointTest:
+			return handleMsgRepairCheckpointTest(ctx, msg, k)
+		case types.MsgMyTest:
+			return handleMsgMyTest(ctx, msg, k)
 		default:
 			return sdk.ErrTxDecode("Invalid message in checkpoint module").Result()
 		}
@@ -352,4 +358,124 @@ func handleMsgCheckpointSyncAck(ctx sdk.Context, msg types.MsgCheckpointSyncAck,
 	return sdk.Result{
 		Events: ctx.EventManager().Events(),
 	}
+}
+
+// handleMsgRepairCheckpoint Validates and repairs a checkpoint
+// checkpointNumber=60191 startBlock=50080768 endBlock=50089983
+// rootHash=0xc18d16ec7f97533ad4aa49aac5aaf73486da34839410f002d41fa73c5c2f06d3
+// proposer=0xd4d14396282a000234862eaf2527c17ed680e58e
+// borChainID=22125 timeStamp=1749546051
+func handleMsgRepairCheckpoint(ctx sdk.Context, msg types.MsgRepairCheckpoint, k Keeper) sdk.Result {
+	logger := k.Logger(ctx)
+
+	// 检查本地是否已存在
+	_, err := k.GetCheckpointByNumber(ctx, msg.CheckpointNumber, msg.RootChain)
+	if err == nil {
+		logger.Info("本地已存在该checkpoint", "checkpointNumber", msg.CheckpointNumber)
+		return sdk.ErrUnknownRequest("本地已存在该checkpoint").Result()
+	}
+
+	// 组装Checkpoint对象
+	checkpoint := hmTypes.Checkpoint{
+		StartBlock: msg.Checkpoint.StartBlock,
+		EndBlock:   msg.Checkpoint.EndBlock,
+		RootHash:   msg.Checkpoint.RootHash,
+		Proposer:   msg.Checkpoint.Proposer,
+		BorChainID: msg.Checkpoint.BorChainID,
+		TimeStamp:  msg.Checkpoint.TimeStamp,
+	}
+
+	logger.Info("handleMsgRepairCheckpoint, 开始补录checkpoint",
+		"checkpointNumber", msg.CheckpointNumber,
+		"checkpoint", checkpoint,
+	)
+
+	// **核心：写入本地数据库**
+	err = k.AddCheckpoint(ctx, msg.CheckpointNumber, msg.Checkpoint, msg.RootChain)
+	if err != nil {
+		logger.Error("写入本地数据库失败", "checkpointNumber", msg.CheckpointNumber, "err", err)
+		return sdk.ErrInternal("写入本地数据库失败").Result()
+	}
+
+	logger.Info("补录checkpoint成功", "checkpointNumber", msg.CheckpointNumber)
+
+	// 发出事件
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			"repair-checkpoint",
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute("checkpoint_number", strconv.FormatUint(msg.CheckpointNumber, 10)),
+			sdk.NewAttribute("root_chain", msg.RootChain),
+			sdk.NewAttribute("from", msg.From.String()),
+		),
+	})
+
+	return sdk.Result{Events: ctx.EventManager().Events()}
+}
+
+// handleMsgRepairCheckpointTest 测试广播机制的 handler
+func handleMsgRepairCheckpointTest(ctx sdk.Context, msg types.MsgRepairCheckpointTest, k Keeper) sdk.Result {
+	logger := k.Logger(ctx)
+
+	logger.Info("✅ 收到测试消息",
+		"testMessage", msg.TestMessage,
+		"checkpointNumber", msg.CheckpointNumber,
+		"from", msg.From.String(),
+		"rootChain", msg.RootChain,
+	)
+
+	// 检查本地是否已存在该 checkpoint
+	existingCheckpoint, err := k.GetCheckpointByNumber(ctx, msg.CheckpointNumber, msg.RootChain)
+	if err == nil {
+		logger.Info("本地已存在该checkpoint，测试消息仍然成功处理",
+			"checkpointNumber", msg.CheckpointNumber,
+			"existingCheckpoint", existingCheckpoint,
+		)
+	} else {
+		logger.Info("本地不存在该checkpoint，这是正常的测试场景",
+			"checkpointNumber", msg.CheckpointNumber,
+		)
+	}
+
+	// 发出事件
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			"repair-checkpoint-test",
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute("test_message", msg.TestMessage),
+			sdk.NewAttribute("checkpoint_number", strconv.FormatUint(msg.CheckpointNumber, 10)),
+			sdk.NewAttribute("from", msg.From.String()),
+			sdk.NewAttribute("root_chain", msg.RootChain),
+		),
+	})
+
+	logger.Info("✅ 测试消息处理完成，广播机制正常工作")
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
+// handleMsgMyTest handles MsgMyTest message
+func handleMsgMyTest(ctx sdk.Context, msg types.MsgMyTest, k Keeper) sdk.Result {
+	// Validate message
+	if err := msg.ValidateBasic(); err != nil {
+		return err.Result()
+	}
+
+	// Process your message logic here
+	// Example: k.SetTestData(ctx, msg.TestData)
+	logger := k.Logger(ctx)
+	logger.Info("✅ handleMsgMyTest")
+	// Create and emit event
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.From.String()),
+			sdk.NewAttribute("test_data", msg.TestData),
+		),
+	)
+
+	return sdk.Result{Events: ctx.EventManager().Events()}
 }

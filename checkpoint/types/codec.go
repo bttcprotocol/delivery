@@ -10,6 +10,9 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgCheckpointNoAck{}, "checkpoint/MsgCheckpointNoACK", nil)
 	cdc.RegisterConcrete(MsgCheckpointSync{}, "checkpoint/MsgCheckpointSync", nil)
 	cdc.RegisterConcrete(MsgCheckpointSyncAck{}, "checkpoint/MsgCheckpointSyncAck", nil)
+	cdc.RegisterConcrete(MsgRepairCheckpoint{}, "checkpoint/MsgRepairCheckpoint", nil)
+	cdc.RegisterConcrete(MsgRepairCheckpointTest{}, "checkpoint/MsgRepairCheckpointTest", nil)
+	cdc.RegisterConcrete(MsgMyTest{}, "heimdall/MsgMyTest", nil)
 }
 
 // ModuleCdc generic sealed codec to be used throughout module

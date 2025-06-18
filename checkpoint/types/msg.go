@@ -10,6 +10,7 @@ import (
 	hmCommon "github.com/maticnetwork/heimdall/common"
 	"github.com/maticnetwork/heimdall/helper"
 	"github.com/maticnetwork/heimdall/types"
+	hmTypes "github.com/maticnetwork/heimdall/types"
 )
 
 //
@@ -360,5 +361,150 @@ func (msg MsgCheckpointSyncAck) ValidateBasic() sdk.Error {
 
 // GetSideSignBytes returns side sign bytes
 func (msg MsgCheckpointSyncAck) GetSideSignBytes() []byte {
+	return nil
+}
+
+// MsgRepairCheckpoint represents a repair checkpoint message
+type MsgRepairCheckpoint struct {
+	From             types.HeimdallAddress `json:"from"`
+	CheckpointNumber uint64                `json:"checkpoint_number"`
+	RootChain        string                `json:"root_chain"`
+	Checkpoint       hmTypes.Checkpoint    `json:"checkpoint"` // 使用已有的 Checkpoint 结构
+}
+
+// NewMsgRepairCheckpoint creates a new MsgRepairCheckpoint message
+func NewMsgRepairCheckpoint(
+	from types.HeimdallAddress,
+	checkpointNumber uint64,
+	rootChain string,
+	checkpoint hmTypes.Checkpoint,
+) MsgRepairCheckpoint {
+	return MsgRepairCheckpoint{
+		From:             from,
+		CheckpointNumber: checkpointNumber,
+		RootChain:        rootChain,
+		Checkpoint:       checkpoint,
+	}
+}
+
+func (msg MsgRepairCheckpoint) Type() string  { return "repair-checkpoint" }
+func (msg MsgRepairCheckpoint) Route() string { return RouterKey }
+func (msg MsgRepairCheckpoint) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{types.HeimdallAddressToAccAddress(msg.From)}
+}
+func (msg MsgRepairCheckpoint) GetSignBytes() []byte {
+	b, err := ModuleCdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+func (msg MsgRepairCheckpoint) ValidateBasic() sdk.Error {
+	if msg.From.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid from %v", msg.From.String())
+	}
+	if msg.Checkpoint.RootHash.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid empty root hash")
+	}
+	if msg.Checkpoint.StartBlock >= msg.Checkpoint.EndBlock || msg.Checkpoint.EndBlock == 0 {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid startBlock %v or/and endBlock %v", msg.Checkpoint.StartBlock, msg.Checkpoint.EndBlock)
+	}
+	return nil
+}
+
+// MsgRepairCheckpointTest represents a test repair checkpoint message for testing broadcast mechanism
+type MsgRepairCheckpointTest struct {
+	From             types.HeimdallAddress `json:"from"`
+	CheckpointNumber uint64                `json:"checkpoint_number"`
+	RootChain        string                `json:"root_chain"`
+	TestMessage      string                `json:"test_message"`
+	Checkpoint       hmTypes.Checkpoint    `json:"checkpoint"`
+}
+
+// NewMsgRepairCheckpointTest creates a new MsgRepairCheckpointTest message
+func NewMsgRepairCheckpointTest(
+	from types.HeimdallAddress,
+	checkpointNumber uint64,
+	rootChain string,
+	testMessage string,
+	checkpoint hmTypes.Checkpoint,
+) MsgRepairCheckpointTest {
+	return MsgRepairCheckpointTest{
+		From:             from,
+		CheckpointNumber: checkpointNumber,
+		RootChain:        rootChain,
+		TestMessage:      testMessage,
+		Checkpoint:       checkpoint,
+	}
+}
+
+func (msg MsgRepairCheckpointTest) Type() string  { return "repair-checkpoint-test" }
+func (msg MsgRepairCheckpointTest) Route() string { return RouterKey }
+func (msg MsgRepairCheckpointTest) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{types.HeimdallAddressToAccAddress(msg.From)}
+}
+func (msg MsgRepairCheckpointTest) GetSignBytes() []byte {
+	b, err := ModuleCdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+func (msg MsgRepairCheckpointTest) ValidateBasic() sdk.Error {
+	if msg.From.Empty() {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Invalid from %v", msg.From.String())
+	}
+	if msg.TestMessage == "" {
+		return hmCommon.ErrInvalidMsg(hmCommon.DefaultCodespace, "Test message cannot be empty")
+	}
+	return nil
+}
+
+// MsgMyTest - your test message
+type MsgMyTest struct {
+	From     hmTypes.HeimdallAddress `json:"from"`
+	TestData string                  `json:"test_data"`
+}
+
+// NewMsgMyTest creates new MsgMyTest message
+func NewMsgMyTest(from hmTypes.HeimdallAddress, testData string) MsgMyTest {
+	return MsgMyTest{
+		From:     from,
+		TestData: testData,
+	}
+}
+
+// Type returns message type
+func (msg MsgMyTest) Type() string {
+	return "my-test"
+}
+
+// Route returns route for message
+func (msg MsgMyTest) Route() string {
+	return RouterKey
+}
+
+// GetSigners returns signers
+func (msg MsgMyTest) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{hmTypes.HeimdallAddressToAccAddress(msg.From)}
+}
+
+// GetSignBytes returns sign bytes
+func (msg MsgMyTest) GetSignBytes() []byte {
+	b, err := ModuleCdc.MarshalJSON(msg)
+	if err != nil {
+		panic(err)
+	}
+	return sdk.MustSortJSON(b)
+}
+
+// ValidateBasic validates the message
+func (msg MsgMyTest) ValidateBasic() sdk.Error {
+	if msg.From.Empty() {
+		return sdk.ErrInvalidAddress("missing sender address")
+	}
+	if msg.TestData == "" {
+		return sdk.ErrUnknownRequest("test data cannot be empty")
+	}
 	return nil
 }

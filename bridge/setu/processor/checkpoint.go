@@ -97,12 +97,24 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 
 func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 	now := time.Now()
-	baseTime := time.Unix(0, 0)
+	baseTime := time.Unix(0, 0) // 1970年1月1日0时0分0秒 UTC
 	// no-ack ticker interval keep same with checkpoint interval
+	// 以30分钟为例
 	noAckInterval := helper.GetConfig().CheckpointerPollInterval
 	// adjust no-ack ticker to tick at the middle of checkpoint interval
+	// now.UTC().Sub(baseTime) 计算当前时间与基准时间的时间差，返回一个 Duration 类型
+	// (now.UTC().Sub(baseTime) % noAckInterval) 这一步会得到当前时间在 noAckInterval 周期内的剩余时间，结果也是一个 Duration 类型。
+	// 假设：
+	//    noAckInterval 为 30 分钟（1800 秒）。
+	//    当前时间 now 是 2024年11月22日 12:00:00 UTC。
+	// 那么：
+	//    baseTime 是 1970年1月1日 00:00:00 UTC。
+	//    now.UTC().Sub(baseTime) 计算出从基准时间到当前时间的总秒数。
+	//    now.UTC().Sub(baseTime) % noAckInterval 计算当前时间在 30 分钟周期内的位置。
+	//    最后，firstIntervalForNoAck 将给出距离下次触发的时间间隔（以秒为单位）。
 	firstIntervalForNoAck := noAckInterval - (now.UTC().Sub(baseTime) % noAckInterval) - noAckInterval/2 // nolint: gomnd
 	if firstIntervalForNoAck <= 0 {
+		// firstIntervalForNoAck > 0 还在 noAckInterval 区间内
 		firstIntervalForNoAck += noAckInterval
 	}
 
@@ -148,6 +160,7 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 		return err
 	}
 
+	// proposer 才允许这个操作
 	if isProposer {
 		// fetch checkpoint context
 		checkpointContext, err := cp.getCheckpointContext(hmTypes.RootChainTypeEth)
@@ -158,6 +171,7 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 		// process latest confirmed child block only
 		chainmanagerParams := checkpointContext.ChainmanagerParams
 		cp.Logger.Debug("no of checkpoint confirmations required", "maticchainTxConfirmations", chainmanagerParams.MaticchainTxConfirmations)
+		// 最新固化高度
 		latestConfirmedChildBlock := header.Number.Uint64() - chainmanagerParams.MaticchainTxConfirmations
 		if latestConfirmedChildBlock <= 0 {
 			cp.Logger.Error("no of blocks on childchain is less than confirmations required", "childChainBlocks", header.Number.Uint64(), "confirmationsRequired", chainmanagerParams.MaticchainTxConfirmations)
@@ -165,8 +179,10 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 		}
 
 		// tron send tron checkpoint
+		// TRON 链相关
 		go cp.sendTronCheckpointToHeimdall(checkpointContext, latestConfirmedChildBlock)
 
+		// 遍历 其它两条链
 		for _, root := range []string{hmTypes.RootChainTypeEth, hmTypes.RootChainTypeBsc} {
 			activationHeight := cp.getCheckpointActivationHeight(cp.cliCtx, root)
 			if root != hmTypes.RootChainTypeEth {
@@ -344,6 +360,8 @@ func (cp *CheckpointProcessor) sendCheckpointAckToHeimdall(eventName string, che
 	} else {
 		checkpointNumber := big.NewInt(0).Div(event.HeaderBlockId, big.NewInt(0).SetUint64(checkpointContext.CheckpointParams.ChildBlockInterval))
 
+		// 日志
+		//Received task to send checkpoint-ack to heimdall module=checkpoint service=processor event=NewHeaderBlock start=43295232 end=43295999 reward=2234787297409219980422799 root=0xedbd8153f8573899c4c2c45eb40ea9f8eaaed45491905a6cf6d6cbb8134683c4 proposer=0xcC792A4C26E5E4ED0d52e30c62753eFd741Dfc62 checkpointNumber=52752 txHash=0xa450b048da8744be5ee4d2ca41272c8feca91e1f6e93cecf1c07caa5b779fad6 logIndex=0 rootChain=tron
 		cp.Logger.Info(
 			"✅ Received task to send checkpoint-ack to heimdall",
 			"event", eventName,
@@ -406,6 +424,7 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 		return
 	}
 
+	// 查重 no-ack 是否已发送过
 	isNoAckRequired, _ := cp.checkIfNoAckIsRequired(checkpointContext, lastCreatedAt)
 	if isNoAckRequired {
 		var isProposer bool
@@ -416,6 +435,7 @@ func (cp *CheckpointProcessor) handleCheckpointNoAck() {
 		}
 
 		// if i am the proposer and NoAck is required, then propose No-Ack
+		// 如果 自己 是proposer，且需要 NoAck，则提出 NoAck
 		if isProposer {
 			// send Checkpoint No-Ack to heimdall
 			if err := cp.proposeCheckpointNoAck(); err != nil {
@@ -501,6 +521,7 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 	}
 
 	if !cp.checkCrossChain(start, end, rootChain, checkpointParams.MaxCheckpointLength) {
+		// 这里赋值为相同
 		end = start
 	}
 
@@ -829,21 +850,29 @@ func (cp *CheckpointProcessor) getCheckpointActivationHeight(cliCtx cliContext.C
 }
 
 // checkIfNoAckIsRequired - check if NoAck has to be sent or not
+// 检查是否需要发送 NoAck
 func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *CheckpointContext, lastCreatedAt int64) (bool, uint64) {
 	var index float64
 	// if last created at ==0 , no checkpoint yet
+	// 如果最后创建的时间 ==0 , 则还没有 checkpoint
 	if lastCreatedAt == 0 {
 		index = 1
 	}
 
+	// lastCreatedAt 时间戳
 	checkpointCreationTime := time.Unix(lastCreatedAt, 0)
 	currentTime := time.Now().UTC()
 
+	// 比较出两个时间差
 	timeDiff := currentTime.Sub(checkpointCreationTime)
+
+	// 关键逻辑 timeDiff >= checkpoint的拉取周期 CheckpointerPollInterval
 	if timeDiff.Seconds() >= helper.GetConfig().CheckpointerPollInterval.Seconds() && index == 0 {
+		// 向下取整
 		index = math.Floor(timeDiff.Seconds() / helper.GetConfig().CheckpointerPollInterval.Seconds())
 	}
 
+	// 也就是说 index 取整后>0的任意数，都会执行后续逻辑
 	if index == 0 {
 		return false, uint64(index)
 	}
@@ -852,9 +881,11 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 	checkpointParams := checkpointContext.CheckpointParams
 
 	// check if difference between no-ack time and current time
+	// 检查 no-ack 时间与当前时间是否有差异
 	lastNoAck := cp.getLastNoAckTime()
 	lastNoAckTime := time.Unix(int64(lastNoAck), 0)
 	// if last no ack == 0 , first no-ack to be sent
+	// 如果最后一个 no ack == 0 ，则发送第一个 no-ack，这里就是个判重逻辑，防止noAck多发
 	if currentTime.Sub(lastNoAckTime).Seconds() < checkpointParams.CheckpointBufferTime.Seconds() && lastNoAck != 0 {
 		cp.Logger.Debug("Cannot send multiple no-ack in short time", "timeDiff", currentTime.Sub(lastNoAckTime).Seconds(), "ExpectedDiff", checkpointParams.CheckpointBufferTime.Seconds())
 		return false, uint64(index)
@@ -991,9 +1022,7 @@ func (cp *CheckpointProcessor) Stop() {
 	cp.cancelNoACKPolling()
 }
 
-//
 // utils
-//
 func (cp *CheckpointProcessor) getCheckpointContext(rootChain string) (*CheckpointContext, error) {
 	// fetch chain params for different root chains
 	chainmanagerParams, err := util.GetNewChainParams(cp.cliCtx, rootChain)
@@ -1031,6 +1060,7 @@ func (cp *CheckpointProcessor) hasCrossChainTx(start uint64, end uint64, rootCha
 		return true
 	}
 
+	// start=46149376 end=46152191 addrLen=16 logsLen=0
 	cp.Logger.Info("hasCrossChainTx getLogs", "rootChain", rootChain, "start", start, "end", end,
 		"addrLen", len(addrs), "logsLen", len(logs))
 
