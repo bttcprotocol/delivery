@@ -229,11 +229,6 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		req.BaseReq = req.BaseReq.Sanitize()
-		if !req.BaseReq.ValidateBasic(w) {
-			return
-		}
-
 		// 获取发送者地址
 		var from hmTypes.HeimdallAddress
 		if req.From != "" {
@@ -246,10 +241,17 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		// 验证 BaseReq
+		req.BaseReq = req.BaseReq.Sanitize()
+		if !req.BaseReq.ValidateBasic(w) {
+			return
+		}
+
 		// 记录开始广播的日志
 		helper.Logger.Info("repairCheckpointTestHandler, 开始广播测试消息",
 			"checkpointNumber", req.CheckpointNumber,
 			"testMessage", req.TestMessage,
+			"from", from.String(),
 		)
 
 		// 创建一个测试 checkpoint 消息
@@ -277,6 +279,12 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
+		// 记录成功日志
+		helper.Logger.Info("repairCheckpointTestHandler, 消息验证成功，准备广播",
+			"checkpointNumber", req.CheckpointNumber,
+			"testMessage", req.TestMessage,
+		)
 
 		// 创建 TxBroadcaster 实例，使用 bridge 中的方式
 		txBroadcaster := broadcaster.NewTxBroadcaster(cliCtx.Codec)
