@@ -2,7 +2,10 @@ package rest
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -247,10 +250,14 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		// 生成唯一标识，用于防重
+		uniqueID := fmt.Sprintf("%d_%s_%s", time.Now().UnixNano(), from.String(), req.TestMessage)
+
 		// 记录开始广播的日志
 		helper.Logger.Info("repairCheckpointTestHandler, 开始广播测试消息",
 			"checkpointNumber", req.CheckpointNumber,
 			"testMessage", req.TestMessage,
+			"uniqueID", uniqueID,
 		)
 
 		// 创建一个测试 checkpoint 消息
@@ -260,7 +267,8 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			RootHash:   hmTypes.HexToHeimdallHash("0xc18d16ec7f97533ad4aa49aac5aaf73486da34839410f002d41fa73c5c2f06d3"),
 			Proposer:   hmTypes.HexToHeimdallAddress("0xd4d14396282a000234862eaf2527c17ed680e58e"),
 			BorChainID: "22125",
-			TimeStamp:  1749546051,
+			TimeStamp:  uint64(time.Now().Unix()), // 防重验证
+			//TimeStamp:  1749546051,	// 实际时间戳
 		}
 
 		// 创建 MsgRepairCheckpointTest 消息
@@ -279,6 +287,11 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
+		// 添加随机延迟，避免 RabbitMQ 防重
+		delay := time.Duration(rand.Intn(3000)+1000) * time.Millisecond // 1-4秒随机延迟
+		helper.Logger.Info("repairCheckpointTestHandler, 添加随机延迟", "delay", delay)
+		time.Sleep(delay)
+
 		// 创建 TxBroadcaster 实例，使用 bridge 中的方式
 		txBroadcaster := broadcaster.NewTxBroadcaster(cliCtx.Codec)
 
@@ -293,6 +306,7 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 		helper.Logger.Info("repairCheckpointTestHandler, 广播成功",
 			"checkpointNumber", req.CheckpointNumber,
 			"testMessage", req.TestMessage,
+			"uniqueID", uniqueID,
 		)
 
 		// 返回成功响应，避免 Unregistered interface 错误
@@ -303,6 +317,7 @@ func repairCheckpointTestHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			"message":           "测试消息广播成功",
 			"checkpoint_number": req.CheckpointNumber,
 			"test_message":      req.TestMessage,
+			"unique_id":         uniqueID,
 			"note":              "消息已成功广播到链上，请查看服务日志确认 handler 处理",
 		}
 		json.NewEncoder(w).Encode(response)

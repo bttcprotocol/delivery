@@ -7,7 +7,7 @@ echo "=== 测试 repair-test 接口（使用 MsgRepairCheckpointTest 消息类�
 REST_URL="http://localhost:1317"
 ACCOUNT_ADDRESS="0xd4d14396282a000234862eaf2527c17ed680e58e"
 CHECKPOINT_NUMBER="60191"
-TEST_MESSAGE="快速测试_MsgRepairCheckpointTest"
+TEST_MESSAGE="快速测试_MsgRepairCheckpointTest_$(date +%s)"
 
 # 获取账户序列号
 echo "获取账户序列号..."
@@ -67,6 +67,11 @@ else
     echo ""
     echo "❌ 测试失败！"
     echo "错误信息: $(echo "$RESPONSE" | jq -r '.error // .')"
+    echo ""
+    echo "可能的原因："
+    echo "1. 序列号已被使用（防重机制）"
+    echo "2. 服务未启动"
+    echo "3. 网络连接问题"
 fi
 
 echo ""
