@@ -402,11 +402,11 @@ func handleMsgRepairCheckpoint(ctx sdk.Context, msg types.MsgRepairCheckpoint, k
 	// 发出事件
 	ctx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
-			"repair-checkpoint",
+			types.EventTypeRepairCheckpoint,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute("checkpoint_number", strconv.FormatUint(msg.CheckpointNumber, 10)),
-			sdk.NewAttribute("root_chain", msg.RootChain),
-			sdk.NewAttribute("from", msg.From.String()),
+			sdk.NewAttribute(types.AttributeKeyCheckpointNumber, strconv.FormatUint(msg.CheckpointNumber, 10)),
+			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChain),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.From.String()),
 		),
 	})
 
@@ -440,12 +440,12 @@ func handleMsgRepairCheckpointTest(ctx sdk.Context, msg types.MsgRepairCheckpoin
 	// 发出事件
 	ctx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
-			"repair-checkpoint-test",
+			types.EventTypeRepairCheckpointTest,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute("test_message", msg.TestMessage),
-			sdk.NewAttribute("checkpoint_number", strconv.FormatUint(msg.CheckpointNumber, 10)),
-			sdk.NewAttribute("from", msg.From.String()),
-			sdk.NewAttribute("root_chain", msg.RootChain),
+			sdk.NewAttribute(types.AttributeKeyTestMessage, msg.TestMessage),
+			sdk.NewAttribute(types.AttributeKeyCheckpointNumber, strconv.FormatUint(msg.CheckpointNumber, 10)),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.From.String()),
+			sdk.NewAttribute(types.AttributeKeyRootChain, msg.RootChain),
 		),
 	})
 
