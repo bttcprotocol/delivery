@@ -46,7 +46,6 @@ func handleMsgCheckpoint(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper, con
 	if msg.StartBlock == 50080768 && msg.EndBlock == 50089983 {
 		compensation = true
 	}
-	logger.Info("Handle MsgCheckpoint, 补录开始", "compensation", compensation, "startBlock", msg.StartBlock, "endBlock", msg.EndBlock, "rootChainType", msg.RootChainType, "timeStamp", timeStamp, "blockTime", ctx.BlockTime())
 	if compensation {
 		return handleMsgCheckpointCompensation(ctx, msg, k)
 	}
@@ -380,7 +379,7 @@ type MsgRepairCheckpoint struct {
 func handleMsgRepairCheckpoint(ctx sdk.Context, msg MsgRepairCheckpoint, k Keeper) sdk.Result {
 	logger := k.Logger(ctx)
 
-	// 检查本地是否已存在
+	// 检查本地是否已存在 checkpointNumber=60191
 	_, err := k.GetCheckpointByNumber(ctx, msg.CheckpointNumber, msg.RootChain)
 	if err == nil {
 		logger.Info("本地已存在该checkpoint", "checkpointNumber", msg.CheckpointNumber)
@@ -400,11 +399,14 @@ func handleMsgRepairCheckpoint(ctx sdk.Context, msg MsgRepairCheckpoint, k Keepe
 	logger.Info("handleMsgRepairCheckpoint, 开始补录checkpoint",
 		"checkpointNumber", msg.CheckpointNumber,
 		"checkpoint", checkpoint,
+		"startBlock", checkpoint.StartBlock,
+		"endBlock", checkpoint.EndBlock,
+		"rootHash", checkpoint.RootHash.String(),
 	)
 
 	if msg.CheckpointNumber == 60191 {
-		logger.Error("checkpointNumber 不能为0")
-		return sdk.ErrInternal("checkpointNumber 不能为60191").Result()
+		logger.Error("60191高度已完成补录，不允许重复补录", "checkpointNumber", msg.CheckpointNumber)
+		return sdk.ErrInternal("60191高度已完成补录，不允许重复补录").Result()
 	}
 
 	// **核心：写入本地数据库**
@@ -414,7 +416,12 @@ func handleMsgRepairCheckpoint(ctx sdk.Context, msg MsgRepairCheckpoint, k Keepe
 		return sdk.ErrInternal("写入本地数据库失败").Result()
 	}
 
-	logger.Info("补录checkpoint成功", "checkpointNumber", msg.CheckpointNumber)
+	logger.Info("补录checkpoint成功",
+		"checkpointNumber", msg.CheckpointNumber,
+		"startBlock", checkpoint.StartBlock,
+		"endBlock", checkpoint.EndBlock,
+		"rootHash", checkpoint.RootHash.String(),
+	)
 
 	// 发出事件
 	ctx.EventManager().EmitEvents(sdk.Events{
@@ -424,6 +431,9 @@ func handleMsgRepairCheckpoint(ctx sdk.Context, msg MsgRepairCheckpoint, k Keepe
 			sdk.NewAttribute("checkpoint_number", strconv.FormatUint(msg.CheckpointNumber, 10)),
 			sdk.NewAttribute("root_chain", msg.RootChain),
 			sdk.NewAttribute("from", msg.From.String()),
+			sdk.NewAttribute("start_block", strconv.FormatUint(checkpoint.StartBlock, 10)),
+			sdk.NewAttribute("end_block", strconv.FormatUint(checkpoint.EndBlock, 10)),
+			sdk.NewAttribute("root_hash", checkpoint.RootHash.String()),
 		),
 	})
 
@@ -444,10 +454,52 @@ type MsgMyTest struct {
 	TestData string
 }
 
+// handleMsgRepairCheckpointTest 测试广播机制的 handler
+func handleMsgRepairCheckpointTest(ctx sdk.Context, msg MsgRepairCheckpointTest, k Keeper) sdk.Result {
+	logger := k.Logger(ctx)
+
+	logger.Info("✅ 收到测试消息",
+		"testMessage", msg.TestMessage,
+		"checkpointNumber", msg.CheckpointNumber,
+		"from", msg.From.String(),
+		"rootChain", msg.RootChain,
+	)
+
+	// 检查本地是否已存在该 checkpoint
+	existingCheckpoint, err := k.GetCheckpointByNumber(ctx, msg.CheckpointNumber, msg.RootChain)
+	if err == nil {
+		logger.Info("本地已存在该checkpoint，测试消息仍然成功处理",
+			"checkpointNumber", msg.CheckpointNumber,
+			"existingCheckpoint", existingCheckpoint,
+		)
+	} else {
+		logger.Info("本地不存在该checkpoint，这是正常的测试场景",
+			"checkpointNumber", msg.CheckpointNumber,
+		)
+	}
+
+	// 发出事件
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			"repair-checkpoint-test",
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute("test_message", msg.TestMessage),
+			sdk.NewAttribute("checkpoint_number", strconv.FormatUint(msg.CheckpointNumber, 10)),
+			sdk.NewAttribute("from", msg.From.String()),
+			sdk.NewAttribute("root_chain", msg.RootChain),
+		),
+	})
+
+	logger.Info("✅ 测试消息处理完成，广播机制正常工作")
+
+	return sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}
+}
+
 // handleMsgCheckpointCompensation 专门处理补录场景
 func handleMsgCheckpointCompensation(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper) sdk.Result {
 	// 检查本地是否已存在该 checkpoint
-	k.Logger(ctx).Debug("处理补录消息 handleMsgCheckpointCompensation")
 	if _, err := k.GetCheckpointByNumber(ctx, msg.StartBlock, msg.RootChainType); err == nil {
 		// 已存在，直接返回成功
 		k.Logger(ctx).Info("补录已存在，本地无需重复执行", "checkpointNumber", msg.StartBlock, "rootChain", msg.RootChainType)
@@ -464,7 +516,7 @@ func handleMsgCheckpointCompensation(ctx sdk.Context, msg types.MsgCheckpoint, k
 			RootHash:   msg.RootHash,
 			Proposer:   msg.Proposer,
 			BorChainID: msg.BorChainID,
-			TimeStamp:  uint64(ctx.BlockTime().Unix()),
+			TimeStamp:  1749546051,
 		},
 	}
 	return handleMsgRepairCheckpoint(ctx, repairMsg, k)

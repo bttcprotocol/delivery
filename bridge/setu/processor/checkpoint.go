@@ -259,9 +259,8 @@ func compensationCheckpoint(cp *CheckpointProcessor) error {
 	}
 	chainParams := checkpointContext.ChainmanagerParams.ChainParams
 	epoch := cp.getCurrentEpoch()
-	proposer := hmTypes.BytesToHeimdallAddress(helper.GetAddress())
 	msg := checkpointTypes.NewMsgCheckpointBlock(
-		proposer,
+		hmTypes.BytesToHeimdallAddress(helper.GetAddress()),
 		uint64(start),
 		uint64(end),
 		hmTypes.BytesToHeimdallHash(rootHash),
@@ -272,7 +271,7 @@ func compensationCheckpoint(cp *CheckpointProcessor) error {
 	)
 	// 构造 context
 	// return broadcast to heimdall
-	if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+	if err := cp.txBroadcaster.BroadcastToHeimdall(&msg); err != nil {
 		cp.Logger.Error("Error while broadcasting checkpoint to heimdall", "error", err)
 		return err
 	}
