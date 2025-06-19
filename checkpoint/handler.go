@@ -488,6 +488,12 @@ func handleMsgRepairCheckpointTest(ctx sdk.Context, msg MsgRepairCheckpointTest,
 
 // handleMsgCheckpointCompensation 专门处理补录场景
 func handleMsgCheckpointCompensation(ctx sdk.Context, msg types.MsgCheckpoint, k Keeper) sdk.Result {
+	// 检查本地是否已存在该 checkpoint
+	if _, err := k.GetCheckpointByNumber(ctx, msg.StartBlock, msg.RootChainType); err == nil {
+		// 已存在，直接返回成功
+		k.Logger(ctx).Info("补录已存在，本地无需重复执行", "checkpointNumber", msg.StartBlock, "rootChain", msg.RootChainType)
+		return sdk.Result{Events: ctx.EventManager().Events()}
+	}
 	// 组装 repair 消息
 	repairMsg := MsgRepairCheckpoint{
 		From:             msg.Proposer,
