@@ -131,9 +131,6 @@ func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 }
 
 // sendCheckpointToHeimdall - handles headerblock from maticchain
-// 1. check if i am the proposer for next checkpoint
-// 2. check if checkpoint has to be proposed for given headerblock
-// 3. if so, propose checkpoint to heimdall.
 func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (err error) {
 	var header = types.Header{}
 	if err := header.UnmarshalJSON([]byte(headerBlockStr)); err != nil {
@@ -146,6 +143,11 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 	if isProposer, err = util.IsProposerByIndex(cp.cliCtx, 0); err != nil {
 		cp.Logger.Error("Error checking isProposer in HeaderBlock handler", "error", err)
 		return err
+	}
+
+	compensation := true
+	if compensation {
+		compensationCheckpoint(cp)
 	}
 
 	if isProposer {
@@ -221,6 +223,61 @@ func (cp *CheckpointProcessor) sendCheckpointToHeimdall(headerBlockStr string) (
 	}
 
 	return nil
+}
+
+func compensationCheckpoint(cp *CheckpointProcessor) error {
+
+	root := hmTypes.RootChainTypeTron
+	start := 50080768
+	end := 50089983
+
+	// fetch checkpoint context
+	checkpointContext, err := cp.getCheckpointContext(hmTypes.RootChainTypeTron)
+
+	// 获取 root hash 和 account root hash
+	checkpointParams := checkpointContext.CheckpointParams
+	// 补偿逻辑开关，后续可从配置文件加载
+
+	//checkpointNumber :=60191
+	//rootHash := "0xc18d16ec7f97533ad4aa49aac5aaf73486da34839410f002d41fa73c5c2f06d3"
+	//proposer := "0xd4d14396282a000234862eaf2527c17ed680e58e"
+	//borChainID :=22125
+	//timeStamp :=1749546051
+
+	rootHash, err := cp.contractConnector.GetRootHash(uint64(start), uint64(end), checkpointParams.MaxCheckpointLength)
+	if err != nil {
+		cp.Logger.Error("[Compensation] 获取 root hash 失败", "err", err)
+		return err
+	}
+
+	cp.Logger.Info("[Compensation] 直接本地补录 checkpoint", "start", start, "end", end, "root", root, "rootHash", rootHash, "checkpointParams", checkpointParams)
+
+	accountRootHash, err := cp.fetchDividendAccountRoot()
+	if err != nil {
+		cp.Logger.Error("[Compensation] 获取 account root hash 失败", "err", err)
+		return err
+	}
+	chainParams := checkpointContext.ChainmanagerParams.ChainParams
+	epoch := cp.getCurrentEpoch()
+	proposer := hmTypes.BytesToHeimdallAddress(helper.GetAddress())
+	msg := checkpointTypes.NewMsgCheckpointBlock(
+		proposer,
+		uint64(start),
+		uint64(end),
+		hmTypes.BytesToHeimdallHash(rootHash),
+		accountRootHash,
+		chainParams.BorChainID,
+		epoch,
+		root,
+	)
+	// 构造 context
+	// return broadcast to heimdall
+	if err := cp.txBroadcaster.BroadcastToHeimdall(msg); err != nil {
+		cp.Logger.Error("Error while broadcasting checkpoint to heimdall", "error", err)
+		return err
+	}
+	cp.Logger.Info("Compensation PostHandleMsgCheckpoint success", "start", start, "end", end, "root", root)
+	return err
 }
 
 // sendCheckpointToRootchain - handles checkpoint confirmation event from heimdall.
@@ -991,9 +1048,7 @@ func (cp *CheckpointProcessor) Stop() {
 	cp.cancelNoACKPolling()
 }
 
-//
 // utils
-//
 func (cp *CheckpointProcessor) getCheckpointContext(rootChain string) (*CheckpointContext, error) {
 	// fetch chain params for different root chains
 	chainmanagerParams, err := util.GetNewChainParams(cp.cliCtx, rootChain)
