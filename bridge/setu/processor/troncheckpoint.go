@@ -15,7 +15,7 @@ import (
 )
 
 func (cp *CheckpointProcessor) sendTronCheckpointToHeimdall(checkpointContext *CheckpointContext, latestConfirmedChildBlock uint64) {
-	expectedCheckpointState, err := cp.nextExpectedTronCheckpoint(checkpointContext, latestConfirmedChildBlock)
+	expectedCheckpointState, err := cp.nextExpectedTronCheckpoint(checkpointContext, latestConfirmedChildBlock, hmTypes.RootChainTypeTron)
 	if err != nil {
 		cp.Logger.Error("Error while calculate next expected checkpoint[tron]", "error", err)
 		return
@@ -46,7 +46,7 @@ func (cp *CheckpointProcessor) sendTronCheckpointToHeimdall(checkpointContext *C
 }
 
 // nextExpectedTronCheckpoint - fetched contract checkpoint state and returns the next probable checkpoint that needs to be sent
-func (cp *CheckpointProcessor) nextExpectedTronCheckpoint(checkpointContext *CheckpointContext, latestChildBlock uint64) (*ContractCheckpoint, error) {
+func (cp *CheckpointProcessor) nextExpectedTronCheckpoint(checkpointContext *CheckpointContext, latestChildBlock uint64, rootChain string) (*ContractCheckpoint, error) {
 	chainManagerParams := checkpointContext.ChainmanagerParams
 	checkpointParams := checkpointContext.CheckpointParams
 
@@ -97,6 +97,11 @@ func (cp *CheckpointProcessor) nextExpectedTronCheckpoint(checkpointContext *Che
 			"end", end,
 		)
 	}
+
+	if !cp.checkCrossChain(start, end, rootChain, checkpointParams.MaxCheckpointLength) {
+		end = start
+	}
+
 	// Handle when block producers go down
 	if end == 0 || end == start || (0 < diff && diff < checkpointParams.AvgCheckpointLength) {
 		cp.Logger.Debug("Fetching last header block to calculate time")

@@ -566,7 +566,10 @@ func getTopics(topicStr [][]string) [][]common.Hash {
 	return ret
 }
 
-func GetDynamicCheckpointFeature(cliCtx cliContext.CLIContext) (*featureManagerTypes.PlainFeatureData, error) {
+func GetDynamicCheckpointFeature(cliCtx cliContext.CLIContext, rootType string) (*featureManagerTypes.PlainFeatureData, error) {
+	if rootType == hmtypes.RootChainTypeTron {
+		return GetTargetFeatureConfig(cliCtx, featureManagerTypes.TronDynamicCheckpoint)
+	}
 	return GetTargetFeatureConfig(cliCtx, featureManagerTypes.DynamicCheckpoint)
 }
 

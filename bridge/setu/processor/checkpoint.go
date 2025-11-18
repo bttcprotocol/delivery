@@ -1081,7 +1081,7 @@ func (cp *CheckpointProcessor) getAddress(rootChain string) ([]common.Address, b
 }
 
 func (cp *CheckpointProcessor) getDynamicCheckpointProposal(rootType string) (bool, bool, int) {
-	fea, err := util.GetDynamicCheckpointFeature(cp.cliCtx)
+	fea, err := util.GetDynamicCheckpointFeature(cp.cliCtx, rootType)
 	if err != nil {
 		cp.Logger.Error("Error while fetching dynamic checkpoint feature", "error", err)
 

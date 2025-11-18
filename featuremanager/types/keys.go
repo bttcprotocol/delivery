@@ -22,4 +22,5 @@ const (
 	DynamicCheckpoint    = "DynamicCheckpoint"
 	FinalizedEth         = "FinalizedEth"
 	NoAckValidatorCheck  = "NoAckValidatorCheck"
+	TronDynamicCheckpoint = "TronDynamicCheckpoint"
 )
