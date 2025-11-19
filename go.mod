@@ -28,10 +28,9 @@ require (
 	github.com/tendermint/tendermint v0.34.21
 	github.com/tendermint/tm-db v0.6.7
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
-	github.com/xdg/scram v1.0.3 // indirect
-	github.com/xdg/stringprep v1.0.3 // indirect
-	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/sync v0.3.0
+	go.mongodb.org/mongo-driver v1.5.1 // indirect
+	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/sync v0.10.0
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/grpc v1.58.3
@@ -51,7 +50,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b // indirect
-	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cespare/cp v1.1.1 // indirect
@@ -76,7 +74,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -126,12 +124,11 @@ require (
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/xsleonard/go-merkle v1.1.0 // indirect
 	github.com/zondax/hid v0.9.1 // indirect
-	go.mongodb.org/mongo-driver v1.4.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/api v0.126.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
@@ -150,6 +147,10 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
+	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
+	github.com/xdg-go/scram v1.0.2 // indirect
+	github.com/xdg-go/stringprep v1.0.2 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	github.com/zondax/ledger-go v0.14.1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
@@ -162,3 +163,9 @@ replace github.com/cosmos/cosmos-sdk => github.com/maticnetwork/cosmos-sdk v0.37
 replace github.com/ethereum/go-ethereum => github.com/maticnetwork/bor v0.2.18-0.20220922050621-c91d4ca1fa4f
 
 replace github.com/tendermint/tm-db => github.com/tendermint/tm-db v0.2.0
+
+replace github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.23.2
+
+replace golang.org/x/net => golang.org/x/net v0.17.0
+
+replace golang.org/x/crypto => golang.org/x/crypto v0.31.0
