@@ -100,6 +100,16 @@ func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 	baseTime := time.Unix(0, 0)
 	// no-ack ticker interval keep same with checkpoint interval
 	noAckInterval := helper.GetConfig().CheckpointerPollInterval
+
+	// fetch initial checkpoint params
+	if checkpointParams, err := util.GetCheckpointParams(cp.cliCtx); err == nil {
+		if checkpointParams.CheckPointerPollInterval > 0 {
+			noAckInterval = checkpointParams.CheckPointerPollInterval
+		}
+	} else {
+		cp.Logger.Error("Error fetching checkpoint params", "error", err)
+	}
+
 	// adjust no-ack ticker to tick at the middle of checkpoint interval
 	firstIntervalForNoAck := noAckInterval - (now.UTC().Sub(baseTime) % noAckInterval) - noAckInterval/2 // nolint: gomnd
 	if firstIntervalForNoAck <= 0 {
@@ -107,7 +117,7 @@ func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 	}
 
 	tickerForNoAck := time.NewTicker(firstIntervalForNoAck)
-	syncInterval := helper.GetConfig().CheckpointerPollInterval / 2
+	syncInterval := noAckInterval / 2
 	tickerForSync := time.NewTicker(syncInterval)
 	// stop ticker when everything done
 	defer tickerForNoAck.Stop()
@@ -991,9 +1001,7 @@ func (cp *CheckpointProcessor) Stop() {
 	cp.cancelNoACKPolling()
 }
 
-//
 // utils
-//
 func (cp *CheckpointProcessor) getCheckpointContext(rootChain string) (*CheckpointContext, error) {
 	// fetch chain params for different root chains
 	chainmanagerParams, err := util.GetNewChainParams(cp.cliCtx, rootChain)
