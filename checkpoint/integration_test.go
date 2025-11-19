@@ -27,7 +27,7 @@ func createTestApp(isCheckTx bool) (*app.HeimdallApp, sdk.Context, context.CLICo
 
 	helper.SetTestConfig(helper.GetDefaultHeimdallConfig())
 
-	params := types.NewParams(5*time.Second, 256, 1024, 10000)
+	params := types.NewParams(5*time.Second, 256, 1024, 10000, 30*time.Minute)
 
 	Checkpoints := make([]hmTypes.Checkpoint, 0)
 
