@@ -15,6 +15,8 @@ const (
 	DefaultAvgCheckpointLength  uint64        = 256
 	DefaultMaxCheckpointLength  uint64        = 1024
 	DefaultChildBlockInterval   uint64        = 10000
+
+	DefaultCheckpointPollInterval time.Duration = 30 * time.Minute
 )
 
 // Parameter keys
@@ -82,10 +84,11 @@ func (p Params) Equal(p2 Params) bool {
 // DefaultParams returns a default set of parameters.
 func DefaultParams() Params {
 	return Params{
-		CheckpointBufferTime: DefaultCheckpointBufferTime,
-		AvgCheckpointLength:  DefaultAvgCheckpointLength,
-		MaxCheckpointLength:  DefaultMaxCheckpointLength,
-		ChildBlockInterval:   DefaultChildBlockInterval,
+		CheckpointBufferTime:   DefaultCheckpointBufferTime,
+		AvgCheckpointLength:    DefaultAvgCheckpointLength,
+		MaxCheckpointLength:    DefaultMaxCheckpointLength,
+		ChildBlockInterval:     DefaultChildBlockInterval,
+		CheckpointPollInterval: DefaultCheckpointPollInterval,
 	}
 }
 
