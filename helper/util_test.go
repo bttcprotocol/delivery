@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -62,4 +63,11 @@ func TestGetPowerFromAmount(t *testing.T) {
 		require.Nil(t, err, "Error must be null for input %v, output %v", k, v)
 		require.Equal(t, p.String(), v, "Power must match")
 	}
+}
+
+func TestCalcCheckpointTimeout(t *testing.T) {
+	tronMaxLength := 1024
+	pollTime := 10 * time.Minute
+	checkpointTimeout, _ := CalcCheckpointTimeout(tronMaxLength, pollTime)
+	require.Equal(t, 40*time.Minute, checkpointTimeout, "checkpointTimeout should match")
 }

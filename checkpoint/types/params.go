@@ -19,34 +19,38 @@ const (
 
 // Parameter keys
 var (
-	KeyCheckpointBufferTime = []byte("CheckpointBufferTime")
-	KeyAvgCheckpointLength  = []byte("AvgCheckpointLength")
-	KeyMaxCheckpointLength  = []byte("MaxCheckpointLength")
-	KeyChildBlockInterval   = []byte("ChildBlockInterval")
+	KeyCheckpointBufferTime   = []byte("CheckpointBufferTime")
+	KeyCheckpointPollInterval = []byte("CheckpointPollInterval")
+	KeyAvgCheckpointLength    = []byte("AvgCheckpointLength")
+	KeyMaxCheckpointLength    = []byte("MaxCheckpointLength")
+	KeyChildBlockInterval     = []byte("ChildBlockInterval")
 )
 
 var _ subspace.ParamSet = &Params{}
 
 // Params defines the parameters for the auth module.
 type Params struct {
-	CheckpointBufferTime time.Duration `json:"checkpoint_buffer_time" yaml:"checkpoint_buffer_time"`
-	AvgCheckpointLength  uint64        `json:"avg_checkpoint_length" yaml:"avg_checkpoint_length"`
-	MaxCheckpointLength  uint64        `json:"max_checkpoint_length" yaml:"max_checkpoint_length"`
-	ChildBlockInterval   uint64        `json:"child_chain_block_interval" yaml:"child_chain_block_interval"`
+	CheckpointBufferTime   time.Duration `json:"checkpoint_buffer_time" yaml:"checkpoint_buffer_time"`
+	CheckpointPollInterval time.Duration `json:"checkpoint_poll_interval" yaml:"checkpoint_poll_interval"`
+	AvgCheckpointLength    uint64        `json:"avg_checkpoint_length" yaml:"avg_checkpoint_length"`
+	MaxCheckpointLength    uint64        `json:"max_checkpoint_length" yaml:"max_checkpoint_length"`
+	ChildBlockInterval     uint64        `json:"child_chain_block_interval" yaml:"child_chain_block_interval"`
 }
 
 // NewParams creates a new Params object
 func NewParams(
 	checkpointBufferTime time.Duration,
+	checkpointPollInterval time.Duration,
 	checkpointLength uint64,
 	maxCheckpointLength uint64,
 	childBlockInterval uint64,
 ) Params {
 	return Params{
-		CheckpointBufferTime: checkpointBufferTime,
-		AvgCheckpointLength:  checkpointLength,
-		MaxCheckpointLength:  maxCheckpointLength,
-		ChildBlockInterval:   childBlockInterval,
+		CheckpointBufferTime:   checkpointBufferTime,
+		CheckpointPollInterval: checkpointPollInterval,
+		AvgCheckpointLength:    checkpointLength,
+		MaxCheckpointLength:    maxCheckpointLength,
+		ChildBlockInterval:     childBlockInterval,
 	}
 }
 
@@ -61,6 +65,7 @@ func ParamKeyTable() subspace.KeyTable {
 func (p *Params) ParamSetPairs() subspace.ParamSetPairs {
 	return subspace.ParamSetPairs{
 		{KeyCheckpointBufferTime, &p.CheckpointBufferTime},
+		{KeyCheckpointPollInterval, &p.CheckpointPollInterval},
 		{KeyAvgCheckpointLength, &p.AvgCheckpointLength},
 		{KeyMaxCheckpointLength, &p.MaxCheckpointLength},
 		{KeyChildBlockInterval, &p.ChildBlockInterval},
@@ -89,6 +94,7 @@ func (p Params) String() string {
 	var sb strings.Builder
 	sb.WriteString("Params: \n")
 	sb.WriteString(fmt.Sprintf("CheckpointBufferTime: %s\n", p.CheckpointBufferTime))
+	sb.WriteString(fmt.Sprintf("CheckpointPollInterval: %d\n", p.CheckpointPollInterval))
 	sb.WriteString(fmt.Sprintf("AvgCheckpointLength: %d\n", p.AvgCheckpointLength))
 	sb.WriteString(fmt.Sprintf("MaxCheckpointLength: %d\n", p.MaxCheckpointLength))
 	sb.WriteString(fmt.Sprintf("ChildBlockInterval: %d\n", p.ChildBlockInterval))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/tron/pb"
 	"google.golang.org/grpc"
+	"time"
 )
 
 // Client defines typed wrappers for the Tron RPC API.
@@ -36,9 +38,7 @@ func NewClient(url string) *Client {
 	}
 }
 
-//
 // private abi methods
-//
 func getABI(data string) (abi.ABI, error) {
 	return abi.JSON(strings.NewReader(data))
 }
@@ -81,6 +81,41 @@ func (tc *Client) TriggerConstantContract(contractAddress string, data []byte) (
 	return response.ConstantResult[0], nil
 }
 
+func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data []byte) ([]byte, error) {
+	const maxRetries = 3
+
+	var response *pb.TransactionExtention
+	var err error
+
+	req := &pb.TriggerSmartContract{
+		OwnerAddress:    nil,
+		ContractAddress: common.FromHex(contractAddress),
+		CallValue:       0,
+		Data:            data,
+		CallTokenValue:  0,
+		TokenId:         0,
+	}
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		response, err = tc.client.TriggerConstantContract(context.Background(), req)
+
+		if err == nil && response.Result.Code == pb.Return_SUCCESS && response.Transaction.GetRet()[0].Ret != pb.Transaction_Result_FAILED {
+			break
+		}
+		// if not last time, sleep for a random amount of time which don't exceed 100ms
+		if attempt < maxRetries-1 {
+			time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+		}
+
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	if response.Result.Code != pb.Return_SUCCESS || response.Transaction.GetRet()[0].Ret == pb.Transaction_Result_FAILED {
+		return nil, fmt.Errorf("code:%v message:%v", response.Result.Code, string(response.Result.Message))
+	}
+	return response.ConstantResult[0], nil
+}
 func (tc *Client) GetNowBlock(ctx context.Context) (int64, error) {
 	block, err := tc.client.GetNowBlock2(ctx, &pb.EmptyMessage{})
 	if err != nil {
@@ -100,7 +135,7 @@ func (tc *Client) CurrentHeaderBlock(contractAddress string, childBlockInterval 
 	}
 
 	// Call
-	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContractWithRetry(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}
@@ -125,7 +160,7 @@ func (tc *Client) GetLastChildBlock(contractAddress string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContractWithRetry(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}

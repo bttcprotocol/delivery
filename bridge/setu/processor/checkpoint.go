@@ -96,10 +96,28 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 }
 
 func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
+	var (
+		checkpointerPollInterval time.Duration
+		err                      error
+	)
+	for {
+		checkpointerPollInterval, err = cp.GetCheckpointPollTime()
+		if err == nil && checkpointerPollInterval > 0 {
+			cp.Logger.Info("Successfully get checkpoint poll interval")
+			break
+		}
+		cp.Logger.Warn("Failed to load checkpoint params, retrying...", "error", err)
+		select {
+		case <-ctx.Done():
+			cp.Logger.Info("Polling cancelled while waiting for checkpoint params")
+			return
+		case <-time.After(5 * time.Second):
+		}
+	}
 	now := time.Now()
 	baseTime := time.Unix(0, 0)
 	// no-ack ticker interval keep same with checkpoint interval
-	noAckInterval := helper.GetConfig().CheckpointerPollInterval
+	noAckInterval := checkpointerPollInterval
 	// adjust no-ack ticker to tick at the middle of checkpoint interval
 	firstIntervalForNoAck := noAckInterval - (now.UTC().Sub(baseTime) % noAckInterval) - noAckInterval/2 // nolint: gomnd
 	if firstIntervalForNoAck <= 0 {
@@ -107,7 +125,7 @@ func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 	}
 
 	tickerForNoAck := time.NewTicker(firstIntervalForNoAck)
-	syncInterval := helper.GetConfig().CheckpointerPollInterval / 2
+	syncInterval := checkpointerPollInterval / 2
 	tickerForSync := time.NewTicker(syncInterval)
 	// stop ticker when everything done
 	defer tickerForNoAck.Stop()
@@ -840,16 +858,25 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 	currentTime := time.Now().UTC()
 
 	timeDiff := currentTime.Sub(checkpointCreationTime)
-	if timeDiff.Seconds() >= helper.GetConfig().CheckpointerPollInterval.Seconds() && index == 0 {
-		index = math.Floor(timeDiff.Seconds() / helper.GetConfig().CheckpointerPollInterval.Seconds())
+
+	// checkpoint params
+	checkpointParams := checkpointContext.CheckpointParams
+
+	var checkpointTimeout time.Duration
+	isOpen, tronMaxLength := cp.getTronDynamicCheckpointProposal()
+	if isOpen {
+		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointParams.CheckpointPollInterval)
+	} else {
+		checkpointTimeout = helper.GetConfig().CheckpointerPollInterval
+	}
+
+	if timeDiff.Seconds() >= checkpointTimeout.Seconds() && index == 0 {
+		index = math.Floor(timeDiff.Seconds() / checkpointTimeout.Seconds())
 	}
 
 	if index == 0 {
 		return false, uint64(index)
 	}
-
-	// checkpoint params
-	checkpointParams := checkpointContext.CheckpointParams
 
 	// check if difference between no-ack time and current time
 	lastNoAck := cp.getLastNoAckTime()
@@ -991,9 +1018,7 @@ func (cp *CheckpointProcessor) Stop() {
 	cp.cancelNoACKPolling()
 }
 
-//
 // utils
-//
 func (cp *CheckpointProcessor) getCheckpointContext(rootChain string) (*CheckpointContext, error) {
 	// fetch chain params for different root chains
 	chainmanagerParams, err := util.GetNewChainParams(cp.cliCtx, rootChain)
@@ -1089,4 +1114,38 @@ func (cp *CheckpointProcessor) getDynamicCheckpointProposal(rootType string) (bo
 	}
 
 	return fea.IsOpen, fea.IntConf[strings.ToLower(rootType)] != 0, fea.IntConf["maxLength"]
+}
+
+func (cp *CheckpointProcessor) getTronDynamicCheckpointProposal() (bool, int) {
+	fea, err := util.GetTronDynamicCheckpointFeature(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Error while fetching dynamic checkpoint feature", "error", err)
+
+		return false, 0
+	}
+
+	return fea.IsOpen, fea.IntConf["maxLength"]
+}
+func (cp *CheckpointProcessor) GetCheckpointPollTime() (time.Duration, error) {
+
+	feature, err := util.GetTronDynamicCheckpointFeature(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Error while fetching tron dynamic checkpoint feature", "error", err)
+
+		return 0, err
+	}
+
+	checkpointParams, err := util.GetCheckpointParams(cp.cliCtx)
+	if err != nil || checkpointParams == nil {
+		cp.Logger.Error("Error while fetching checkpoint param", "error", err)
+		return 0, err
+	}
+
+	var checkpointPollInterval time.Duration
+	if feature.IsOpen {
+		checkpointPollInterval = checkpointParams.CheckpointPollInterval
+	} else {
+		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
+	}
+	return checkpointPollInterval, nil
 }
