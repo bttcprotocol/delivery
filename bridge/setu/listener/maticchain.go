@@ -36,8 +36,8 @@ func (ml *MaticChainListener) Start() error {
 
 	pollInterval := helper.GetConfig().CheckpointerPollInterval
 	params := util.GetCheckpointParamsWithRetry(ml.cliCtx)
-	if params.CheckPointerPollInterval > 0 {
-		pollInterval = params.CheckPointerPollInterval
+	if params.CheckpointPollInterval > 0 {
+		pollInterval = params.CheckpointPollInterval
 	}
 
 	ml.Logger.Info("Start polling for header blocks", "pollInterval", pollInterval)
