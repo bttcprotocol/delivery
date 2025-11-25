@@ -50,13 +50,10 @@ func (hl *HeimdallListener) Start() error {
 	// Heimdall pollIntervall = (minimal pollInterval of rootchain and matichain)
 	pollInterval := helper.GetConfig().EthSyncerPollInterval
 
-	// fetch initial checkpoint params
-	if checkpointParams, err := util.GetCheckpointParams(hl.cliCtx); err == nil {
-		if checkpointParams.CheckPointerPollInterval > 0 && checkpointParams.CheckPointerPollInterval < helper.GetConfig().EthSyncerPollInterval {
-			pollInterval = checkpointParams.CheckPointerPollInterval
-		}
-	} else {
-		hl.Logger.Error("Error fetching checkpoint params", "error", err)
+	// fetch initial checkpoint params (will retry up to 10 times or exit service)
+	checkpointParams := util.GetCheckpointParamsWithRetry(hl.cliCtx)
+	if checkpointParams.CheckPointerPollInterval > 0 && checkpointParams.CheckPointerPollInterval < helper.GetConfig().EthSyncerPollInterval {
+		pollInterval = checkpointParams.CheckPointerPollInterval
 	}
 
 	if helper.GetConfig().CheckpointerPollInterval < helper.GetConfig().EthSyncerPollInterval {

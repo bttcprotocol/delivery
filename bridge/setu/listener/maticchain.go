@@ -35,7 +35,8 @@ func (ml *MaticChainListener) Start() error {
 	go ml.StartHeaderProcess(headerCtx)
 
 	pollInterval := helper.GetConfig().CheckpointerPollInterval
-	if params, err := util.GetCheckpointParams(ml.cliCtx); err == nil && params.CheckPointerPollInterval > 0 {
+	params := util.GetCheckpointParamsWithRetry(ml.cliCtx)
+	if params.CheckPointerPollInterval > 0 {
 		pollInterval = params.CheckPointerPollInterval
 	}
 

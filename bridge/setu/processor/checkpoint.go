@@ -99,25 +99,23 @@ func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 	now := time.Now()
 	baseTime := time.Unix(0, 0)
 	// no-ack ticker interval keep same with checkpoint interval
-	noAckInterval := helper.GetConfig().CheckpointerPollInterval
+	checkpointInterval := helper.GetConfig().CheckpointerPollInterval
 
-	// fetch initial checkpoint params
-	if checkpointParams, err := util.GetCheckpointParams(cp.cliCtx); err == nil {
-		if checkpointParams.CheckPointerPollInterval > 0 {
-			noAckInterval = checkpointParams.CheckPointerPollInterval
-		}
-	} else {
-		cp.Logger.Error("Error fetching checkpoint params", "error", err)
+	// fetch initial checkpoint params (will retry up to 10 times or exit service)
+	checkpointParams := util.GetCheckpointParamsWithRetry(cp.cliCtx)
+	if checkpointParams.CheckPointerPollInterval > 0 {
+		checkpointInterval = checkpointParams.CheckPointerPollInterval
 	}
 
 	// adjust no-ack ticker to tick at the middle of checkpoint interval
-	firstIntervalForNoAck := noAckInterval - (now.UTC().Sub(baseTime) % noAckInterval) - noAckInterval/2 // nolint: gomnd
+	firstIntervalForNoAck := checkpointInterval - (now.UTC().Sub(baseTime) % checkpointInterval) - checkpointInterval/2 // nolint: gomnd
 	if firstIntervalForNoAck <= 0 {
-		firstIntervalForNoAck += noAckInterval
+		firstIntervalForNoAck += checkpointInterval
 	}
 
 	tickerForNoAck := time.NewTicker(firstIntervalForNoAck)
-	syncInterval := noAckInterval / 2
+	syncInterval := checkpointInterval / 2
+	noAckInterval := checkpointInterval
 	tickerForSync := time.NewTicker(syncInterval)
 	// stop ticker when everything done
 	defer tickerForNoAck.Stop()
