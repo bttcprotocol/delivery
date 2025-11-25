@@ -11,12 +11,11 @@ import (
 
 // Default parameter values
 const (
-	DefaultCheckpointBufferTime time.Duration = 1000 * time.Second // Time checkpoint is allowed to stay in buffer (1000 seconds ~ 17 mins)
-	DefaultAvgCheckpointLength  uint64        = 256
-	DefaultMaxCheckpointLength  uint64        = 1024
-	DefaultChildBlockInterval   uint64        = 10000
-
+	DefaultCheckpointBufferTime   time.Duration = 1000 * time.Second // Time checkpoint is allowed to stay in buffer (1000 seconds ~ 17 mins)
 	DefaultCheckpointPollInterval time.Duration = 30 * time.Minute
+	DefaultAvgCheckpointLength    uint64        = 256
+	DefaultMaxCheckpointLength    uint64        = 1024
+	DefaultChildBlockInterval     uint64        = 10000
 )
 
 // Parameter keys
@@ -85,10 +84,10 @@ func (p Params) Equal(p2 Params) bool {
 func DefaultParams() Params {
 	return Params{
 		CheckpointBufferTime:   DefaultCheckpointBufferTime,
+		CheckpointPollInterval: DefaultCheckpointPollInterval,
 		AvgCheckpointLength:    DefaultAvgCheckpointLength,
 		MaxCheckpointLength:    DefaultMaxCheckpointLength,
 		ChildBlockInterval:     DefaultChildBlockInterval,
-		CheckpointPollInterval: DefaultCheckpointPollInterval,
 	}
 }
 

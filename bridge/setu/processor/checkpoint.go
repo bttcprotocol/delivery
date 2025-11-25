@@ -862,12 +862,19 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 	// checkpoint params
 	checkpointParams := checkpointContext.CheckpointParams
 
+	var checkpointPollInterval time.Duration
+	if checkpointParams.CheckpointPollInterval > 0 {
+		checkpointPollInterval = checkpointParams.CheckpointPollInterval
+	} else {
+		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
+	}
+
 	var checkpointTimeout time.Duration
 	isOpen, tronMaxLength := cp.getTronDynamicCheckpointProposal()
 	if isOpen {
-		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointParams.CheckpointPollInterval)
+		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
 	} else {
-		checkpointTimeout = helper.GetConfig().CheckpointerPollInterval
+		checkpointTimeout = checkpointPollInterval
 	}
 
 	if timeDiff.Seconds() >= checkpointTimeout.Seconds() && index == 0 {
@@ -1128,24 +1135,18 @@ func (cp *CheckpointProcessor) getTronDynamicCheckpointProposal() (bool, int) {
 }
 func (cp *CheckpointProcessor) GetCheckpointPollTime() (time.Duration, error) {
 
-	feature, err := util.GetTronDynamicCheckpointFeature(cp.cliCtx)
-	if err != nil {
-		cp.Logger.Error("Error while fetching tron dynamic checkpoint feature", "error", err)
-
-		return 0, err
-	}
-
 	checkpointParams, err := util.GetCheckpointParams(cp.cliCtx)
-	if err != nil || checkpointParams == nil {
+	if err != nil {
 		cp.Logger.Error("Error while fetching checkpoint param", "error", err)
 		return 0, err
 	}
 
 	var checkpointPollInterval time.Duration
-	if feature.IsOpen {
+	if checkpointParams.CheckpointPollInterval > 0 {
 		checkpointPollInterval = checkpointParams.CheckpointPollInterval
 	} else {
 		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
 	}
+
 	return checkpointPollInterval, nil
 }

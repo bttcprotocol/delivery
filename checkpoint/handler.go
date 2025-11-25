@@ -224,14 +224,21 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 
 	// Get buffer time from params
 	bufferTime := k.GetParams(ctx).CheckpointBufferTime
+
+	var checkpointPollInterval time.Duration
+	if k.GetParams(ctx).CheckpointPollInterval > 0 {
+		checkpointPollInterval = k.GetParams(ctx).CheckpointPollInterval
+	} else {
+		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
+	}
+
 	var checkpointTimeout time.Duration
 	tronDynamicFeature := util.GetFeatureConfig().GetFeature(ctx, featuremanagerTypes.TronDynamicCheckpoint)
 	if tronDynamicFeature.IsOpen {
 		tronMaxLength := tronDynamicFeature.IntConf["maxLength"]
-		checkpointPollInterval := k.GetParams(ctx).CheckpointPollInterval
 		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
 	} else {
-		checkpointTimeout = helper.GetConfig().CheckpointerPollInterval
+		checkpointTimeout = checkpointPollInterval
 	}
 
 	// Fetch last checkpoint from store
