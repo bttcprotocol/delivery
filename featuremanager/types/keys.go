@@ -20,7 +20,7 @@ const (
 const (
 	SupportMapMarshaling  = "SupportMapMarshaling"
 	DynamicCheckpoint     = "DynamicCheckpoint"
-	TronDynamicCheckpoint = "TronDynamicCheckpoint"
 	FinalizedEth          = "FinalizedEth"
 	NoAckValidatorCheck   = "NoAckValidatorCheck"
+	TronDynamicCheckpoint = "TronDynamicCheckpoint"
 )

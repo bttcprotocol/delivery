@@ -96,36 +96,26 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 }
 
 func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
-	var (
-		checkpointerPollInterval time.Duration
-		err                      error
-	)
-	for {
-		checkpointerPollInterval, err = cp.GetCheckpointPollTime()
-		if err == nil && checkpointerPollInterval > 0 {
-			cp.Logger.Info("Successfully get checkpoint poll interval")
-			break
-		}
-		cp.Logger.Warn("Failed to load checkpoint params, retrying...", "error", err)
-		select {
-		case <-ctx.Done():
-			cp.Logger.Info("Polling cancelled while waiting for checkpoint params")
-			return
-		case <-time.After(5 * time.Second):
-		}
-	}
 	now := time.Now()
 	baseTime := time.Unix(0, 0)
 	// no-ack ticker interval keep same with checkpoint interval
-	noAckInterval := checkpointerPollInterval
+	checkpointPollInterval := helper.GetConfig().CheckpointerPollInterval
+
+	// fetch initial checkpoint params (will retry up to 10 times or exit service)
+	checkpointParams := util.GetCheckpointParamsWithRetry(cp.cliCtx)
+	if checkpointParams.CheckpointPollInterval > 0 {
+		checkpointPollInterval = checkpointParams.CheckpointPollInterval
+	}
+
 	// adjust no-ack ticker to tick at the middle of checkpoint interval
-	firstIntervalForNoAck := noAckInterval - (now.UTC().Sub(baseTime) % noAckInterval) - noAckInterval/2 // nolint: gomnd
+	firstIntervalForNoAck := checkpointPollInterval - (now.UTC().Sub(baseTime) % checkpointPollInterval) - checkpointPollInterval/2 // nolint: gomnd
 	if firstIntervalForNoAck <= 0 {
-		firstIntervalForNoAck += noAckInterval
+		firstIntervalForNoAck += checkpointPollInterval
 	}
 
 	tickerForNoAck := time.NewTicker(firstIntervalForNoAck)
-	syncInterval := checkpointerPollInterval / 2
+	syncInterval := checkpointPollInterval / 2
+	noAckInterval := checkpointPollInterval
 	tickerForSync := time.NewTicker(syncInterval)
 	// stop ticker when everything done
 	defer tickerForNoAck.Stop()
@@ -1132,21 +1122,4 @@ func (cp *CheckpointProcessor) getTronDynamicCheckpointProposal() (bool, int) {
 	}
 
 	return fea.IsOpen, fea.IntConf["maxLength"]
-}
-func (cp *CheckpointProcessor) GetCheckpointPollTime() (time.Duration, error) {
-
-	checkpointParams, err := util.GetCheckpointParams(cp.cliCtx)
-	if err != nil {
-		cp.Logger.Error("Error while fetching checkpoint param", "error", err)
-		return 0, err
-	}
-
-	var checkpointPollInterval time.Duration
-	if checkpointParams.CheckpointPollInterval > 0 {
-		checkpointPollInterval = checkpointParams.CheckpointPollInterval
-	} else {
-		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
-	}
-
-	return checkpointPollInterval, nil
 }
