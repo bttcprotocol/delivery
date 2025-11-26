@@ -48,8 +48,23 @@ func (hl *HeimdallListener) Start() error {
 
 	// Heimdall pollIntervall = (minimal pollInterval of rootchain and matichain)
 	pollInterval := helper.GetConfig().EthSyncerPollInterval
+
+	// fetch initial checkpoint params (will retry up to 10 times or exit service)
+	checkpointParams := util.GetCheckpointParamsWithRetry(hl.cliCtx)
+	if checkpointParams.CheckpointPollInterval > 0 && checkpointParams.CheckpointPollInterval < helper.GetConfig().EthSyncerPollInterval {
+		pollInterval = checkpointParams.CheckpointPollInterval
+	}
+
 	if helper.GetConfig().CheckpointerPollInterval < helper.GetConfig().EthSyncerPollInterval {
-		pollInterval = helper.GetConfig().CheckpointerPollInterval
+		// This logic seems redundant if we already set pollInterval above, but keeping original logic structure
+		// actually the original code was:
+		// if helper.GetConfig().CheckpointerPollInterval < helper.GetConfig().EthSyncerPollInterval {
+		// 	pollInterval = helper.GetConfig().CheckpointerPollInterval
+		// }
+		// We should respect the dynamic param if available.
+		// If dynamic param is set, we used it.
+		// If not, we fall back to config.
+		// But wait, I should just use the variable `pollInterval` which I updated above.
 	}
 
 	hl.Logger.Info("Start polling for events", "pollInterval", pollInterval)

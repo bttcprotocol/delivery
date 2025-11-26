@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
+	"github.com/maticnetwork/heimdall/bridge/setu/util"
 	"github.com/maticnetwork/heimdall/helper"
 )
 
@@ -33,9 +34,15 @@ func (ml *MaticChainListener) Start() error {
 	// start header process
 	go ml.StartHeaderProcess(headerCtx)
 
-	ml.Logger.Info("Start polling for header blocks", "pollInterval", helper.GetConfig().CheckpointerPollInterval)
+	pollInterval := helper.GetConfig().CheckpointerPollInterval
+	params := util.GetCheckpointParamsWithRetry(ml.cliCtx)
+	if params.CheckpointPollInterval > 0 {
+		pollInterval = params.CheckpointPollInterval
+	}
 
-	go ml.StartPolling(ctx, helper.GetConfig().CheckpointerPollInterval, true, nil)
+	ml.Logger.Info("Start polling for header blocks", "pollInterval", pollInterval)
+
+	go ml.StartPolling(ctx, pollInterval, true, nil)
 
 	// subscribed to new head
 	ml.Logger.Info("Subscribed to new head")
