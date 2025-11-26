@@ -22,6 +22,10 @@ type Client struct {
 	rootchainABI abi.ABI
 }
 
+var (
+	retryRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
 // NewClient creates a client that uses the given RPC client.
 func NewClient(url string) *Client {
 	conn, err := grpc.Dial(url, grpc.WithInsecure())
@@ -95,7 +99,8 @@ func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data 
 		}
 		// if not last time, sleep for a random amount of time which don't exceed 100ms
 		if attempt < maxRetries-1 {
-			time.Sleep(time.Duration(rand.Intn(500)+1000) * time.Millisecond)
+			delay := retryRand.Intn(500) + 500
+			time.Sleep(time.Duration(delay) * time.Millisecond)
 		}
 
 	}

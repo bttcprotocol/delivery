@@ -894,7 +894,10 @@ func Hash(s []byte) ([]byte, error) {
 
 func CalcCheckpointTimeout(tronMaxLength int, pollTime time.Duration) (time.Duration, error) {
 	if pollTime <= 0 {
-		return 0, errors.New("interval must be greater than 0")
+		return 0, errors.New("pollTime must be greater than 0")
+	}
+	if tronMaxLength <= 0 {
+		return 0, errors.New("tronMaxLength must be greater than 0")
 	}
 
 	timeForBttcBlocks := time.Duration(tronMaxLength) * BttcBlockInterval

@@ -396,7 +396,6 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAckWithTronDynamicOpen()
 			"maxLength": 1024,
 		},
 	}
-	// 添加数据
 	featureParams.FeatureParamMap[featuremanagerTypes.TronDynamicCheckpoint] = featureData
 
 	featureKeeper.SetFeatureParams(ctx, featureParams)

@@ -233,10 +233,15 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 	}
 
 	var checkpointTimeout time.Duration
+	var err error
 	tronDynamicFeature := util.GetFeatureConfig().GetFeature(ctx, featuremanagerTypes.TronDynamicCheckpoint)
 	if tronDynamicFeature.IsOpen {
 		tronMaxLength := tronDynamicFeature.IntConf["maxLength"]
-		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
+		checkpointTimeout, err = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
+		if err != nil {
+			logger.Error("Error while calculating checkpoint timeout", "error", err)
+			return common.ErrInvalidNoAckCheckpointTimeout(k.Codespace()).Result()
+		}
 	} else {
 		checkpointTimeout = checkpointPollInterval
 	}
