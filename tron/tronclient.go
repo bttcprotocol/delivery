@@ -7,13 +7,13 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/maticnetwork/heimdall/contracts/rootchain"
 	"github.com/maticnetwork/heimdall/tron/pb"
 	"google.golang.org/grpc"
-	"time"
 )
 
 // Client defines typed wrappers for the Tron RPC API.
@@ -84,21 +84,13 @@ func (tc *Client) TriggerConstantContract(contractAddress string, data []byte) (
 func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data []byte) ([]byte, error) {
 	const maxRetries = 3
 
-	var response *pb.TransactionExtention
+	var response []byte
 	var err error
 
-	req := &pb.TriggerSmartContract{
-		OwnerAddress:    nil,
-		ContractAddress: common.FromHex(contractAddress),
-		CallValue:       0,
-		Data:            data,
-		CallTokenValue:  0,
-		TokenId:         0,
-	}
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		response, err = tc.client.TriggerConstantContract(context.Background(), req)
+		response, err = tc.TriggerConstantContract(contractAddress, data)
 
-		if err == nil && response.Result.Code == pb.Return_SUCCESS && response.Transaction.GetRet()[0].Ret != pb.Transaction_Result_FAILED {
+		if err == nil && response != nil {
 			break
 		}
 		// if not last time, sleep for a random amount of time which don't exceed 100ms
@@ -107,14 +99,7 @@ func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data 
 		}
 
 	}
-
-	if err != nil {
-		return nil, err
-	}
-	if response.Result.Code != pb.Return_SUCCESS || response.Transaction.GetRet()[0].Ret == pb.Transaction_Result_FAILED {
-		return nil, fmt.Errorf("code:%v message:%v", response.Result.Code, string(response.Result.Message))
-	}
-	return response.ConstantResult[0], nil
+	return response, err
 }
 func (tc *Client) GetNowBlock(ctx context.Context) (int64, error) {
 	block, err := tc.client.GetNowBlock2(ctx, &pb.EmptyMessage{})
