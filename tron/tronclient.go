@@ -95,7 +95,7 @@ func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data 
 		}
 		// if not last time, sleep for a random amount of time which don't exceed 100ms
 		if attempt < maxRetries-1 {
-			time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+			time.Sleep(time.Duration(rand.Intn(500)+1000) * time.Millisecond)
 		}
 
 	}

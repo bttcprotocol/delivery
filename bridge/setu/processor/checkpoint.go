@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	featureManagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
 	"math"
 	"math/big"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -860,7 +862,11 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 	}
 
 	var checkpointTimeout time.Duration
-	isOpen, tronMaxLength := cp.getTronDynamicCheckpointProposal()
+	isOpen, tronMaxLength, err := cp.getTronDynamicCheckpointProposalWithRetry()
+	if err != nil {
+		cp.Logger.Error("failed to check if no ack is required. Error while fetching dynamic checkpoint feature", "error", err)
+		return false, uint64(index)
+	}
 	if isOpen {
 		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
 	} else {
@@ -1113,13 +1119,22 @@ func (cp *CheckpointProcessor) getDynamicCheckpointProposal(rootType string) (bo
 	return fea.IsOpen, fea.IntConf[strings.ToLower(rootType)] != 0, fea.IntConf["maxLength"]
 }
 
-func (cp *CheckpointProcessor) getTronDynamicCheckpointProposal() (bool, int) {
-	fea, err := util.GetTronDynamicCheckpointFeature(cp.cliCtx)
-	if err != nil {
-		cp.Logger.Error("Error while fetching dynamic checkpoint feature", "error", err)
-
-		return false, 0
+func (cp *CheckpointProcessor) getTronDynamicCheckpointProposalWithRetry() (bool, int, error) {
+	const maxRetries = 3
+	var (
+		fea *featureManagerTypes.PlainFeatureData
+		err error
+	)
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		fea, err = util.GetTronDynamicCheckpointFeature(cp.cliCtx)
+		if err == nil {
+			return fea.IsOpen, fea.IntConf["maxLength"], nil
+		}
+		if attempt < maxRetries-1 {
+			time.Sleep(time.Duration(rand.Intn(500)+1000) * time.Millisecond)
+		}
 	}
+	cp.Logger.Error("Error while fetching dynamic checkpoint feature", "error", err)
 
-	return fea.IsOpen, fea.IntConf["maxLength"]
+	return false, 0, err
 }
