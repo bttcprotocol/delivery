@@ -333,7 +333,6 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAck() {
 	start := uint64(0)
 	maxSize := uint64(256)
 	params := keeper.GetParams(ctx)
-	checkpointBufferTime := params.CheckpointBufferTime
 
 	dividendAccount := hmTypes.DividendAccount{
 		User:      hmTypes.HexToHeimdallAddress("123"),
@@ -360,8 +359,9 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAck() {
 	require.True(t, got.IsOK(), "expected send-NoAck to be ok, got %v", got)
 
 	// set time lastCheckpoint timestamp + checkpointBufferTime
-	newTime := lastCheckpoint.TimeStamp + uint64(checkpointBufferTime)
-	suite.ctx = ctx.WithBlockTime(time.Unix(0, int64(newTime)))
+	checkpointTimeout := 10 * time.Minute
+	newTime := time.Unix(int64(lastCheckpoint.TimeStamp), int64(checkpointTimeout))
+	suite.ctx = ctx.WithBlockTime(newTime)
 	result := suite.SendNoAck()
 	require.True(t, result.IsOK(), "expected send-NoAck to be ok, got %v", got)
 	ackCount := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)
