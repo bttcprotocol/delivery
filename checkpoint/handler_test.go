@@ -426,8 +426,8 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAckWithTronDynamicOpen()
 
 	// set time lastCheckpoint timestamp + checkpointBufferTime
 	checkpointTimeout := 40 * time.Minute
-	newTime := lastCheckpoint.TimeStamp + uint64(checkpointTimeout)
-	suite.ctx = ctx.WithBlockTime(time.Unix(0, int64(newTime)))
+	newTime := time.Unix(int64(lastCheckpoint.TimeStamp), int64(checkpointTimeout))
+	suite.ctx = ctx.WithBlockTime(newTime)
 	result := suite.SendNoAck()
 	require.True(t, result.IsOK(), "expected send-NoAck to be ok, got %v", got)
 	ackCount := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)
