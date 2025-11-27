@@ -866,11 +866,7 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 		return false, uint64(index)
 	}
 	if isOpen {
-		checkpointTimeout, err = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
-		if err != nil {
-			cp.Logger.Error("failed to check if no ack is required. Error while calculating checkpoint timeout", "error", err)
-			return false, uint64(index)
-		}
+		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
 	} else {
 		checkpointTimeout = checkpointPollInterval
 	}

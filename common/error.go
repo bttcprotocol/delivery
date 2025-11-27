@@ -17,22 +17,21 @@ const (
 	CodeInvalidMsg   CodeType          = 1400
 	CodeOldTx        CodeType          = 1401
 
-	CodeInvalidProposerInput          CodeType = 1500
-	CodeInvalidBlockInput             CodeType = 1501
-	CodeInvalidACK                    CodeType = 1502
-	CodeNoACK                         CodeType = 1503
-	CodeBadTimeStamp                  CodeType = 1504
-	CodeInvalidNoACK                  CodeType = 1505
-	CodeTooManyNoAck                  CodeType = 1506
-	CodeLowBal                        CodeType = 1507
-	CodeNoCheckpoint                  CodeType = 1508
-	CodeOldCheckpoint                 CodeType = 1509
-	CodeDisCountinuousCheckpoint      CodeType = 1510
-	CodeNoCheckpointBuffer            CodeType = 1511
-	CodeWrongRootChain                CodeType = 1512
-	CodeNoChainParams                 CodeType = 1513
-	CodeChainParamsExist              CodeType = 1514
-	CodeInvalidNoAckCheckpointTimeout CodeType = 1515
+	CodeInvalidProposerInput     CodeType = 1500
+	CodeInvalidBlockInput        CodeType = 1501
+	CodeInvalidACK               CodeType = 1502
+	CodeNoACK                    CodeType = 1503
+	CodeBadTimeStamp             CodeType = 1504
+	CodeInvalidNoACK             CodeType = 1505
+	CodeTooManyNoAck             CodeType = 1506
+	CodeLowBal                   CodeType = 1507
+	CodeNoCheckpoint             CodeType = 1508
+	CodeOldCheckpoint            CodeType = 1509
+	CodeDisCountinuousCheckpoint CodeType = 1510
+	CodeNoCheckpointBuffer       CodeType = 1511
+	CodeWrongRootChain           CodeType = 1512
+	CodeNoChainParams            CodeType = 1513
+	CodeChainParamsExist         CodeType = 1514
 
 	CodeOldValidator        CodeType = 2500
 	CodeNoValidator         CodeType = 2501
@@ -156,10 +155,6 @@ func ErrInvalidNoACKProposer(codespace sdk.CodespaceType) sdk.Error {
 
 func ErrTooManyNoACK(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeTooManyNoAck, "Too many no-acks")
-}
-
-func ErrInvalidNoAckCheckpointTimeout(codespace sdk.CodespaceType) sdk.Error {
-	return newError(codespace, CodeInvalidNoAckCheckpointTimeout, "invalid no ack checkpoint")
 }
 
 func ErrBadTimeStamp(codespace sdk.CodespaceType) sdk.Error {

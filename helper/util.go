@@ -896,9 +896,6 @@ func CalcCheckpointTimeout(tronMaxLength int, pollTime time.Duration) (time.Dura
 	if pollTime <= 0 {
 		return 0, errors.New("pollTime must be greater than 0")
 	}
-	if tronMaxLength <= 0 {
-		return 0, errors.New("tronMaxLength must be greater than 0")
-	}
 
 	timeForBttcBlocks := time.Duration(tronMaxLength) * BttcBlockInterval
 

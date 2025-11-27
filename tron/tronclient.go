@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -21,10 +20,6 @@ type Client struct {
 	client       pb.WalletClient
 	rootchainABI abi.ABI
 }
-
-var (
-	retryRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-)
 
 // NewClient creates a client that uses the given RPC client.
 func NewClient(url string) *Client {
@@ -97,10 +92,9 @@ func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data 
 		if err == nil && response != nil {
 			break
 		}
-		// if not last time, sleep for a random amount of time which don't exceed 100ms
 		if attempt < maxRetries-1 {
-			delay := retryRand.Intn(500) + 500
-			time.Sleep(time.Duration(delay) * time.Millisecond)
+			delay := attempt
+			time.Sleep(time.Duration(delay) * time.Second)
 		}
 
 	}
