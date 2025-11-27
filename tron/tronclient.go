@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -36,9 +37,7 @@ func NewClient(url string) *Client {
 	}
 }
 
-//
 // private abi methods
-//
 func getABI(data string) (abi.ABI, error) {
 	return abi.JSON(strings.NewReader(data))
 }
@@ -81,6 +80,26 @@ func (tc *Client) TriggerConstantContract(contractAddress string, data []byte) (
 	return response.ConstantResult[0], nil
 }
 
+func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data []byte) ([]byte, error) {
+	const maxRetries = 3
+
+	var response []byte
+	var err error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		response, err = tc.TriggerConstantContract(contractAddress, data)
+
+		if err == nil && response != nil {
+			break
+		}
+		if attempt < maxRetries-1 {
+			delay := attempt
+			time.Sleep(time.Duration(delay) * time.Second)
+		}
+
+	}
+	return response, err
+}
 func (tc *Client) GetNowBlock(ctx context.Context) (int64, error) {
 	block, err := tc.client.GetNowBlock2(ctx, &pb.EmptyMessage{})
 	if err != nil {
@@ -100,7 +119,7 @@ func (tc *Client) CurrentHeaderBlock(contractAddress string, childBlockInterval 
 	}
 
 	// Call
-	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContractWithRetry(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}
@@ -125,7 +144,7 @@ func (tc *Client) GetLastChildBlock(contractAddress string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	data, err := tc.TriggerConstantContract(contractAddress, btsPack)
+	data, err := tc.TriggerConstantContractWithRetry(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}

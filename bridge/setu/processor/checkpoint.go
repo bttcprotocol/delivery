@@ -848,16 +848,36 @@ func (cp *CheckpointProcessor) checkIfNoAckIsRequired(checkpointContext *Checkpo
 	currentTime := time.Now().UTC()
 
 	timeDiff := currentTime.Sub(checkpointCreationTime)
-	if timeDiff.Seconds() >= helper.GetConfig().CheckpointerPollInterval.Seconds() && index == 0 {
-		index = math.Floor(timeDiff.Seconds() / helper.GetConfig().CheckpointerPollInterval.Seconds())
+
+	// checkpoint params
+	checkpointParams := checkpointContext.CheckpointParams
+
+	var checkpointPollInterval time.Duration
+	if checkpointParams.CheckpointPollInterval > 0 {
+		checkpointPollInterval = checkpointParams.CheckpointPollInterval
+	} else {
+		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
+	}
+
+	var checkpointTimeout time.Duration
+	isOpen, tronMaxLength, err := cp.getTronDynamicCheckpointProposalWithErr()
+	if err != nil {
+		cp.Logger.Error("failed to check if no ack is required. Error while fetching dynamic checkpoint feature", "error", err)
+		return false, uint64(index)
+	}
+	if isOpen {
+		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
+	} else {
+		checkpointTimeout = checkpointPollInterval
+	}
+
+	if timeDiff.Seconds() >= checkpointTimeout.Seconds() && index == 0 {
+		index = math.Floor(timeDiff.Seconds() / checkpointTimeout.Seconds())
 	}
 
 	if index == 0 {
 		return false, uint64(index)
 	}
-
-	// checkpoint params
-	checkpointParams := checkpointContext.CheckpointParams
 
 	// check if difference between no-ack time and current time
 	lastNoAck := cp.getLastNoAckTime()
@@ -1095,4 +1115,14 @@ func (cp *CheckpointProcessor) getDynamicCheckpointProposal(rootType string) (bo
 	}
 
 	return fea.IsOpen, fea.IntConf[strings.ToLower(rootType)] != 0, fea.IntConf["maxLength"]
+}
+
+func (cp *CheckpointProcessor) getTronDynamicCheckpointProposalWithErr() (bool, int, error) {
+	fea, err := util.GetTronDynamicCheckpointFeature(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Error while fetching dynamic checkpoint feature", "error", err)
+
+		return false, 0, err
+	}
+	return fea.IsOpen, fea.IntConf["maxLength"], err
 }

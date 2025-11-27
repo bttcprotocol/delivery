@@ -15,6 +15,7 @@ import (
 	"github.com/maticnetwork/heimdall/checkpoint"
 	chSim "github.com/maticnetwork/heimdall/checkpoint/simulation"
 
+	featuremanagerTypes "github.com/maticnetwork/heimdall/featuremanager/types"
 	"github.com/maticnetwork/heimdall/helper/mocks"
 	hmTypes "github.com/maticnetwork/heimdall/types"
 	"github.com/stretchr/testify/require"
@@ -332,7 +333,6 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAck() {
 	start := uint64(0)
 	maxSize := uint64(256)
 	params := keeper.GetParams(ctx)
-	checkpointBufferTime := params.CheckpointBufferTime
 
 	dividendAccount := hmTypes.DividendAccount{
 		User:      hmTypes.HexToHeimdallAddress("123"),
@@ -359,8 +359,75 @@ func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAck() {
 	require.True(t, got.IsOK(), "expected send-NoAck to be ok, got %v", got)
 
 	// set time lastCheckpoint timestamp + checkpointBufferTime
-	newTime := lastCheckpoint.TimeStamp + uint64(checkpointBufferTime)
-	suite.ctx = ctx.WithBlockTime(time.Unix(0, int64(newTime)))
+	checkpointTimeout := 10 * time.Minute
+	newTime := time.Unix(int64(lastCheckpoint.TimeStamp), int64(checkpointTimeout))
+	suite.ctx = ctx.WithBlockTime(newTime)
+	result := suite.SendNoAck()
+	require.True(t, result.IsOK(), "expected send-NoAck to be ok, got %v", got)
+	ackCount := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)
+	require.Equal(t, uint64(0), uint64(ackCount), "Should not update state")
+}
+
+func (suite *HandlerTestSuite) TestHandleMsgCheckpointNoAckWithTronDynamicOpen() {
+	t, app, ctx := suite.T(), suite.app, suite.ctx
+	keeper := app.CheckpointKeeper
+	stakingKeeper := app.StakingKeeper
+	topupKeeper := app.TopupKeeper
+	featureKeeper := app.FeatureKeeper
+	start := uint64(0)
+	maxSize := uint64(256)
+	params := keeper.GetParams(ctx)
+
+	open := true
+
+	featureParams := featuremanagerTypes.FeatureParams{
+		FeatureParamMap: map[string]featuremanagerTypes.FeatureData{
+			featuremanagerTypes.DynamicCheckpoint: {IsOpen: &open,
+				IntConf: map[string]int{
+					"eth":       1,
+					"maxLength": 1024,
+				}},
+			featuremanagerTypes.FinalizedEth: {IsOpen: &open},
+		},
+	}
+	featureData := featuremanagerTypes.FeatureData{
+		IsOpen: &open,
+		IntConf: map[string]int{
+			"maxLength": 1024,
+		},
+	}
+	featureParams.FeatureParamMap[featuremanagerTypes.TronDynamicCheckpoint] = featureData
+
+	featureKeeper.SetFeatureParams(ctx, featureParams)
+
+	dividendAccount := hmTypes.DividendAccount{
+		User:      hmTypes.HexToHeimdallAddress("123"),
+		FeeAmount: big.NewInt(0).String(),
+	}
+	topupKeeper.AddDividendAccount(ctx, dividendAccount)
+
+	// check valid checkpoint
+	// generate proposer for validator set
+	chSim.LoadValidatorSet(2, t, stakingKeeper, ctx, false, 10)
+	stakingKeeper.IncrementAccum(ctx, 1)
+
+	lastCheckpoint, err := keeper.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
+	if err == nil {
+		start = start + lastCheckpoint.EndBlock + 1
+	}
+
+	header, err := chSim.GenRandCheckpoint(start, maxSize, params.MaxCheckpointLength)
+
+	// add current proposer to header
+	header.Proposer = stakingKeeper.GetValidatorSet(ctx).Proposer.Signer
+
+	got := suite.SendCheckpoint(header)
+	require.True(t, got.IsOK(), "expected send-NoAck to be ok, got %v", got)
+
+	// set time lastCheckpoint timestamp + checkpointBufferTime
+	checkpointTimeout := 40 * time.Minute
+	newTime := time.Unix(int64(lastCheckpoint.TimeStamp), int64(checkpointTimeout))
+	suite.ctx = ctx.WithBlockTime(newTime)
 	result := suite.SendNoAck()
 	require.True(t, result.IsOK(), "expected send-NoAck to be ok, got %v", got)
 	ackCount := keeper.GetACKCount(ctx, hmTypes.RootChainTypeStake)

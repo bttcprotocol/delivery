@@ -157,6 +157,7 @@ type Configuration struct {
 
 	TronStartListenBlock uint64 `mapstructure:"tron_start_listen_block"` // tron chain start listen block on bridge
 	EthStartListenBlock  uint64 `mapstructure:"eth_start_listen_block"`  // eth chain start listen block on bridge
+	BscStartListenBlock  uint64 `mapstructure:"bsc_start_listen_block"`
 
 	EthUnconfirmedTxsBusyLimit  int `mapstructure:"eth_unconfirmed_txs_busy_limit"`  // the busy limit of unconfirmed txs on heimdall for eth
 	BscUnconfirmedTxsBusyLimit  int `mapstructure:"bsc_unconfirmed_txs_busy_limit"`  // the busy limit of unconfirmed txs on heimdall for bsc
@@ -317,6 +318,7 @@ func GetDefaultHeimdallConfig() Configuration {
 		TronGridApiKey:       DefaultTronGridApiKey,
 		TronStartListenBlock: DefaultStartListenBlock,
 		EthStartListenBlock:  DefaultStartListenBlock,
+		BscStartListenBlock:  DefaultStartListenBlock,
 
 		EthUnconfirmedTxsBusyLimit:  DefaultEthBusyLimitTxs,
 		BscUnconfirmedTxsBusyLimit:  DefaultBscBusyLimitTxs,

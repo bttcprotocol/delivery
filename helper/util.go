@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -50,6 +51,8 @@ var ZeroAddress = common.Address{}
 
 // ZeroPubKey represents empty pub key
 var ZeroPubKey = hmTypes.PubKey{}
+
+const BttcBlockInterval = 2 * time.Second
 
 // GetFromAddress get from address
 func GetFromAddress(cliCtx context.CLIContext) types.HeimdallAddress {
@@ -887,4 +890,15 @@ func Hash(s []byte) ([]byte, error) {
 	}
 	bs := h.Sum(nil)
 	return bs, nil
+}
+
+func CalcCheckpointTimeout(tronMaxLength int, pollTime time.Duration) (time.Duration, error) {
+	if pollTime <= 0 {
+		return 0, errors.New("pollTime must be greater than 0")
+	}
+
+	timeForBttcBlocks := time.Duration(tronMaxLength) * BttcBlockInterval
+
+	checkpointTimeout := ((timeForBttcBlocks + pollTime - 1) / pollTime) * pollTime
+	return checkpointTimeout, nil
 }

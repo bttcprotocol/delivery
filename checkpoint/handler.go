@@ -225,13 +225,29 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 	// Get buffer time from params
 	bufferTime := k.GetParams(ctx).CheckpointBufferTime
 
+	var checkpointPollInterval time.Duration
+	if k.GetParams(ctx).CheckpointPollInterval > 0 {
+		checkpointPollInterval = k.GetParams(ctx).CheckpointPollInterval
+	} else {
+		checkpointPollInterval = helper.GetConfig().CheckpointerPollInterval
+	}
+
+	var checkpointTimeout time.Duration
+	tronDynamicFeature := util.GetFeatureConfig().GetFeature(ctx, featuremanagerTypes.TronDynamicCheckpoint)
+	if tronDynamicFeature.IsOpen {
+		tronMaxLength := tronDynamicFeature.IntConf["maxLength"]
+		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
+	} else {
+		checkpointTimeout = checkpointPollInterval
+	}
+
 	// Fetch last checkpoint from store
 	// TODO figure out how to handle this error
 	lastCheckpoint, _ := k.GetLastCheckpoint(ctx, hmTypes.RootChainTypeStake)
 	lastCheckpointTime := time.Unix(int64(lastCheckpoint.TimeStamp), 0)
 
 	// If last checkpoint is not present or last checkpoint happens before checkpoint buffer time -- thrown an error
-	if lastCheckpointTime.After(currentTime) || (currentTime.Sub(lastCheckpointTime) < bufferTime) {
+	if lastCheckpointTime.After(currentTime) || (currentTime.Sub(lastCheckpointTime) < checkpointTimeout) {
 		logger.Debug("Invalid No ACK -- Waiting for last checkpoint ACK")
 		return common.ErrInvalidNoACK(k.Codespace()).Result()
 	}

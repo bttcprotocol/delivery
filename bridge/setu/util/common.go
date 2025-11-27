@@ -607,6 +607,10 @@ func GetDynamicCheckpointFeature(cliCtx cliContext.CLIContext) (*featureManagerT
 	return GetTargetFeatureConfig(cliCtx, featureManagerTypes.DynamicCheckpoint)
 }
 
+func GetTronDynamicCheckpointFeature(cliCtx cliContext.CLIContext) (*featureManagerTypes.PlainFeatureData, error) {
+	return GetTargetFeatureConfig(cliCtx, featureManagerTypes.TronDynamicCheckpoint)
+}
+
 func GetFinalizedEthOpen(cliCtx cliContext.CLIContext) bool {
 	feature, err := GetTargetFeatureConfig(cliCtx, featureManagerTypes.FinalizedEth)
 	if err != nil {

@@ -1088,6 +1088,8 @@ func (c *ContractCaller) GetStartListenBlock(rootChainType string) uint64 {
 		return GetConfig().TronStartListenBlock
 	} else if rootChainType == hmTypes.RootChainTypeEth {
 		return GetConfig().EthStartListenBlock
+	} else if rootChainType == hmTypes.RootChainTypeBsc {
+		return GetConfig().BscStartListenBlock
 	} else {
 		return 0
 	}
@@ -1104,7 +1106,7 @@ func (c *ContractCaller) GetTronHeaderInfo(headerID uint64, contractAddress stri
 	}
 
 	// Call
-	data, err := c.TronChainRPC.TriggerConstantContract(contractAddress, btsPack)
+	data, err := c.TronChainRPC.TriggerConstantContractWithRetry(contractAddress, btsPack)
 	if err != nil {
 		return root, 0, 0, 0, types.HeimdallAddress{}, err
 	}
