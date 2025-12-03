@@ -97,6 +97,12 @@ func (cp *CheckpointProcessor) nextExpectedTronCheckpoint(checkpointContext *Che
 			"end", end,
 		)
 	}
+
+	// Check cross-chain transactions for Tron dynamic checkpoint feature
+	if !cp.checkCrossChainForTron(start, end, checkpointParams.MaxCheckpointLength) {
+		end = start
+	}
+
 	// Handle when block producers go down
 	if end == 0 || end == start || (0 < diff && diff < checkpointParams.AvgCheckpointLength) {
 		cp.Logger.Debug("Fetching last header block to calculate time")
@@ -342,4 +348,30 @@ func (cp *CheckpointProcessor) resubmitTronCheckpointAck(checkpointContext *Chec
 	}
 
 	return nil
+}
+
+// checkCrossChainForTron checks if checkpoint should be submitted based on Tron dynamic checkpoint feature
+// This method implements the same logic as checkCrossChain but specifically for Tron chain
+func (cp *CheckpointProcessor) checkCrossChainForTron(start uint64, end uint64, maxCheckpointLengthParam uint64) bool {
+	// Get Tron dynamic checkpoint feature configuration
+	isOpen, maxLength, err := cp.getTronDynamicCheckpointProposalWithErr()
+	if err != nil || !isOpen {
+		// If feature is not enabled or error occurred, allow checkpoint submission
+		return true
+	}
+
+	// Validate maxLength parameter
+	if maxCheckpointLengthParam < uint64(maxLength) {
+		cp.Logger.Error("proposal feature-tron-dynamic-checkpoint maxlength is too long",
+			"maxLength", maxLength, "MaxCheckpointLength", maxCheckpointLengthParam)
+		return true
+	}
+
+	// If checkpoint length already reached maxLength, allow submission
+	if end-start+1 >= uint64(maxLength) {
+		return true
+	}
+
+	// Check if there are cross-chain transactions for Tron
+	return cp.hasCrossChainTx(start, end, hmTypes.RootChainTypeTron)
 }
