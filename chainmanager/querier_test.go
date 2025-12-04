@@ -82,11 +82,18 @@ func (suite *QuerierTestSuite) TestQueryParams() {
 	require.Equal(t, defaultParams.ChainParams, params.ChainParams)
 
 	{
+		// When params are not set, querier should return zero values instead of panicking
 		rapp := app.Setup(true)
 		ctx := rapp.BaseApp.NewContext(true, abci.Header{})
 		querier := chainmanager.NewQuerier(rapp.ChainKeeper)
-		require.Panics(t, func() {
-			querier(ctx, path, req)
-		})
+		res, err = querier(ctx, path, req)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+
+		var zeroParams types.Params
+		json.Unmarshal(res, &zeroParams)
+		// Params should be zero values when not initialized
+		require.Equal(t, uint64(0), zeroParams.MainchainTxConfirmations)
+		require.Equal(t, uint64(0), zeroParams.MaticchainTxConfirmations)
 	}
 }
