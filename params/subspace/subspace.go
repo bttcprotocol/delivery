@@ -2,8 +2,9 @@ package subspace
 
 import (
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/log"
 	"reflect"
+
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/maticnetwork/heimdall/helper/fork"
 
@@ -122,6 +123,13 @@ func (s Subspace) transientStore(ctx sdk.Context) sdk.KVStore {
 func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	store := s.kvStore(ctx)
 	bz := store.Get(key)
+
+	// If the key does not exist in store, return early without modifying ptr
+	// This allows ptr to keep its zero value (e.g., 0 for time.Duration)
+	// Callers can check if the value > 0 to determine if it was set
+	if bz == nil {
+		return
+	}
 
 	var err error
 

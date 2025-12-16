@@ -157,11 +157,19 @@ func (suite *QuerierTestSuite) TestQueryParams() {
 	require.Equal(t, uint64(8), params.TxSizeCostPerByte)
 
 	{
+		// When params are not set, querier should return zero values instead of panicking
 		happ := app.Setup(true)
 		ctx := happ.BaseApp.NewContext(true, abci.Header{})
 		querier := auth.NewQuerier(happ.AccountKeeper)
-		require.Panics(t, func() {
-			querier(ctx, path, req)
-		})
+		res, err = querier(ctx, path, req)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+
+		var zeroParams types.Params
+		err4 := json.Unmarshal(res, &zeroParams)
+		require.NoError(t, err4)
+		// Params should be zero values when not initialized
+		require.Equal(t, uint64(0), zeroParams.MaxMemoCharacters)
+		require.Equal(t, uint64(0), zeroParams.TxSigLimit)
 	}
 }
