@@ -248,7 +248,9 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 
 	// If last checkpoint is not present or last checkpoint happens before checkpoint buffer time -- thrown an error
 	if lastCheckpointTime.After(currentTime) || (currentTime.Sub(lastCheckpointTime) < checkpointTimeout) {
-		logger.Debug("Invalid No ACK -- Waiting for last checkpoint ACK")
+		logger.Debug("Invalid No ACK -- Waiting for last checkpoint ACK", "lastCheckpoint", lastCheckpoint,
+			"lastCheckpointTime", lastCheckpointTime, "currentTime", currentTime,
+			"checkpointTimeout", checkpointTimeout)
 		return common.ErrInvalidNoACK(k.Codespace()).Result()
 	}
 
