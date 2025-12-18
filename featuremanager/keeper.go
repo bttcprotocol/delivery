@@ -66,6 +66,7 @@ func (k Keeper) RegisterFeature() {
 	k.addFeature(types.SupportMapMarshaling)
 	k.addFeature(types.FinalizedEth)
 	k.addFeature(types.NoAckValidatorCheck)
+	k.addFeature(types.TronDynamicCheckpoint)
 }
 
 func (k Keeper) HasFeature(feature string) bool {
