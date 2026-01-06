@@ -81,7 +81,7 @@ func (tc *Client) TriggerConstantContract(contractAddress string, data []byte) (
 }
 
 func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data []byte) ([]byte, error) {
-	const maxRetries = 3
+	const maxRetries = 5
 
 	var response []byte
 	var err error
