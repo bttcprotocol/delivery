@@ -238,7 +238,7 @@ func handleMsgCheckpointNoAck(ctx sdk.Context, msg types.MsgCheckpointNoAck, k K
 		tronMaxLength := tronDynamicFeature.IntConf["maxLength"]
 		checkpointTimeout, _ = helper.CalcCheckpointTimeout(tronMaxLength, checkpointPollInterval)
 	} else {
-		checkpointTimeout = checkpointPollInterval
+		checkpointTimeout = bufferTime
 	}
 
 	// Fetch last checkpoint from store
