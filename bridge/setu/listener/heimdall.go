@@ -50,8 +50,11 @@ func (hl *HeimdallListener) Start() error {
 
 	checkpointPollInterval := helper.GetConfig().CheckpointerPollInterval
 
-	// fetch initial checkpoint params (will retry up to 10 times or exit service)
-	checkpointParams := util.GetCheckpointParamsWithRetry(hl.cliCtx)
+	checkpointParams, err := util.GetCheckpointParamsWithRetry(hl.cliCtx)
+	if err != nil {
+		hl.Logger.Error("Failed to fetch checkpoint params", "error", err)
+		return err
+	}
 	if checkpointParams.CheckpointPollInterval > 0 {
 		checkpointPollInterval = checkpointParams.CheckpointPollInterval
 	}

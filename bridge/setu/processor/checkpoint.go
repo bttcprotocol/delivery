@@ -65,10 +65,17 @@ func NewCheckpointProcessor(rootchainAbi, stakingInfoAbi *abi.ABI) *CheckpointPr
 // Start - consumes messages from checkpoint queue and call processMsg
 func (cp *CheckpointProcessor) Start() error {
 	cp.Logger.Info("Starting")
+
+	checkpointParams, err := util.GetCheckpointParamsWithRetry(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Failed to fetch checkpoint params", "error", err)
+		return err
+	}
+
 	// no-ack
 	ackCtx, cancelNoACKPolling := context.WithCancel(context.Background())
 	cp.cancelNoACKPolling = cancelNoACKPolling
-	go cp.startPolling(ackCtx)
+	go cp.startPolling(ackCtx, checkpointParams)
 	return nil
 }
 
@@ -95,14 +102,12 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 	}
 }
 
-func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
+func (cp *CheckpointProcessor) startPolling(ctx context.Context, checkpointParams *checkpointTypes.Params) {
 	now := time.Now()
 	baseTime := time.Unix(0, 0)
 	// no-ack ticker interval keep same with checkpoint interval
 	checkpointPollInterval := helper.GetConfig().CheckpointerPollInterval
 
-	// fetch initial checkpoint params (will retry up to 10 times or exit service)
-	checkpointParams := util.GetCheckpointParamsWithRetry(cp.cliCtx)
 	if checkpointParams.CheckpointPollInterval > 0 {
 		checkpointPollInterval = checkpointParams.CheckpointPollInterval
 	}
