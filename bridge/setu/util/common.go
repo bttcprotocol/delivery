@@ -435,15 +435,9 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		params, err := GetCheckpointParams(cliCtx)
-		if err == nil {
+		if err == nil && params != nil {
 			logger.Info("Successfully fetched checkpoint params", "attempt", attempt)
 			return params
-		}
-
-		if attempt == maxRetries {
-			logger.Error("Failed to fetch checkpoint params after maximum retries, exiting service",
-				"err", err, "maxRetries", maxRetries)
-			os.Exit(1)
 		}
 
 		logger.Error("Failed to fetch checkpoint params, retrying...",
@@ -459,6 +453,7 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 
 	// This line should never be reached, but added for completeness
 	logger.Error("Unexpected: exceeded retry loop without returning or exiting")
+	CloseBridgeDBInstance()
 	os.Exit(1)
 	return nil
 }
