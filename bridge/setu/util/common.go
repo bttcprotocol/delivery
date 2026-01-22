@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -440,7 +441,7 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 			return params
 		}
 
-		logger.Error("Failed to fetch checkpoint params, retrying...",
+		logger.Warn("Failed to fetch checkpoint params, retrying...",
 			"err", err, "attempt", attempt, "maxRetries", maxRetries, "retryAfter", retryDelay)
 		time.Sleep(retryDelay)
 
@@ -450,12 +451,30 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 			retryDelay = maxRetryDelay
 		}
 	}
-
-	// This line should never be reached, but added for completeness
-	logger.Error("Unexpected: exceeded retry loop without returning or exiting")
-	CloseBridgeDBInstance()
-	os.Exit(1)
+	// do a magic exit to trigger a graceful shutdown to prevent the leveldb broken
+	SelfTerminate("failed to fetch checkpoint params after all retries")
 	return nil
+}
+
+// SelfTerminate sends a SIGTERM signal to the current process to trigger graceful shutdown.
+// This method blocks the current goroutine until the process exits.
+// If signal sending fails, it falls back to os.Exit(1).
+func SelfTerminate(reason string) {
+	logger.Error("Self terminating process", "reason", reason, "pid", os.Getpid())
+
+	proc, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		logger.Error("Failed to get process, falling back to os.Exit", "pid", os.Getpid(), "err", err)
+		os.Exit(1)
+	}
+
+	if err := proc.Signal(syscall.SIGTERM); err != nil {
+		logger.Error("Failed to send SIGTERM signal, falling back to os.Exit", "err", err)
+		os.Exit(1)
+	}
+
+	// Block the current goroutine, waiting for the main process to handle SIGTERM and exit.
+	select {}
 }
 
 // GetBufferedCheckpoint return checkpoint from bueffer

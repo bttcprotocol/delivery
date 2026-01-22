@@ -256,7 +256,9 @@ func (bl *BaseListener) Stop() {
 	}
 
 	// cancel header process
-	bl.cancelHeaderProcess()
+	if bl.cancelHeaderProcess!= nil {
+		bl.cancelHeaderProcess()
+	}
 }
 
 func (bl *BaseListener) setStartListenBLock(StartBlock uint64, key string) error {
