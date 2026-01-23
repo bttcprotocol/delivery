@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -15,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	tmLog "github.com/tendermint/tendermint/libs/log"
+	rpcserver "github.com/tendermint/tendermint/rpc/lib/server"
 
 	"github.com/maticnetwork/heimdall/app"
 	tx "github.com/maticnetwork/heimdall/client/tx"
@@ -38,17 +41,34 @@ func StartRestServer(mainCtx context.Context, cdc *codec.Codec,
 
 	logger := tmLog.NewTMLogger(tmLog.NewSyncWriter(os.Stdout)).With("module", "rest-server")
 
-	err := restServer.Start(
-		viper.GetString(client.FlagListenAddr),
-		viper.GetInt(client.FlagMaxOpenConnections),
-		0,
-		0,
-	)
+	cfg := rpcserver.DefaultConfig()
+	cfg.MaxOpenConnections = viper.GetInt(client.FlagMaxOpenConnections)
+	cfg.ReadTimeout = 0 * time.Second
+	cfg.WriteTimeout = 0 * time.Second
+
+	listener, err := rpcserver.Listen(viper.GetString(client.FlagListenAddr), cfg)
 	if err != nil {
 		logger.Error("Cannot start REST server", "Error", err)
+		return err
 	}
 
-	return err
+	logger.Info(
+		fmt.Sprintf(
+			"Starting application REST service (chain-id: %q)...",
+			viper.GetString(flags.FlagChainID),
+		),
+	)
+
+	// Graceful shutdown: close listener when context is cancelled
+	go func() {
+		<-mainCtx.Done()
+		logger.Info("Shutting down REST server...")
+		if err := listener.Close(); err != nil {
+			logger.Error("Error closing REST listener", "err", err)
+		}
+	}()
+
+	return rpcserver.StartHTTPServer(listener, restServer.Mux, logger, cfg)
 }
 
 // ServeCommands will generate a long-running rest server

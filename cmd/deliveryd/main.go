@@ -389,7 +389,7 @@ func startInProcess(shutdownCtx context.Context, ctx *server.Context, cmd *cobra
 			cpuProfileCleanup()
 		}
 		if tmNode.IsRunning() {
-			return tmNode.Stop()
+			_ = tmNode.Stop()
 		}
 
 		database.Close()
