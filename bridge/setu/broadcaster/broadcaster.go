@@ -120,7 +120,7 @@ func (tb *TxBroadcaster) BroadcastToMatic(msg bor.CallMsg) error {
 	maticClient := helper.GetMaticClient()
 
 	// get auth
-	auth, err := helper.GenerateAuthObj(maticClient, *msg.To, msg.Data)
+	auth, err := helper.GenerateAuthObj(maticClient, *msg.To, msg.Data, false)
 
 	if err != nil {
 		tb.logger.Error("Error generating auth object", "error", err)
