@@ -147,7 +147,7 @@ func (cp *CheckpointProcessor) sendCheckpointSyncToStakeChain(eventBytes string,
 	} else {
 		txHash := common.FromHex(txHash)
 		if err := cp.createAndSendCheckpointSyncToTron(checkpointContext, number, startBlock, endBlock, rootChain, blockHeight, txHash); err != nil {
-			cp.Logger.Error("Error sending checkpoint to rootchain", "error", err)
+			cp.Logger.Error("Error sending checkpoint sync to rootchain", "error", err)
 			return err
 		}
 	}
