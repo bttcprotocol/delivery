@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func GenerateAuthObj(client *ethclient.Client, address common.Address, data []byte, increaseGasPrice bool) (auth *bind.TransactOpts, err error) {
+func GenerateAuthObj(client *ethclient.Client, address common.Address, data []byte, enableIncreaseGasPrice bool) (auth *bind.TransactOpts, err error) {
 	// generate call msg
 	callMsg := ethereum.CallMsg{
 		To:   &address,
@@ -45,13 +45,17 @@ func GenerateAuthObj(client *ethclient.Client, address common.Address, data []by
 	if err != nil {
 		return
 	}
-	if increaseGasPrice {
-		multiplier := big.NewInt(105)
-		divisor := big.NewInt(100)
-		originGasPrice := gasprice
-		gasprice = new(big.Int).Mul(gasprice, multiplier)
-		gasprice.Div(gasprice, divisor)
-		Logger.Debug("adjust gas price", "origin gas price", originGasPrice, "adjusted gas price", gasprice)
+
+	if enableIncreaseGasPrice {
+		gasPriceIncreasePercent := GetConfig().GasPriceIncreasePercent
+		if gasPriceIncreasePercent > 0 {
+			multiplier := big.NewInt(100 + gasPriceIncreasePercent)
+			divisor := big.NewInt(100)
+			originGasPrice := gasprice
+			gasprice = new(big.Int).Mul(gasprice, multiplier)
+			gasprice.Div(gasprice, divisor)
+			Logger.Debug("adjust gas price", "originGasPrice", originGasPrice, "adjustedGasPrice", gasprice)
+		}
 	}
 
 	mainChainMaxGasPrice := GetConfig().MainchainMaxGasPrice
@@ -117,7 +121,8 @@ func (c *ContractCaller) SendCheckpoint(signedData []byte, sigs [][3]*big.Int,
 	var auth *bind.TransactOpts
 
 	if rootChain == hmtypes.RootChainTypeEth {
-		auth, err = GenerateAuthObj(client, rootChainAddress, data, true)
+		enableIncreaseGasPrice := GetConfig().EnableIncreaseGasPrice
+		auth, err = GenerateAuthObj(client, rootChainAddress, data, enableIncreaseGasPrice)
 	} else {
 		auth, err = GenerateAuthObj(client, rootChainAddress, data, false)
 	}

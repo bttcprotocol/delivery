@@ -100,7 +100,10 @@ const (
 	DefaultBscMaxQueryBlocks  = 5
 	DefaultTronMaxQueryBlocks = 5
 
-	DefaultBttcChainID string = "15001"
+	DefaultBttcChainID            string = "15001"
+	DefaultEnableIncreaseGasPrice        = false
+
+	DefaultGasPriceIncreasePercent = 0
 
 	DefaultLogsType = "json"
 	DefaultChain    = "mainnet"
@@ -166,6 +169,9 @@ type Configuration struct {
 	EthMaxQueryBlocks  int64 `mapstructure:"eth_max_query_blocks"`  // eth max number of blocks in one query logs
 	BscMaxQueryBlocks  int64 `mapstructure:"bsc_max_query_blocks"`  // bsc max number of blocks in one query logs
 	TronMaxQueryBlocks int64 `mapstructure:"tron_max_query_blocks"` // tron max number of blocks in one query logs
+
+	EnableIncreaseGasPrice  bool  `mapstructure:"enable_increase_gas_price"`  // whether enable increase gas price when submit checkpoint to eth
+	GasPriceIncreasePercent int64 `mapstructure:"gas_price_increase_percent"` // the increase percent of gas price when submit tx. newGasPrice = oldGasPrice * (100 + GasPriceIncreasePercent) / 100
 }
 
 var conf Configuration
@@ -327,6 +333,9 @@ func GetDefaultHeimdallConfig() Configuration {
 		EthMaxQueryBlocks:  DefaultEthMaxQueryBlocks,
 		BscMaxQueryBlocks:  DefaultBscMaxQueryBlocks,
 		TronMaxQueryBlocks: DefaultTronMaxQueryBlocks,
+
+		EnableIncreaseGasPrice:  DefaultEnableIncreaseGasPrice,
+		GasPriceIncreasePercent: DefaultGasPriceIncreasePercent,
 	}
 }
 
