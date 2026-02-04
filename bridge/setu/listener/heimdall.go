@@ -3,6 +3,7 @@ package listener
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strconv"
 	"sync"
@@ -112,6 +113,9 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 
 				hl.Logger.Info("Fetching new events between", "fromBlock", fromBlock, "toBlock", toBlock)
 
+				// set to avoid deduplicate checkpoint-sync events by (rootChain, number, startBlock, endBlock)
+				checkpointSyncSet := make(map[string]struct{})
+
 				// Querying and processing Begin events
 				for i := fromBlock; i <= toBlock; i++ {
 					events, err := helper.GetBeginBlockEvents(hl.httpClient, int64(i))
@@ -119,7 +123,7 @@ func (hl *HeimdallListener) StartPolling(ctx context.Context, pollInterval time.
 						hl.Logger.Error("Error fetching begin block events", "error", err)
 					}
 					for _, event := range events {
-						hl.ProcessBlockEvent(sdk.StringifyEvent(event), int64(i))
+						hl.ProcessBlockEvent(sdk.StringifyEvent(event), int64(i), checkpointSyncSet)
 					}
 				}
 
@@ -202,11 +206,18 @@ func (hl *HeimdallListener) fetchFromAndToBlock() (uint64, uint64, error) {
 			return fromBlock, toBlock, err
 		}
 	}
+	maxQueryBlocks := helper.GetConfig().HeimdallMaxQueryBlocks
+	if maxQueryBlocks == 0 {
+		maxQueryBlocks = helper.DefaultHeimdallMaxQueryBlocks
+	}
+	if maxQueryBlocks != 0 && toBlock-fromBlock > uint64(maxQueryBlocks) {
+		toBlock = fromBlock + uint64(maxQueryBlocks)
+	}
 	return fromBlock, toBlock, err
 }
 
 // ProcessBlockEvent - process Blockevents (BeginBlock, EndBlock events) from heimdall.
-func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight int64) {
+func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight int64, checkpointSyncSet map[string]struct{}) {
 	hl.Logger.Info("Received block event from Heimdall", "eventType", event.Type, "height", blockHeight)
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
@@ -218,6 +229,13 @@ func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight
 	case checkpointTypes.EventTypeCheckpoint:
 		hl.sendBlockTask("sendCheckpointToRootchain", eventBytes, blockHeight)
 	case checkpointTypes.EventTypeCheckpointSync:
+		key := hl.getCheckpointSyncKey(event)
+		if _, exists := checkpointSyncSet[key]; exists {
+			hl.Logger.Info("CheckpointSync duplicate, skip sending task", "key", key)
+			return
+		}
+
+		checkpointSyncSet[key] = struct{}{}
 		hl.sendBlockTask("sendCheckpointSyncToStakeChain", eventBytes, blockHeight)
 	case slashingTypes.EventTypeSlashLimit:
 		hl.sendBlockTask("sendTickToHeimdall", eventBytes, blockHeight)
@@ -234,6 +252,24 @@ func (hl *HeimdallListener) ProcessBlockEvent(event sdk.StringEvent, blockHeight
 	default:
 		hl.Logger.Debug("BlockEvent Type mismatch", "eventType", event.Type)
 	}
+}
+
+func (hl *HeimdallListener) getCheckpointSyncKey(event sdk.StringEvent) string {
+	var rootChain string
+	var number, startBlock, endBlock uint64
+	for _, attr := range event.Attributes {
+		switch attr.Key {
+		case checkpointTypes.AttributeKeyRootChain:
+			rootChain = attr.Value
+		case checkpointTypes.AttributeKeyHeaderIndex:
+			number, _ = strconv.ParseUint(attr.Value, 10, 64)
+		case checkpointTypes.AttributeKeyStartBlock:
+			startBlock, _ = strconv.ParseUint(attr.Value, 10, 64)
+		case checkpointTypes.AttributeKeyEndBlock:
+			endBlock, _ = strconv.ParseUint(attr.Value, 10, 64)
+		}
+	}
+	return fmt.Sprintf("%s_%d_%d_%d", rootChain, number, startBlock, endBlock)
 }
 
 func (hl *HeimdallListener) sendBlockTask(taskName string, eventBytes []byte, blockHeight int64) {
