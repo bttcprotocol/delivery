@@ -427,9 +427,10 @@ func GetCheckpointParams(cliCtx cliContext.CLIContext) (*checkpointTypes.Params,
 	return &params, nil
 }
 
-// GetCheckpointParamsWithRetry guarantees successful retrieval of checkpoint parameters
-// by retrying up to 10 times. If it fails after 10 attempts, the service will exit.
-func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes.Params {
+// GetCheckpointParamsWithRetry tries to retrieve checkpoint parameters with retries.
+// If it ultimately fails, it triggers a graceful shutdown request (SIGTERM) and returns an error
+// so callers can abort their startup path cleanly.
+func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) (*checkpointTypes.Params, error) {
 	const maxRetries = 10
 	retryDelay := 1 * time.Second
 	maxRetryDelay := 30 * time.Second
@@ -438,7 +439,7 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 		params, err := GetCheckpointParams(cliCtx)
 		if err == nil && params != nil {
 			logger.Info("Successfully fetched checkpoint params", "attempt", attempt)
-			return params
+			return params, nil
 		}
 
 		logger.Warn("Failed to fetch checkpoint params, retrying...",
@@ -451,30 +452,26 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 			retryDelay = maxRetryDelay
 		}
 	}
-	// do a magic exit to trigger a graceful shutdown to prevent the leveldb broken
+	// Request graceful shutdown (do not os.Exit / do not block).
 	SelfTerminate("failed to fetch checkpoint params after all retries")
-	return nil
+	return nil, errors.New("failed to fetch checkpoint params after all retries")
 }
 
 // SelfTerminate sends a SIGTERM signal to the current process to trigger graceful shutdown.
-// This method blocks the current goroutine until the process exits.
-// If signal sending fails, it falls back to os.Exit(1).
+// This method MUST NOT block or force-exit; it only requests shutdown.
 func SelfTerminate(reason string) {
 	logger.Error("Self terminating process", "reason", reason, "pid", os.Getpid())
 
 	proc, err := os.FindProcess(os.Getpid())
 	if err != nil {
-		logger.Error("Failed to get process, falling back to os.Exit", "pid", os.Getpid(), "err", err)
-		os.Exit(1)
+		logger.Error("Failed to get process for SIGTERM", "pid", os.Getpid(), "err", err)
+		return
 	}
 
 	if err := proc.Signal(syscall.SIGTERM); err != nil {
-		logger.Error("Failed to send SIGTERM signal, falling back to os.Exit", "err", err)
-		os.Exit(1)
+		logger.Error("Failed to send SIGTERM signal", "err", err)
+		return
 	}
-
-	// Block the current goroutine, waiting for the main process to handle SIGTERM and exit.
-	select {}
 }
 
 // GetBufferedCheckpoint return checkpoint from bueffer

@@ -101,8 +101,12 @@ func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
 	// no-ack ticker interval keep same with checkpoint interval
 	checkpointPollInterval := helper.GetConfig().CheckpointerPollInterval
 
-	// fetch initial checkpoint params (will retry up to 10 times or exit service)
-	checkpointParams := util.GetCheckpointParamsWithRetry(cp.cliCtx)
+	// fetch initial checkpoint params (with retries)
+	checkpointParams, err := util.GetCheckpointParamsWithRetry(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Failed to fetch checkpoint params", "err", err)
+		return
+	}
 	if checkpointParams.CheckpointPollInterval > 0 {
 		checkpointPollInterval = checkpointParams.CheckpointPollInterval
 	}
