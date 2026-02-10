@@ -59,16 +59,35 @@ func StartRestServer(mainCtx context.Context, cdc *codec.Codec,
 		),
 	)
 
-	// Graceful shutdown: close listener when context is cancelled
+	// create HTTP server so we can perform graceful shutdown
+	httpSrv := &http.Server{
+		Handler:      restServer.Mux,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+	}
+
+	// Graceful shutdown: when context is cancelled (Ctrl+C / SIGTERM),
+	// give in-flight requests a window to finish before forcing close.
 	go func() {
 		<-mainCtx.Done()
 		logger.Info("Shutting down REST server...")
-		if err := listener.Close(); err != nil {
-			logger.Error("Error closing REST listener", "err", err)
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := httpSrv.Shutdown(shutdownCtx); err != nil && err != http.ErrServerClosed {
+			logger.Error("Error during REST server shutdown", "err", err)
 		}
 	}()
 
-	return rpcserver.StartHTTPServer(listener, restServer.Mux, logger, cfg)
+	// Serve will return http.ErrServerClosed when Shutdown is called.
+	if err := httpSrv.Serve(listener); err != nil && err != http.ErrServerClosed {
+		logger.Error("REST server stopped with error", "err", err)
+		return err
+	}
+
+	logger.Info("REST server stopped")
+	return nil
 }
 
 // ServeCommands will generate a long-running rest server
@@ -81,9 +100,10 @@ func ServeCommands(cdc *codec.Codec, registerRoutesFn func(*lcd.RestServer)) *co
 		RunE: func(cmd *cobra.Command, args []string) error {
 			helper.InitDeliveryConfig("")
 			restCh := make(chan struct{}, 1)
-			err := StartRestServer(context.Background(), cdc, registerRoutesFn, restCh)
 
-			return err
+			// use cmd.Context() so that Ctrl+C / SIGTERM from the root command
+			// is propagated down to the REST server for graceful shutdown.
+			return StartRestServer(cmd.Context(), cdc, registerRoutesFn, restCh)
 		},
 	}
 

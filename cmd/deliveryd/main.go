@@ -115,6 +115,11 @@ func main() {
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 
+	// propagate shutdown context (Ctrl+C / SIGTERM) to all sub-commands
+	// so that long-running services like the REST server can gracefully
+	// shut down using cmd.Context().
+	rootCmd.SetContext(shutdownCtx)
+
 	// add new persistent flag for heimdall-config
 	rootCmd.PersistentFlags().String(
 		helper.WithDeliveryConfigFlag,
