@@ -68,7 +68,22 @@ func (cp *CheckpointProcessor) Start() error {
 	// no-ack
 	ackCtx, cancelNoACKPolling := context.WithCancel(context.Background())
 	cp.cancelNoACKPolling = cancelNoACKPolling
-	go cp.startPolling(ackCtx)
+
+	checkpointPollInterval := helper.GetConfig().CheckpointerPollInterval
+
+	// fetch initial checkpoint params (with retries)
+	checkpointParams, err := util.GetCheckpointParamsWithRetry(cp.cliCtx)
+	if err != nil {
+		cp.Logger.Error("Failed to fetch checkpoint params", "err", err)
+		return err
+	}
+
+	if checkpointParams.CheckpointPollInterval > 0 {
+		checkpointPollInterval = checkpointParams.CheckpointPollInterval
+	}
+
+	go cp.startPolling(ackCtx, checkpointPollInterval)
+
 	return nil
 }
 
@@ -95,21 +110,9 @@ func (cp *CheckpointProcessor) RegisterTasks() {
 	}
 }
 
-func (cp *CheckpointProcessor) startPolling(ctx context.Context) {
+func (cp *CheckpointProcessor) startPolling(ctx context.Context, checkpointPollInterval time.Duration) {
 	now := time.Now()
 	baseTime := time.Unix(0, 0)
-	// no-ack ticker interval keep same with checkpoint interval
-	checkpointPollInterval := helper.GetConfig().CheckpointerPollInterval
-
-	// fetch initial checkpoint params (with retries)
-	checkpointParams, err := util.GetCheckpointParamsWithRetry(cp.cliCtx)
-	if err != nil {
-		cp.Logger.Error("Failed to fetch checkpoint params", "err", err)
-		return
-	}
-	if checkpointParams.CheckpointPollInterval > 0 {
-		checkpointPollInterval = checkpointParams.CheckpointPollInterval
-	}
 
 	// adjust no-ack ticker to tick at the middle of checkpoint interval
 	firstIntervalForNoAck := checkpointPollInterval - (now.UTC().Sub(baseTime) % checkpointPollInterval) - checkpointPollInterval/2 // nolint: gomnd
