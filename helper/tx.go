@@ -54,7 +54,7 @@ func GenerateAuthObj(client *ethclient.Client, address common.Address, data []by
 			originGasPrice := gasprice
 			gasprice = new(big.Int).Mul(gasprice, multiplier)
 			gasprice.Div(gasprice, divisor)
-			Logger.Debug("adjust gas price", "originGasPrice", originGasPrice, "adjustedGasPrice", gasprice)
+			Logger.Debug("Adjust gas price", "originGasPrice", originGasPrice, "adjustedGasPrice", gasprice)
 		}
 	}
 

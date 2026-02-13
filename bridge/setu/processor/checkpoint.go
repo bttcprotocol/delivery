@@ -576,10 +576,10 @@ func (cp *CheckpointProcessor) createAndSendCheckpointToHeimdall(checkpointConte
 	latestCheckpoint, err := util.GetlastestCheckpoint(cp.cliCtx, rootChain)
 	// event checkpoint is older than or equal to latest checkpoint
 	if err == nil && latestCheckpoint != nil && latestCheckpoint.EndBlock+1 < start {
-		cp.Logger.Debug("Need to resubmit Checkpoint ack first", "start", start, "last_end", latestCheckpoint.EndBlock)
+		cp.Logger.Info("Need to resubmit Checkpoint ack first", "start", start, "last_end", latestCheckpoint.EndBlock)
 		err := cp.resubmitCheckpointAck(checkpointContext, rootChain)
 		if err != nil {
-			cp.Logger.Info("Error while resubmit checkpoint ack", "root", rootChain, "err", err)
+			cp.Logger.Error("Error while resubmit checkpoint ack", "root", rootChain, "err", err)
 			return err
 		}
 		return nil

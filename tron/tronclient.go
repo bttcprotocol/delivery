@@ -93,7 +93,7 @@ func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data 
 			break
 		}
 		if attempt < maxRetries-1 {
-			delay := attempt
+			delay := attempt + 1
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
 
