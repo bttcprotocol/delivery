@@ -440,26 +440,23 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 			return params
 		}
 
-		if attempt == maxRetries {
-			logger.Error("Failed to fetch checkpoint params after maximum retries, exiting service",
-				"err", err, "maxRetries", maxRetries)
-			os.Exit(1)
-		}
-
 		logger.Error("Failed to fetch checkpoint params, retrying...",
 			"err", err, "attempt", attempt, "maxRetries", maxRetries, "retryAfter", retryDelay)
-		time.Sleep(retryDelay)
 
-		// Exponential backoff with cap
-		retryDelay *= 2
-		if retryDelay > maxRetryDelay {
-			retryDelay = maxRetryDelay
+		if attempt < maxRetries {
+			time.Sleep(retryDelay)
+
+			// Exponential backoff with cap
+			retryDelay *= 2
+			if retryDelay > maxRetryDelay {
+				retryDelay = maxRetryDelay
+			}
 		}
 	}
 
-	// This line should never be reached, but added for completeness
 	logger.Error("Unexpected: exceeded retry loop without returning or exiting")
-	os.Exit(1)
+
+	panic(errors.New("Failed to fetch checkpoint params"))
 	return nil
 }
 
