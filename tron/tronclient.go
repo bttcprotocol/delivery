@@ -3,6 +3,7 @@ package tron
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 	"os"
 	"strings"
@@ -90,13 +91,15 @@ func (tc *Client) TriggerConstantContractWithRetry(contractAddress string, data 
 		response, err = tc.TriggerConstantContract(contractAddress, data)
 
 		if err == nil && response != nil {
+			log.Info("Successfully trigger tron constant contract", "attempt", attempt)
 			break
 		}
+		log.Error("Failed to trigger tron constant contract",
+			"err", err, "attempt", attempt, "maxRetries", maxRetries)
 		if attempt < maxRetries-1 {
 			delay := attempt + 1
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
-
 	}
 	return response, err
 }
