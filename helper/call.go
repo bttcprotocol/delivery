@@ -1136,7 +1136,7 @@ func (c *ContractCaller) GetSyncedCheckpointId(contractAddress string, rootChain
 	}
 
 	// Call
-	data, err := c.TronChainRPC.TriggerConstantContract(contractAddress, btsPack)
+	data, err := c.TronChainRPC.TriggerConstantContractWithRetry(contractAddress, btsPack)
 	if err != nil {
 		return 0, err
 	}
