@@ -71,3 +71,10 @@ func TestCalcCheckpointTimeout(t *testing.T) {
 	checkpointTimeout, _ := CalcCheckpointTimeout(tronMaxLength, pollTime)
 	require.Equal(t, 40*time.Minute, checkpointTimeout, "checkpointTimeout should match")
 }
+
+func TestCalcCheckpointTimeout2(t *testing.T) {
+	tronMaxLength := 1024
+	pollTime := 5 * time.Minute
+	checkpointTimeout, _ := CalcCheckpointTimeout(tronMaxLength, pollTime)
+	require.Equal(t, 40*time.Minute, checkpointTimeout, "checkpointTimeout should match")
+}

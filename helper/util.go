@@ -53,6 +53,8 @@ var ZeroAddress = common.Address{}
 var ZeroPubKey = hmTypes.PubKey{}
 
 const BttcBlockInterval = 2 * time.Second
+const BttcFirstBlockIntervalInSprint = 6 * time.Second
+const BttcSprintLength = 64
 
 // GetFromAddress get from address
 func GetFromAddress(cliCtx context.CLIContext) types.HeimdallAddress {
@@ -897,7 +899,7 @@ func CalcCheckpointTimeout(tronMaxLength int, pollTime time.Duration) (time.Dura
 		return 0, errors.New("pollTime must be greater than 0")
 	}
 
-	timeForBttcBlocks := time.Duration(tronMaxLength) * BttcBlockInterval
+	timeForBttcBlocks := time.Duration(tronMaxLength)*BttcBlockInterval + time.Duration(tronMaxLength)/BttcSprintLength*(BttcFirstBlockIntervalInSprint-BttcBlockInterval)
 
 	checkpointTimeout := ((timeForBttcBlocks + pollTime - 1) / pollTime) * pollTime
 	return checkpointTimeout, nil
