@@ -117,9 +117,5 @@ func (p Params) Validate() error {
 		return fmt.Errorf("ChildBlockInterval should be greater than zero")
 	}
 
-	if p.CheckpointPollInterval == 0 {
-		return fmt.Errorf("CheckpointPollInterval should be greater than zero")
-	}
-
 	return nil
 }
