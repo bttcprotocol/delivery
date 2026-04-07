@@ -457,6 +457,7 @@ func GetCheckpointParamsWithRetry(cliCtx cliContext.CLIContext) *checkpointTypes
 	logger.Error("Unexpected: exceeded retry loop without returning or exiting")
 
 	panic(errors.New("Failed to fetch checkpoint params"))
+	return nil
 }
 
 // GetBufferedCheckpoint return checkpoint from bueffer
