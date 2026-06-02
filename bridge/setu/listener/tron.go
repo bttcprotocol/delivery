@@ -221,9 +221,6 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 			logBytes, _ := json.Marshal(vLog)
 			if selectedEvent != nil {
 				tl.Logger.Debug("ReceivedTronEvent", "eventname", selectedEvent.Name)
-				if !isListenedTronEvent(selectedEvent.Name) {
-					continue
-				}
 
 				receipt, err := tl.contractConnector.GetTronTransactionReceipt(vLog.TxHash.Hex())
 				if receipt != nil && !helper.IsTronTransactionReceiptSuccessful(receipt) {
@@ -332,24 +329,6 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 				}
 			}
 		}
-	}
-}
-
-func isListenedTronEvent(eventName string) bool {
-	switch eventName {
-	case "NewHeaderBlock",
-		"Staked",
-		"SignerChange",
-		"UnstakeInit",
-		"StateSynced",
-		"TopUpFee",
-		"Slashed",
-		"UnJailed",
-		"CheckpointSyncAck",
-		"NewChain":
-		return true
-	default:
-		return false
 	}
 }
 
