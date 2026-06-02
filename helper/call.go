@@ -883,6 +883,11 @@ func (c *ContractCaller) GetTronTransactionReceipt(txID string) (*ethTypes.Recei
 	return &transactionReceipt.Result, nil
 }
 
+// IsTronTransactionReceiptSuccessful returns true when a Tron transaction receipt indicates success.
+func IsTronTransactionReceiptSuccessful(receipt *ethTypes.Receipt) bool {
+	return receipt != nil && receipt.Status == ethTypes.ReceiptStatusSuccessful
+}
+
 // utility and helper methods
 
 // populateABIs fills the package level cache for contracts' ABIs

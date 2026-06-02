@@ -53,6 +53,10 @@ func SideHandleMsgNewChain(ctx sdk.Context, msg types.MsgNewChain, k Keeper, con
 	if err != nil || receipt == nil {
 		return common.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return common.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronChainAddress)
 	// decode validator join event
 	eventLog, err := contractCaller.DecodeNewChainEvent(contractAddress, receipt, msg.LogIndex)

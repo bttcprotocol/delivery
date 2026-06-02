@@ -72,6 +72,7 @@ func (suite *HandlerTestSuite) TestHandleMsgValidatorJoin() {
 	chainParams := app.ChainKeeper.GetParams(ctx)
 
 	txreceipt := &ethTypes.Receipt{
+		Status:      ethTypes.ReceiptStatusSuccessful,
 		BlockNumber: big.NewInt(10),
 	}
 
@@ -127,7 +128,7 @@ func (suite *HandlerTestSuite) TestHandleMsgValidatorUpdate() {
 	msgTxHash := hmTypes.HexToHeimdallHash("123")
 	msg := types.NewMsgSignerUpdate(newSigner[0].Signer, uint64(newSigner[0].ID), newSigner[0].PubKey, msgTxHash, 0, 0, 1)
 
-	txreceipt := &ethTypes.Receipt{BlockNumber: big.NewInt(10)}
+	txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: big.NewInt(10)}
 	suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 
 	signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
@@ -169,6 +170,7 @@ func (suite *HandlerTestSuite) TestHandleMsgValidatorExit() {
 	logIndex := uint64(0)
 
 	txreceipt := &ethTypes.Receipt{
+		Status:      ethTypes.ReceiptStatusSuccessful,
 		BlockNumber: big.NewInt(10),
 	}
 
@@ -218,7 +220,7 @@ func (suite *HandlerTestSuite) TestHandleMsgStakeUpdate() {
 	msgTxHash := hmTypes.HexToHeimdallHash("123")
 	msg := types.NewMsgStakeUpdate(oldVal.Signer, oldVal.ID.Uint64(), sdk.NewInt(2000000000000000000), msgTxHash, 0, 0, 1)
 
-	txreceipt := &ethTypes.Receipt{BlockNumber: big.NewInt(10)}
+	txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: big.NewInt(10)}
 	suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 
 	stakinginfoStakeUpdate := &stakinginfo.StakinginfoStakeUpdate{
@@ -277,6 +279,7 @@ func (suite *HandlerTestSuite) TestExitedValidatorJoiningAgain() {
 	chainParams := app.ChainKeeper.GetParams(ctx)
 
 	txreceipt := &ethTypes.Receipt{
+		Status:      ethTypes.ReceiptStatusSuccessful,
 		BlockNumber: big.NewInt(10),
 	}
 	msgValJoin := types.NewMsgValidatorJoin(
@@ -330,6 +333,7 @@ func (suite *HandlerTestSuite) TestTopupSuccessBeforeValidatorJoin() {
 	}
 
 	txreceipt := &ethTypes.Receipt{
+		Status:      ethTypes.ReceiptStatusSuccessful,
 		BlockNumber: big.NewInt(10),
 	}
 

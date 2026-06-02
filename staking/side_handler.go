@@ -91,6 +91,10 @@ func SideHandleMsgValidatorJoin(ctx sdk.Context, msg types.MsgValidatorJoin, k K
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 	// decode validator join event
 	eventLog, err := contractCaller.DecodeValidatorJoinEvent(contractAddress, receipt, msg.LogIndex)
@@ -230,6 +234,10 @@ func SideHandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Kee
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 
 	newPubKey := msg.NewSignerPubKey
@@ -294,6 +302,10 @@ func SideHandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k K
 	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 

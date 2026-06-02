@@ -221,6 +221,21 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 			logBytes, _ := json.Marshal(vLog)
 			if selectedEvent != nil {
 				tl.Logger.Debug("ReceivedTronEvent", "eventname", selectedEvent.Name)
+				if !isListenedTronEvent(selectedEvent.Name) {
+					continue
+				}
+
+				receipt, err := tl.contractConnector.GetTronTransactionReceipt(vLog.TxHash.Hex())
+				if receipt != nil && !helper.IsTronTransactionReceiptSuccessful(receipt) {
+					tl.Logger.Error(
+						"Skip failed tron transaction event",
+						"eventname", selectedEvent.Name,
+						"txHash", vLog.TxHash.Hex(),
+						"error", err,
+					)
+					continue
+				}
+
 				switch selectedEvent.Name {
 				case "NewHeaderBlock":
 					if isCurrentValidator, delay := util.CalculateTaskDelay(tl.cliCtx); isCurrentValidator {
@@ -317,6 +332,24 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 				}
 			}
 		}
+	}
+}
+
+func isListenedTronEvent(eventName string) bool {
+	switch eventName {
+	case "NewHeaderBlock",
+		"Staked",
+		"SignerChange",
+		"UnstakeInit",
+		"StateSynced",
+		"TopUpFee",
+		"Slashed",
+		"UnJailed",
+		"CheckpointSyncAck",
+		"NewChain":
+		return true
+	default:
+		return false
 	}
 }
 
