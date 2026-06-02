@@ -85,6 +85,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("success hash")
@@ -162,6 +163,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("success hash")
@@ -195,6 +197,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber + 1),
 		}
 		txHash := hmTypes.HexToHeimdallHash("success hash")
@@ -233,6 +236,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("success hash")
@@ -271,6 +275,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("success hash")

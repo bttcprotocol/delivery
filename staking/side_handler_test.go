@@ -93,6 +93,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Success", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -131,6 +132,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("No receipt", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -170,6 +172,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("No EventLog", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -199,6 +202,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid Signer pubkey", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -238,6 +242,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid Signer address", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -277,6 +282,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid Validator Id", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -316,6 +322,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid Activation Epoch", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -355,6 +362,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid Amount", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -394,6 +402,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid Block Number", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -433,6 +442,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 	suite.Run("Invalid nonce", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -491,7 +501,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 	suite.Run("Success", func() {
 		msg := types.NewMsgSignerUpdate(newSigner[0].Signer, uint64(oldSigner.ID), newSigner[0].PubKey, msgTxHash, 0, blockNumber.Uint64(), nonce.Uint64())
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
 
@@ -515,7 +525,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		msg := types.NewMsgSignerUpdate(newSigner[0].Signer, uint64(oldSigner.ID), newSigner[0].PubKey, msgTxHash, 0, blockNumber.Uint64(), nonce.Uint64())
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
@@ -539,7 +549,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 			nonce.Uint64(),
 		)
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
 
@@ -563,7 +573,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		msg := types.NewMsgSignerUpdate(newSigner[0].Signer, uint64(6), newSigner[0].PubKey, msgTxHash, 0, blockNumber.Uint64(), nonce.Uint64())
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
 
@@ -587,7 +597,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		msg := types.NewMsgSignerUpdate(newSigner[0].Signer, uint64(oldSigner.ID), hmTypes.NewPubKey([]byte{123}), msgTxHash, 0, blockNumber.Uint64(), nonce.Uint64())
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
 
@@ -611,7 +621,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		msg := types.NewMsgSignerUpdate(hmTypes.ZeroHeimdallAddress, uint64(oldSigner.ID), newSigner[0].PubKey, msgTxHash, 0, blockNumber.Uint64(), nonce.Uint64())
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
 
@@ -635,7 +645,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		msg := types.NewMsgSignerUpdate(newSigner[0].Signer, uint64(oldSigner.ID), newSigner[0].PubKey, msgTxHash, 0, blockNumber.Uint64(), uint64(12))
 
-		txreceipt := &ethTypes.Receipt{BlockNumber: blockNumber}
+		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
 
@@ -670,6 +680,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 	suite.Run("Success", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -706,6 +717,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 	suite.Run("No Receipt", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -742,6 +754,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 	suite.Run("No Eventlog", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -772,6 +785,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		amount, _ := big.NewInt(0).SetString("10000000000000000000", 10)
 
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -807,6 +821,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 	suite.Run("Invalid validatorId", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -843,6 +858,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 	suite.Run("Invalid DeactivationEpoch", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 
@@ -878,6 +894,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 	suite.Run("Invalid Nonce", func() {
 		suite.contractCaller = mocks.IContractCaller{}
 		txreceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: blockNumber,
 		}
 

@@ -78,6 +78,10 @@ func SideHandleMsgTickAck(ctx sdk.Context, k Keeper, msg types.MsgTickAck, contr
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.TronHash().Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
 
 	// get event log for slashed event
 	eventLog, err := contractCaller.DecodeSlashedEvent(chainParams.StakingInfoAddress.EthAddress(), receipt, msg.LogIndex)
@@ -118,6 +122,10 @@ func SideHandleMsgUnjail(ctx sdk.Context, k Keeper, msg types.MsgUnjail, contrac
 	receipt, err := contractCaller.GetTronTransactionReceipt(msg.TxHash.TronHash().Hex())
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.TronHash().Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 
 	// get unjail event

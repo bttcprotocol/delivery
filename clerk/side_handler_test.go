@@ -62,9 +62,7 @@ func TestSideHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(SideHandlerTestSuite))
 }
 
-//
 // Test cases
-//
 func (suite *SideHandlerTestSuite) TestSideHandler() {
 	t, ctx := suite.T(), suite.ctx
 
@@ -88,6 +86,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("success hash")
@@ -131,6 +130,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		logIndex := uint64(10)
 		blockNumber := uint64(599)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("hello tron")
@@ -201,6 +201,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		logIndex := uint64(100)
 		blockNumber := uint64(510)
 		txReceipt := &ethTypes.Receipt{
+			Status:      ethTypes.ReceiptStatusSuccessful,
 			BlockNumber: new(big.Int).SetUint64(blockNumber),
 		}
 		txHash := hmTypes.HexToHeimdallHash("no log hash")
