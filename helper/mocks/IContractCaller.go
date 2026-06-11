@@ -1054,7 +1054,7 @@ func (_m *IContractCaller) GetTronTransactionReceipt(txID string) (*types.Receip
 
 // GetTronConfirmedTxReceipt provides a mock function with given fields: txID, requiredConfirmations
 func (_m *IContractCaller) GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*types.Receipt, error) {
-	ret := _m.Called(txID, requiredConfirmations)
+	ret := _m.Mock.Called(txID, requiredConfirmations)
 
 	var r0 *types.Receipt
 	if rf, ok := ret.Get(0).(func(string, uint64) *types.Receipt); ok {
