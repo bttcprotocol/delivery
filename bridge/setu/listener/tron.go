@@ -222,7 +222,8 @@ func (tl *TronListener) queryAndBroadcastEvents(chainManagerParams *chainmanager
 			if selectedEvent != nil {
 				tl.Logger.Debug("ReceivedTronEvent", "eventname", selectedEvent.Name)
 
-				receipt, err := tl.contractConnector.GetTronTransactionReceipt(vLog.TxHash.Hex())
+				receipt, err := tl.contractConnector.GetTronConfirmedTxReceipt(vLog.TxHash.Hex(),
+					chainManagerParams.TronchainTxConfirmations)
 				if receipt != nil && !helper.IsTronTransactionReceiptSuccessful(receipt) {
 					tl.Logger.Error(
 						"Skip failed tron transaction event",

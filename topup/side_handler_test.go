@@ -114,7 +114,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 			Fee:  coins.AmountOf(authTypes.FeeToken).BigInt(),
 		}
 
-		suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 		suite.contractCaller.On("DecodeValidatorTopupFeesEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(event, nil)
 
 		// execute handler
@@ -147,7 +147,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 			blockNumber,
 		)
 
-		suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(nil, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, chainParams.TronchainTxConfirmations).Return(nil, nil)
 		suite.contractCaller.On("DecodeValidatorTopupFeesEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), nil, logIndex).Return(nil, nil)
 
 		// execute handler
@@ -181,7 +181,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 			blockNumber,
 		)
 
-		suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 		suite.contractCaller.On("DecodeValidatorTopupFeesEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(nil, nil)
 
 		// execute handler
@@ -220,7 +220,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 			User: ethCommon.BytesToAddress(addr1.Bytes()),
 			Fee:  coins.AmountOf(authTypes.FeeToken).BigInt(),
 		}
-		suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 		suite.contractCaller.On("DecodeValidatorTopupFeesEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(event, nil)
 
 		// execute handler
@@ -259,7 +259,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 			User: ethCommon.BytesToAddress(addr2.Bytes()),
 			Fee:  coins.AmountOf(authTypes.FeeToken).BigInt(),
 		}
-		suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 		suite.contractCaller.On("DecodeValidatorTopupFeesEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(event, nil)
 
 		// execute handler
@@ -298,7 +298,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgTopup() {
 			User: ethCommon.BytesToAddress(addr1.Bytes()),
 			Fee:  big.NewInt(1), // different fee
 		}
-		suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 		suite.contractCaller.On("DecodeValidatorTopupFeesEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(event, nil)
 
 		// execute handler

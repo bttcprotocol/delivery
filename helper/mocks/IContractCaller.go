@@ -1052,6 +1052,29 @@ func (_m *IContractCaller) GetTronTransactionReceipt(txID string) (*types.Receip
 	return r0, r1
 }
 
+// GetTronConfirmedTxReceipt provides a mock function with given fields: txID, requiredConfirmations
+func (_m *IContractCaller) GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*types.Receipt, error) {
+	ret := _m.Called(txID, requiredConfirmations)
+
+	var r0 *types.Receipt
+	if rf, ok := ret.Get(0).(func(string, uint64) *types.Receipt); ok {
+		r0 = rf(txID, requiredConfirmations)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Receipt)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, uint64) error); ok {
+		r1 = rf(txID, requiredConfirmations)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetValidatorInfo provides a mock function with given fields: valID, stakingInfoInstance
 func (_m *IContractCaller) GetValidatorInfo(valID heimdalltypes.ValidatorID, stakingInfoInstance *stakinginfo.Stakinginfo) (heimdalltypes.Validator, error) {
 	ret := _m.Called(valID, stakingInfoInstance)
