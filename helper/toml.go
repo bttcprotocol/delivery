@@ -71,7 +71,7 @@ bsc_root_chain_manager_proxy = "{{ .BscRootChainManagerProxy }}"
 tron_root_chain_manager_proxy = "{{ .TronRootChainManagerProxy }}"
 
 #### state sync filters ####
-open_origin_token_deposit = {{ .OpenOriginTokenDeposit }}
+close_origin_token_deposit = {{ .CloseOriginTokenDeposit }}
 
 ##### Timeout Config #####
 no_ack_wait_time = "{{ .NoACKWaitTime }}"

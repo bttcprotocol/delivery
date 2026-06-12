@@ -107,8 +107,8 @@ const (
 	DefaultLogsType = "json"
 	DefaultChain    = "mainnet"
 
-	secretFilePerm                = 0600
-	DefaultOpenOriginTokenDeposit = true
+	secretFilePerm                 = 0600
+	DefaultCloseOriginTokenDeposit = false
 )
 
 var (
@@ -173,7 +173,7 @@ type Configuration struct {
 	BscRootChainManagerProxy  string `mapstructure:"bsc_root_chain_manager_proxy"`  // root chain manager proxy for bsc
 	TronRootChainManagerProxy string `mapstructure:"tron_root_chain_manager_proxy"` // root chain manager proxy for tron
 
-	OpenOriginTokenDeposit bool `mapstructure:"open_origin_token_deposit"` // only allow mintable ERC20 deposits when enabled
+	CloseOriginTokenDeposit bool `mapstructure:"close_origin_token_deposit"` // only allow mintable ERC20 deposits when it is true
 }
 
 var conf Configuration
@@ -335,7 +335,7 @@ func GetDefaultHeimdallConfig() Configuration {
 		BscMaxQueryBlocks:  DefaultBscMaxQueryBlocks,
 		TronMaxQueryBlocks: DefaultTronMaxQueryBlocks,
 
-		OpenOriginTokenDeposit: DefaultOpenOriginTokenDeposit,
+		CloseOriginTokenDeposit: DefaultCloseOriginTokenDeposit,
 	}
 }
 

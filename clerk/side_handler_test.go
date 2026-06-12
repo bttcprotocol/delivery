@@ -170,11 +170,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 
 	const depositStateSyncData = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012087a7811f4bfedea3d341ad165680ae306b01aaeacc205d227629cf157dd9f821000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000a9635197462ba512b47d19399017f6857888bc27000000000000000000000000032017411f4663b317fe77c257d28d5cd1b26e3d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000056bc75e2d63100000"
 
-	t.Run("OpenOriginTokenDeposit", func(t *testing.T) {
+	t.Run("CloseOriginTokenDeposit", func(t *testing.T) {
 		suite.contractCaller = mocks.IContractCaller{}
 		suite.sideHandler = clerk.NewSideTxHandler(suite.app.ClerkKeeper, &suite.contractCaller)
 		conf := helper.GetDefaultHeimdallConfig()
-		conf.OpenOriginTokenDeposit = false
+		conf.CloseOriginTokenDeposit = true
 		conf.EthRootChainManagerProxy = "0x0000000000000000000000000000000000000001"
 		helper.SetTestConfig(conf)
 		defer helper.SetTestConfig(helper.GetDefaultHeimdallConfig())
@@ -214,11 +214,11 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		require.Equal(t, uint32(sdk.CodeOK), result.Code)
 		require.Equal(t, abci.SideTxResultType_Yes, result.Result)
 	})
-	t.Run("OpenOriginTokenDeposit", func(t *testing.T) {
+	t.Run("CloseOriginTokenDeposit", func(t *testing.T) {
 		suite.contractCaller = mocks.IContractCaller{}
 		suite.sideHandler = clerk.NewSideTxHandler(suite.app.ClerkKeeper, &suite.contractCaller)
 		conf := helper.GetDefaultHeimdallConfig()
-		conf.OpenOriginTokenDeposit = false
+		conf.CloseOriginTokenDeposit = true
 		conf.EthRootChainManagerProxy = "0x0000000000000000000000000000000000000001"
 		helper.SetTestConfig(conf)
 		defer helper.SetTestConfig(helper.GetDefaultHeimdallConfig())

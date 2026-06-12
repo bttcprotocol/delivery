@@ -138,7 +138,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 
-	if !helper.GetConfig().OpenOriginTokenDeposit {
+	if helper.GetConfig().CloseOriginTokenDeposit {
 		shouldVote, err := shouldVoteStateSyncedEvent(contractCaller, msg.RootChainType, msg.Data)
 		if err != nil {
 			k.Logger(ctx).Error("Error parsing state sync data", "error", err)

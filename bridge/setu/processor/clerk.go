@@ -84,7 +84,7 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 			return nil
 		}
 
-		if !helper.GetConfig().OpenOriginTokenDeposit {
+		if helper.GetConfig().CloseOriginTokenDeposit {
 			shouldBroadcast, err := cp.shouldBroadcastStateSyncedEvent(event.Data, rootChainType)
 			if err != nil {
 				cp.Logger.Error("Error while checking state sync token type", "error", err)
