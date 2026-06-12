@@ -42,11 +42,7 @@ type StateSyncData struct {
 // ParseStateSyncData decodes StateSender data encoded as abi.encode(eventType, syncData).
 func ParseStateSyncData(data []byte) (*StateSyncData, error) {
 	stateData, err := parseStateSyncPayload(data)
-	if err == nil && stateData.EventType != StateSyncEventUnknown {
-		return stateData, nil
-	} else if stateData.EventType == StateSyncEventUnknown {
-		return nil, errors.New("invalid EventType")
-	} else {
+	if err != nil {
 		return nil, err
 	}
 
@@ -84,7 +80,7 @@ func parseStateSyncPayload(data []byte) (*StateSyncData, error) {
 	case StateSyncMapTokenTypeHash:
 		return parseMapTokenStateSyncData(syncData)
 	default:
-		return &StateSyncData{EventType: StateSyncEventUnknown}, nil
+		return &StateSyncData{EventType: StateSyncEventUnknown}, errors.New("invalid state sync type")
 	}
 }
 
