@@ -84,6 +84,26 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 			return nil
 		}
 
+		if !helper.GetConfig().OpenOriginTokenDeposit {
+			shouldBroadcast, err := cp.shouldBroadcastStateSyncedEvent(event.Data, rootChainType)
+			if err != nil {
+				cp.Logger.Error("Error while checking state sync token type", "error", err)
+				return err
+			}
+			if !shouldBroadcast {
+				cp.Logger.Info("Ignoring deposit event for non-mintable ERC20 token",
+					"event", eventName,
+					"id", event.Id,
+					"contract", event.ContractAddress,
+					"data", hex.EncodeToString(event.Data),
+					"txHash", hmTypes.BytesToHeimdallHash(vLog.TxHash.Bytes()),
+					"logIndex", uint64(vLog.Index),
+					"rootChainType", rootChainType,
+				)
+				return nil
+			}
+		}
+
 		cp.Logger.Debug(
 			"⬜ New event found",
 			"event", eventName,
@@ -116,6 +136,27 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 		}
 	}
 	return nil
+}
+
+func (cp *ClerkProcessor) shouldBroadcastStateSyncedEvent(data []byte, rootChainType string) (bool, error) {
+	stateData, err := helper.ParseStateSyncData(data)
+	if err != nil {
+		return false, err
+	}
+	if stateData.EventType != helper.StateSyncEventDeposit {
+		return true, nil
+	}
+
+	rootChainManagerProxy, err := helper.GetRootChainManagerProxy(rootChainType)
+	if err != nil {
+		return false, err
+	}
+	tokenType, err := cp.contractConnector.GetRootTokenType(rootChainType, rootChainManagerProxy, stateData.RootToken)
+	if err != nil {
+		return false, err
+	}
+
+	return tokenType == helper.MintableERC20TokenHash, nil
 }
 
 // isOldTx  checks if tx is already processed or not

@@ -64,6 +64,7 @@ type IContractCaller interface {
 	DecodeSignerUpdateEvent(common.Address, *ethTypes.Receipt, uint64) (*stakinginfo.StakinginfoSignerChange, error)
 	// decode state events
 	DecodeStateSyncedEvent(common.Address, *ethTypes.Receipt, uint64) (*statesender.StatesenderStateSynced, error)
+	GetRootTokenType(string, string, common.Address) (common.Hash, error)
 
 	// decode slashing events
 	DecodeSlashedEvent(common.Address, *ethTypes.Receipt, uint64) (*stakinginfo.StakinginfoSlashed, error)
@@ -286,6 +287,51 @@ func (c *ContractCaller) GetMaticTokenInstance(maticTokenAddress common.Address)
 		return ci, err
 	}
 	return contractInstance.(*erc20.Erc20), nil
+}
+
+func (c *ContractCaller) GetRootTokenType(rootChainType string, rootChainManagerProxy string, rootToken common.Address) (common.Hash, error) {
+	data, err := rootChainManagerProxyABI.Pack("tokenToType", rootToken)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	var result []byte
+	switch rootChainType {
+	case hmTypes.RootChainTypeEth:
+		contractAddress := common.HexToAddress(rootChainManagerProxy)
+		result, err = c.MainChainClient.CallContract(context.Background(), ethereum.CallMsg{
+			To:   &contractAddress,
+			Data: data,
+		}, nil)
+	case hmTypes.RootChainTypeBsc:
+		contractAddress := common.HexToAddress(rootChainManagerProxy)
+		result, err = c.BscChainClient.CallContract(context.Background(), ethereum.CallMsg{
+			To:   &contractAddress,
+			Data: data,
+		}, nil)
+	case hmTypes.RootChainTypeTron:
+		result, err = c.TronChainRPC.TriggerConstantContract(rootChainManagerProxy, data)
+	default:
+		return common.Hash{}, errors.New("unknown root chain type")
+	}
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	outputs, err := rootChainManagerProxyABI.Unpack("tokenToType", result)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if len(outputs) != 1 {
+		return common.Hash{}, errors.New("invalid tokenToType response")
+	}
+
+	tokenType, ok := outputs[0].([32]byte)
+	if !ok {
+		return common.Hash{}, errors.New("invalid token type")
+	}
+
+	return common.BytesToHash(tokenType[:]), nil
 }
 
 // NewLru create instance of lru

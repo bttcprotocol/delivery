@@ -1,8 +1,10 @@
 package clerk_test
 
 import (
+	"encoding/hex"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/maticnetwork/heimdall/app"
 	"github.com/maticnetwork/heimdall/clerk"
@@ -62,9 +65,7 @@ func TestSideHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(SideHandlerTestSuite))
 }
 
-//
 // Test cases
-//
 func (suite *SideHandlerTestSuite) TestSideHandler() {
 	t, ctx := suite.T(), suite.ctx
 
@@ -165,6 +166,97 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		require.Nil(t, storedEventRecord)
 		require.Error(t, err)
 
+	})
+
+	const depositStateSyncData = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012087a7811f4bfedea3d341ad165680ae306b01aaeacc205d227629cf157dd9f821000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000a9635197462ba512b47d19399017f6857888bc27000000000000000000000000032017411f4663b317fe77c257d28d5cd1b26e3d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000056bc75e2d63100000"
+
+	t.Run("OpenOriginTokenDeposit", func(t *testing.T) {
+		suite.contractCaller = mocks.IContractCaller{}
+		suite.sideHandler = clerk.NewSideTxHandler(suite.app.ClerkKeeper, &suite.contractCaller)
+		conf := helper.GetDefaultHeimdallConfig()
+		conf.OpenOriginTokenDeposit = false
+		conf.EthRootChainManagerProxy = "0x0000000000000000000000000000000000000001"
+		helper.SetTestConfig(conf)
+		defer helper.SetTestConfig(helper.GetDefaultHeimdallConfig())
+
+		logIndex := uint64(11)
+		blockNumber := uint64(600)
+		txReceipt := &ethTypes.Receipt{
+			BlockNumber: new(big.Int).SetUint64(blockNumber),
+		}
+		txHash := hmTypes.HexToHeimdallHash("mintable deposit")
+		data, err := hex.DecodeString(strings.TrimPrefix(depositStateSyncData, "0x"))
+		require.NoError(t, err)
+		rootToken := ethCommon.HexToAddress("0x032017411f4663b317fe77c257d28d5cd1b26e3d")
+
+		msg := types.NewMsgEventRecord(
+			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+			txHash,
+			logIndex,
+			blockNumber,
+			id,
+			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+			data,
+			suite.chainID,
+			hmTypes.RootChainTypeEth,
+		)
+
+		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth).Return(txReceipt, nil)
+		event := &statesender.StatesenderStateSynced{
+			Id:              new(big.Int).SetUint64(msg.ID),
+			ContractAddress: msg.ContractAddress.EthAddress(),
+			Data:            msg.Data,
+		}
+		suite.contractCaller.On("DecodeStateSyncedEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(event, nil)
+		suite.contractCaller.On("GetRootTokenType", hmTypes.RootChainTypeEth, conf.EthRootChainManagerProxy, rootToken).Return(helper.MintableERC20TokenHash, nil)
+
+		result := suite.sideHandler(ctx, msg)
+		require.Equal(t, uint32(sdk.CodeOK), result.Code)
+		require.Equal(t, abci.SideTxResultType_Yes, result.Result)
+	})
+	t.Run("OpenOriginTokenDeposit", func(t *testing.T) {
+		suite.contractCaller = mocks.IContractCaller{}
+		suite.sideHandler = clerk.NewSideTxHandler(suite.app.ClerkKeeper, &suite.contractCaller)
+		conf := helper.GetDefaultHeimdallConfig()
+		conf.OpenOriginTokenDeposit = false
+		conf.EthRootChainManagerProxy = "0x0000000000000000000000000000000000000001"
+		helper.SetTestConfig(conf)
+		defer helper.SetTestConfig(helper.GetDefaultHeimdallConfig())
+
+		logIndex := uint64(12)
+		blockNumber := uint64(601)
+		txReceipt := &ethTypes.Receipt{
+			BlockNumber: new(big.Int).SetUint64(blockNumber),
+		}
+		txHash := hmTypes.HexToHeimdallHash("non mintable deposit")
+		data, err := hex.DecodeString(strings.TrimPrefix(depositStateSyncData, "0x"))
+		require.NoError(t, err)
+		rootToken := ethCommon.HexToAddress("0x032017411f4663b317fe77c257d28d5cd1b26e3d")
+
+		msg := types.NewMsgEventRecord(
+			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+			txHash,
+			logIndex,
+			blockNumber,
+			id,
+			hmTypes.BytesToHeimdallAddress(addr1.Bytes()),
+			data,
+			suite.chainID,
+			hmTypes.RootChainTypeEth,
+		)
+
+		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations, hmTypes.RootChainTypeEth).Return(txReceipt, nil)
+		event := &statesender.StatesenderStateSynced{
+			Id:              new(big.Int).SetUint64(msg.ID),
+			ContractAddress: msg.ContractAddress.EthAddress(),
+			Data:            msg.Data,
+		}
+		suite.contractCaller.On("DecodeStateSyncedEvent", chainParams.ChainParams.StateSenderAddress.EthAddress(), txReceipt, logIndex).Return(event, nil)
+		suite.contractCaller.On("GetRootTokenType", hmTypes.RootChainTypeEth, conf.EthRootChainManagerProxy, rootToken).Return(ethCommon.HexToHash("0x01"), nil)
+
+		result := suite.sideHandler(ctx, msg)
+		require.NotEqual(t, uint32(sdk.CodeOK), result.Code)
+		require.Equal(t, abci.SideTxResultType_Skip, result.Result)
 	})
 	t.Run("NoReceipt", func(t *testing.T) {
 		suite.contractCaller = mocks.IContractCaller{}

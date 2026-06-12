@@ -2,6 +2,7 @@ package helper
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"log"
 	"math/big"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/maticnetwork/heimdall/helper/fork"
+	hmTypes "github.com/maticnetwork/heimdall/types"
 
 	"github.com/maticnetwork/heimdall/tron"
 
@@ -105,7 +107,8 @@ const (
 	DefaultLogsType = "json"
 	DefaultChain    = "mainnet"
 
-	secretFilePerm = 0600
+	secretFilePerm                = 0600
+	DefaultOpenOriginTokenDeposit = true
 )
 
 var (
@@ -165,6 +168,12 @@ type Configuration struct {
 	EthMaxQueryBlocks  int64 `mapstructure:"eth_max_query_blocks"`  // eth max number of blocks in one query logs
 	BscMaxQueryBlocks  int64 `mapstructure:"bsc_max_query_blocks"`  // bsc max number of blocks in one query logs
 	TronMaxQueryBlocks int64 `mapstructure:"tron_max_query_blocks"` // tron max number of blocks in one query logs
+
+	EthRootChainManagerProxy  string `mapstructure:"eth_root_chain_manager_proxy"`  // root chain manager proxy for eth
+	BscRootChainManagerProxy  string `mapstructure:"bsc_root_chain_manager_proxy"`  // root chain manager proxy for bsc
+	TronRootChainManagerProxy string `mapstructure:"tron_root_chain_manager_proxy"` // root chain manager proxy for tron
+
+	OpenOriginTokenDeposit bool `mapstructure:"open_origin_token_deposit"` // only allow mintable ERC20 deposits when enabled
 }
 
 var conf Configuration
@@ -325,12 +334,33 @@ func GetDefaultHeimdallConfig() Configuration {
 		EthMaxQueryBlocks:  DefaultEthMaxQueryBlocks,
 		BscMaxQueryBlocks:  DefaultBscMaxQueryBlocks,
 		TronMaxQueryBlocks: DefaultTronMaxQueryBlocks,
+
+		OpenOriginTokenDeposit: DefaultOpenOriginTokenDeposit,
 	}
 }
 
 // GetConfig returns cached configuration object
 func GetConfig() Configuration {
 	return conf
+}
+
+func GetRootChainManagerProxy(rootChainType string) (string, error) {
+	var proxy string
+	switch rootChainType {
+	case hmTypes.RootChainTypeEth:
+		proxy = conf.EthRootChainManagerProxy
+	case hmTypes.RootChainTypeBsc:
+		proxy = conf.BscRootChainManagerProxy
+	case hmTypes.RootChainTypeTron:
+		proxy = conf.TronRootChainManagerProxy
+	default:
+		return "", errors.New("unknown root chain type")
+	}
+	if proxy == "" {
+		return "", errors.New("root chain manager proxy is not configured")
+	}
+
+	return proxy, nil
 }
 
 func GetGenesisDoc() tmTypes.GenesisDoc {
