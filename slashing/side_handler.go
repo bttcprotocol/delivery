@@ -74,9 +74,13 @@ func SideHandleMsgTickAck(ctx sdk.Context, k Keeper, msg types.MsgTickAck, contr
 	chainParams := params.ChainParams
 
 	// get main tx receipt
-	receipt, err := contractCaller.GetTronTransactionReceipt(msg.TxHash.TronHash().Hex())
+	receipt, err := contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.TronHash().Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.TronHash().Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 
 	// get event log for slashed event
@@ -115,9 +119,13 @@ func SideHandleMsgUnjail(ctx sdk.Context, k Keeper, msg types.MsgUnjail, contrac
 	chainParams := params.ChainParams
 
 	// get main tx receipt
-	receipt, err := contractCaller.GetTronTransactionReceipt(msg.TxHash.TronHash().Hex())
+	receipt, err := contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.TronHash().Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.TronHash().Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 
 	// get unjail event

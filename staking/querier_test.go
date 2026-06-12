@@ -210,7 +210,7 @@ func (suite *QuerierTestSuite) TestHandleQueryStakingSequence() {
 
 	app.StakingKeeper.SetStakingSequence(ctx, sequence.String())
 
-	suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+	suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), app.ChainKeeper.GetParams(ctx).TronchainTxConfirmations).Return(txreceipt, nil)
 
 	path := []string{types.QueryStakingSequence}
 
