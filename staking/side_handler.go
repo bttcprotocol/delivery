@@ -87,7 +87,7 @@ func SideHandleMsgValidatorJoin(ctx sdk.Context, msg types.MsgValidatorJoin, k K
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
@@ -230,7 +230,7 @@ func SideHandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Kee
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}
@@ -299,7 +299,7 @@ func SideHandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k K
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}

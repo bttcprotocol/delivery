@@ -120,7 +120,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -159,7 +159,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(nil, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(nil, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(nil, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -189,7 +189,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		)
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(nil, nil)
 
@@ -229,7 +229,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -269,7 +269,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -309,7 +309,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -349,7 +349,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -389,7 +389,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -429,7 +429,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -469,7 +469,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorJoin() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", txHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		suite.contractCaller.On("DecodeValidatorJoinEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, msgValJoin.LogIndex).Return(stakinginfoStaked, nil)
 
@@ -503,7 +503,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
 			ValidatorId:  new(big.Int).SetUint64(oldSigner.ID.Uint64()),
@@ -528,7 +528,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 		suite.contractCaller.On("DecodeSignerUpdateEvent", chainParams.ChainParams.StakingInfoAddress.EthAddress(), txreceipt, uint64(0)).Return(nil, nil)
 
 		result := suite.sideHandler(ctx, msg)
@@ -551,7 +551,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
 			ValidatorId:  new(big.Int).SetUint64(oldSigner.ID.Uint64()),
@@ -575,7 +575,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
 			ValidatorId:  new(big.Int).SetUint64(oldSigner.ID.Uint64()),
@@ -599,7 +599,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
 			ValidatorId:  new(big.Int).SetUint64(oldSigner.ID.Uint64()),
@@ -623,7 +623,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
 			ValidatorId:  new(big.Int).SetUint64(oldSigner.ID.Uint64()),
@@ -647,7 +647,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgSignerUpdate() {
 
 		txreceipt := &ethTypes.Receipt{Status: ethTypes.ReceiptStatusSuccessful, BlockNumber: blockNumber}
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		signerUpdateEvent := &stakinginfo.StakinginfoSignerChange{
 			ValidatorId:  new(big.Int).SetUint64(oldSigner.ID.Uint64()),
@@ -685,7 +685,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		amount, _ := big.NewInt(0).SetString("10000000000000000000", 10)
 		stakinginfoUnstakeInit := &stakinginfo.StakinginfoUnstakeInit{
@@ -722,7 +722,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(nil, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(nil, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(nil, nil)
 
 		amount, _ := big.NewInt(0).SetString("10000000000000000000", 10)
 		stakinginfoUnstakeInit := &stakinginfo.StakinginfoUnstakeInit{
@@ -759,7 +759,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		validators[0].EndEpoch = 10
 
@@ -790,7 +790,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		stakinginfoUnstakeInit := &stakinginfo.StakinginfoUnstakeInit{
 			User:              validators[0].Signer.EthAddress(),
@@ -826,7 +826,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		amount, _ := big.NewInt(0).SetString("10000000000000000000", 10)
 		stakinginfoUnstakeInit := &stakinginfo.StakinginfoUnstakeInit{
@@ -863,7 +863,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		amount, _ := big.NewInt(0).SetString("10000000000000000000", 10)
 		stakinginfoUnstakeInit := &stakinginfo.StakinginfoUnstakeInit{
@@ -899,7 +899,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgValidatorExit() {
 		}
 
 		suite.contractCaller.On("GetConfirmedTxReceipt", msgTxHash.EthHash(), chainParams.MainchainTxConfirmations).Return(txreceipt, nil)
-		suite.contractCaller.On("GetTronTransactionReceipt", msgTxHash.String()).Return(txreceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", msgTxHash.String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 
 		amount, _ := big.NewInt(0).SetString("10000000000000000000", 10)
 		stakinginfoUnstakeInit := &stakinginfo.StakinginfoUnstakeInit{

@@ -246,7 +246,7 @@ func (suite *QuerierTestSuite) TestHandleQueryRecordSequence() {
 	// tron
 	testSeq = helper.CalculateSequence(big.NewInt(1), 1, hmTypes.RootChainTypeTron).String()
 	ck.SetRecordSequence(ctx, testSeq)
-	suite.contractCaller.On("GetTronTransactionReceipt", txHash.TronHash().String()).Return(txreceipt, nil)
+	suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.TronHash().String(), chainParams.TronchainTxConfirmations).Return(txreceipt, nil)
 	req = abci.RequestQuery{
 		Path: route,
 		Data: app.Codec().MustMarshalJSON(types.NewQueryRecordSequenceParams("12345", logIndex, hmTypes.RootChainTypeTron)),

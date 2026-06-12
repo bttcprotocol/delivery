@@ -240,7 +240,10 @@ func SendCheckpointACKTx(cdc *codec.Codec) *cobra.Command {
 				}
 				rootChainAddress = chainmanagerParams.ChainParams.RootChainAddress.EthAddress()
 			case hmTypes.RootChainTypeTron:
-				receipt, err = contractCallerObj.GetTronTransactionReceipt(txHash.Hex())
+				receipt, err = contractCallerObj.GetTronConfirmedTxReceipt(
+					txHash.Hex(),
+					chainmanagerParams.TronchainTxConfirmations,
+				)
 				if err != nil || receipt == nil {
 					return errors.New("transaction is not confirmed yet. Please wait for sometime and try again")
 				}

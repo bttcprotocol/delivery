@@ -49,7 +49,7 @@ func SideHandleMsgNewChain(ctx sdk.Context, msg types.MsgNewChain, k Keeper, con
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return common.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 	}

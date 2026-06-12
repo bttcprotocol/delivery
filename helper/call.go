@@ -99,6 +99,7 @@ type IContractCaller interface {
 	GetTronHeaderInfo(headerID uint64, rootChainAddress string, childBlockInterval uint64) (root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error)
 	GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error)
 	GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error)
+	GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*ethTypes.Receipt, error)
 	GetTronLatestBlockNumber() (int64, error)
 
 	// checkpoint sync
@@ -164,7 +165,7 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	if err != nil {
 		return contractCallerObj, err
 	}
-
+	contractCallerObj.LatestBlockCache = make(map[string]uint64)
 	contractCallerObj.ContractInstanceCache = make(map[string]interface{})
 
 	// package global cache (string->ABI)
@@ -527,7 +528,7 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 		}
 	} else {
 		latestBlkNumber := c.LatestBlockCache[rootChain]
-		if latestBlkNumber-receipt.BlockNumber.Uint64() >= requiredConfirmations {
+		if latestBlkNumber >= receiptBlockNumber && latestBlkNumber-receiptBlockNumber >= requiredConfirmations {
 			Logger.Debug("receipt block is confirmed by cache",
 				"root", rootChain, "latestBlockCached", latestBlkNumber, "receiptBlock", receipt.BlockNumber.Uint64())
 
@@ -541,9 +542,9 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 			return nil, err
 		}
 		Logger.Debug("Latest block on main chain obtained", "root", rootChain, "Block", latestBlk.Number.Uint64())
-		c.LatestBlockCache[rootChain] = latestBlk.Number.Uint64()
-		diff := latestBlk.Number.Uint64() - receipt.BlockNumber.Uint64()
-		if diff < requiredConfirmations {
+		latestBlkNumber = latestBlk.Number.Uint64()
+		c.LatestBlockCache[rootChain] = latestBlkNumber
+		if latestBlkNumber < receiptBlockNumber || latestBlkNumber-receiptBlockNumber < requiredConfirmations {
 			return nil, errors.New("not enough confirmations")
 		}
 	}
@@ -881,6 +882,65 @@ func (c *ContractCaller) GetTronTransactionReceipt(txID string) (*ethTypes.Recei
 		return nil, err
 	}
 	return &transactionReceipt.Result, nil
+}
+
+// GetTronConfirmedTxReceipt returns confirmed tron tx receipt.
+func (c *ContractCaller) GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*ethTypes.Receipt, error) {
+	var receipt *ethTypes.Receipt
+	cacheKey := hmTypes.RootChainTypeTron + ":" + txID
+
+	if c.ReceiptCache != nil {
+		if receiptCache, ok := c.ReceiptCache.Get(cacheKey); ok {
+			receipt, _ = receiptCache.(*ethTypes.Receipt)
+		}
+	}
+
+	if receipt == nil {
+		var err error
+
+		receipt, err = c.GetTronTransactionReceipt(txID)
+		if err != nil {
+			Logger.Error("Error while fetching tron receipt", "error", err, "txHash", txID)
+			return nil, err
+		}
+		if receipt == nil || receipt.BlockNumber == nil {
+			return nil, errors.New("not enough confirmations")
+		}
+
+		if c.ReceiptCache != nil {
+			c.ReceiptCache.Add(cacheKey, receipt)
+		}
+	}
+
+	receiptBlockNumber := receipt.BlockNumber.Uint64()
+	Logger.Debug("Tron tx included in block", "root", hmTypes.RootChainTypeTron, "block", receiptBlockNumber, "tx", txID)
+
+	latestBlkNumber := c.LatestBlockCache[hmTypes.RootChainTypeTron]
+	if latestBlkNumber >= receiptBlockNumber && latestBlkNumber-receiptBlockNumber >= requiredConfirmations {
+		Logger.Debug("tron receipt block is confirmed by cache",
+			"root", hmTypes.RootChainTypeTron, "latestBlockCached", latestBlkNumber, "receiptBlock", receiptBlockNumber)
+
+		return receipt, nil
+	}
+
+	latestBlk, err := c.GetTronLatestBlockNumber()
+	if err != nil {
+		Logger.Error("error getting latest block from tron chain", "Error", err)
+		return nil, err
+	}
+	if latestBlk < 0 {
+		return nil, errors.New("invalid latest tron block number")
+	}
+
+	latestBlkNumber = uint64(latestBlk)
+	Logger.Debug("Latest block on tron chain obtained", "root", hmTypes.RootChainTypeTron, "Block", latestBlkNumber)
+	c.LatestBlockCache[hmTypes.RootChainTypeTron] = latestBlkNumber
+
+	if latestBlkNumber < receiptBlockNumber || latestBlkNumber-receiptBlockNumber < requiredConfirmations {
+		return nil, errors.New("not enough confirmations")
+	}
+
+	return receipt, nil
 }
 
 // IsTronTransactionReceiptSuccessful returns true when a Tron transaction receipt indicates success.

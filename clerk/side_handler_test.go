@@ -147,7 +147,7 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 			suite.chainID,
 			hmTypes.RootChainTypeTron,
 		)
-		suite.contractCaller.On("GetTronTransactionReceipt", txHash.Hex()).Return(txReceipt, nil)
+		suite.contractCaller.On("GetTronConfirmedTxReceipt", txHash.Hex(), chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 		event := &statesender.StatesenderStateSynced{
 			Id:              new(big.Int).SetUint64(msg.ID),
 			ContractAddress: msg.ContractAddress.TronAddress(),

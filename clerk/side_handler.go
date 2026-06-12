@@ -93,7 +93,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		}
 		contractAddress = bscChain.StateSenderAddress.EthAddress()
 	case hmTypes.RootChainTypeTron:
-		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+		receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
 		}
