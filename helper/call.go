@@ -11,10 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-
-	"github.com/maticnetwork/heimdall/tron"
-
+	eth "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -29,6 +26,7 @@ import (
 	"github.com/maticnetwork/heimdall/contracts/statereceiver"
 	"github.com/maticnetwork/heimdall/contracts/statesender"
 	"github.com/maticnetwork/heimdall/contracts/validatorset"
+	"github.com/maticnetwork/heimdall/tron"
 
 	"github.com/maticnetwork/heimdall/types"
 	hmTypes "github.com/maticnetwork/heimdall/types"
@@ -299,13 +297,13 @@ func (c *ContractCaller) GetRootTokenType(rootChainType string, rootChainManager
 	switch rootChainType {
 	case hmTypes.RootChainTypeEth:
 		contractAddress := common.HexToAddress(rootChainManagerProxy)
-		result, err = c.MainChainClient.CallContract(context.Background(), ethereum.CallMsg{
+		result, err = c.MainChainClient.CallContract(context.Background(), eth.CallMsg{
 			To:   &contractAddress,
 			Data: data,
 		}, nil)
 	case hmTypes.RootChainTypeBsc:
 		contractAddress := common.HexToAddress(rootChainManagerProxy)
-		result, err = c.BscChainClient.CallContract(context.Background(), ethereum.CallMsg{
+		result, err = c.BscChainClient.CallContract(context.Background(), eth.CallMsg{
 			To:   &contractAddress,
 			Data: data,
 		}, nil)
@@ -516,7 +514,7 @@ func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []c
 	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
 	defer cancel()
 
-	logs, err := c.MaticChainClient.FilterLogs(ctx, ethereum.FilterQuery{ //nolint:typecheck
+	logs, err := c.MaticChainClient.FilterLogs(ctx, eth.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
 		Addresses: addrs,

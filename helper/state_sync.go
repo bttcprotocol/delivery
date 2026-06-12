@@ -44,10 +44,6 @@ func ParseStateSyncData(data []byte) (*StateSyncData, error) {
 	stateData, err := parseStateSyncPayload(data)
 	if err == nil && stateData.EventType != StateSyncEventUnknown {
 		return stateData, nil
-	} else if stateData.EventType == StateSyncEventUnknown {
-		return nil, errors.New("invalid EventType")
-	} else {
-		return nil, err
 	}
 
 	return stateData, nil
