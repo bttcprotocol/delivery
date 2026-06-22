@@ -147,16 +147,17 @@ func (cp *ClerkProcessor) shouldBroadcastStateSyncedEvent(data []byte, rootChain
 		return true, nil
 	}
 
-	rootChainManagerProxy, err := helper.GetRootChainManagerProxy(rootChainType)
-	if err != nil {
-		return false, err
-	}
-	tokenType, err := cp.contractConnector.GetRootTokenType(rootChainType, rootChainManagerProxy, stateData.RootToken)
-	if err != nil {
-		return false, err
-	}
+	return false, nil
+	// rootChainManagerProxy, err := helper.GetRootChainManagerProxy(rootChainType)
+	// if err != nil {
+	// 	return false, err
+	// }
+	// tokenType, err := cp.contractConnector.GetRootTokenType(rootChainType, rootChainManagerProxy, stateData.RootToken)
+	// if err != nil {
+	// 	return false, err
+	// }
 
-	return tokenType == helper.MintableERC20TokenHash, nil
+	// return tokenType == helper.MintableERC20TokenHash, nil
 }
 
 // isOldTx  checks if tx is already processed or not
