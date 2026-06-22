@@ -236,15 +236,16 @@ func shouldVoteStateSyncedEvent(contractCaller helper.IContractCaller, rootChain
 	if stateData.EventType != helper.StateSyncEventDeposit {
 		return true, nil
 	}
+	return false, nil
 
-	rootChainManagerProxy, err := helper.GetRootChainManagerProxy(rootChainType)
-	if err != nil {
-		return false, err
-	}
-	tokenType, err := contractCaller.GetRootTokenType(rootChainType, rootChainManagerProxy, stateData.RootToken)
-	if err != nil {
-		return false, err
-	}
+	// rootChainManagerProxy, err := helper.GetRootChainManagerProxy(rootChainType)
+	// if err != nil {
+	// 	return false, err
+	// }
+	// tokenType, err := contractCaller.GetRootTokenType(rootChainType, rootChainManagerProxy, stateData.RootToken)
+	// if err != nil {
+	// 	return false, err
+	// }
 
-	return tokenType == helper.MintableERC20TokenHash, nil
+	// return tokenType == helper.MintableERC20TokenHash, nil
 }
