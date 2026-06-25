@@ -104,7 +104,7 @@ func (cp *ClerkProcessor) sendStateSyncedToHeimdall(eventName string, logBytes s
 			}
 		}
 
-		cp.Logger.Debug(
+		cp.Logger.Info(
 			"⬜ New event found",
 			"event", eventName,
 			"id", event.Id,
