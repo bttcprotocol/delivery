@@ -149,7 +149,7 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
 		}
 		if !shouldVote {
-			k.Logger(ctx).Error("Deposit token type is not mintable ERC20", "rootChainType", msg.RootChainType)
+			k.Logger(ctx).Error("Deposit token type is not mintable ERC20", "rootChainType", msg.RootChainType, "txHash", msg.TxHash.Hex())
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 		}
 	}
