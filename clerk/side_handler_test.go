@@ -211,8 +211,8 @@ func (suite *SideHandlerTestSuite) TestSideHandleMsgEventRecord() {
 		suite.contractCaller.On("GetRootTokenType", hmTypes.RootChainTypeEth, conf.EthRootChainManagerProxy, rootToken).Return(helper.MintableERC20TokenHash, nil)
 
 		result := suite.sideHandler(ctx, msg)
-		require.Equal(t, uint32(sdk.CodeOK), result.Code)
-		require.Equal(t, abci.SideTxResultType_Yes, result.Result)
+		require.Equal(t, uint32(common.CodeInvalidMsg), result.Code)
+		require.Equal(t, abci.SideTxResultType_Skip, result.Result)
 	})
 	t.Run("CloseOriginTokenDeposit", func(t *testing.T) {
 		suite.contractCaller = mocks.IContractCaller{}
