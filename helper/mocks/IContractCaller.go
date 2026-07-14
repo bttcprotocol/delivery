@@ -727,6 +727,27 @@ func (_m *IContractCaller) GetRootHash(start uint64, end uint64, checkpointLengt
 	return r0, r1
 }
 
+// GetRootTokenType provides a mock function with given fields: _a0, _a1, _a2
+func (_m *IContractCaller) GetRootTokenType(_a0 string, _a1 string, _a2 common.Address) (common.Hash, error) {
+	ret := _m.Mock.Called(_a0, _a1, _a2)
+
+	var r0 common.Hash
+	if rf, ok := ret.Get(0).(func(string, string, common.Address) common.Hash); ok {
+		r0 = rf(_a0, _a1, _a2)
+	} else {
+		r0 = ret.Get(0).(common.Hash)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, common.Address) error); ok {
+		r1 = rf(_a0, _a1, _a2)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetSlashManagerInstance provides a mock function with given fields: slashManagerAddress
 func (_m *IContractCaller) GetSlashManagerInstance(slashManagerAddress common.Address) (*slashmanager.Slashmanager, error) {
 	ret := _m.Called(slashManagerAddress)
@@ -1045,6 +1066,29 @@ func (_m *IContractCaller) GetTronTransactionReceipt(txID string) (*types.Receip
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string) error); ok {
 		r1 = rf(txID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTronConfirmedTxReceipt provides a mock function with given fields: txID, requiredConfirmations
+func (_m *IContractCaller) GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*types.Receipt, error) {
+	ret := _m.Mock.Called(txID, requiredConfirmations)
+
+	var r0 *types.Receipt
+	if rf, ok := ret.Get(0).(func(string, uint64) *types.Receipt); ok {
+		r0 = rf(txID, requiredConfirmations)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Receipt)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, uint64) error); ok {
+		r1 = rf(txID, requiredConfirmations)
 	} else {
 		r1 = ret.Error(1)
 	}

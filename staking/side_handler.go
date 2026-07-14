@@ -87,9 +87,13 @@ func SideHandleMsgValidatorJoin(ctx sdk.Context, msg types.MsgValidatorJoin, k K
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 	// decode validator join event
@@ -226,9 +230,13 @@ func SideHandleMsgSignerUpdate(ctx sdk.Context, msg types.MsgSignerUpdate, k Kee
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 
@@ -291,9 +299,13 @@ func SideHandleMsgValidatorExit(ctx sdk.Context, msg types.MsgValidatorExit, k K
 		err             error
 	)
 	// get event log on tron
-	receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+	receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 	if err != nil || receipt == nil {
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+	}
+	if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+		k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 	}
 	contractAddress = hmTypes.HexToTronAddress(chainParams.TronStakingInfoAddress)
 

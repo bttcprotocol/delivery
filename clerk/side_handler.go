@@ -93,9 +93,13 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 		}
 		contractAddress = bscChain.StateSenderAddress.EthAddress()
 	case hmTypes.RootChainTypeTron:
-		receipt, err = contractCaller.GetTronTransactionReceipt(msg.TxHash.Hex())
+		receipt, err = contractCaller.GetTronConfirmedTxReceipt(msg.TxHash.Hex(), params.TronchainTxConfirmations)
 		if err != nil || receipt == nil {
 			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeWaitFrConfirmation)
+		}
+		if !helper.IsTronTransactionReceiptSuccessful(receipt) {
+			k.Logger(ctx).Error("Tron transaction failed", "txHash", msg.TxHash.Hex(), "status", receipt.Status)
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
 		}
 		contractAddress = hmTypes.HexToTronAddress(chainParams.TronStateSenderAddress)
 	default:
@@ -136,6 +140,18 @@ func SideHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 			"MsgData", hmTypes.BytesToHexBytes(msg.Data),
 		)
 		return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+	}
+
+	if helper.GetConfig().CloseOriginTokenDeposit {
+		shouldVote, err := shouldVoteStateSyncedEvent(contractCaller, msg.RootChainType, msg.Data)
+		if err != nil {
+			k.Logger(ctx).Error("Error parsing state sync data", "error", err)
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeErrDecodeEvent)
+		}
+		if !shouldVote {
+			k.Logger(ctx).Error("Deposit token type is not mintable ERC20", "rootChainType", msg.RootChainType, "txHash", msg.TxHash.Hex())
+			return hmCommon.ErrorSideTx(k.Codespace(), common.CodeInvalidMsg)
+		}
 	}
 
 	result.Result = abci.SideTxResultType_Yes
@@ -210,4 +226,26 @@ func PostHandleMsgEventRecord(ctx sdk.Context, k Keeper, msg types.MsgEventRecor
 	return sdk.Result{
 		Events: ctx.EventManager().Events(),
 	}
+}
+
+func shouldVoteStateSyncedEvent(contractCaller helper.IContractCaller, rootChainType string, data []byte) (bool, error) {
+	stateData, err := helper.ParseStateSyncData(data)
+	if err != nil {
+		return false, err
+	}
+	if stateData.EventType != helper.StateSyncEventDeposit {
+		return true, nil
+	}
+	return false, nil
+
+	// rootChainManagerProxy, err := helper.GetRootChainManagerProxy(rootChainType)
+	// if err != nil {
+	// 	return false, err
+	// }
+	// tokenType, err := contractCaller.GetRootTokenType(rootChainType, rootChainManagerProxy, stateData.RootToken)
+	// if err != nil {
+	// 	return false, err
+	// }
+
+	// return tokenType == helper.MintableERC20TokenHash, nil
 }

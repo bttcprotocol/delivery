@@ -42,8 +42,13 @@ func querySequence(ctx sdk.Context, req abci.RequestQuery, k Keeper, contractCal
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
+	chainParams := k.chainKeeper.GetParams(ctx)
+
 	// get main tx receipt
-	receipt, err := contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
+	receipt, err := contractCallerObj.GetTronConfirmedTxReceipt(
+		hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex(),
+		chainParams.TronchainTxConfirmations,
+	)
 	if err != nil || receipt == nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("Transaction is not confirmed yet. Please wait for sometime and try again"))
 	}

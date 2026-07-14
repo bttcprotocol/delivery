@@ -11,10 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-
-	"github.com/maticnetwork/heimdall/tron"
-
+	eth "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -29,6 +26,7 @@ import (
 	"github.com/maticnetwork/heimdall/contracts/statereceiver"
 	"github.com/maticnetwork/heimdall/contracts/statesender"
 	"github.com/maticnetwork/heimdall/contracts/validatorset"
+	"github.com/maticnetwork/heimdall/tron"
 
 	"github.com/maticnetwork/heimdall/types"
 	hmTypes "github.com/maticnetwork/heimdall/types"
@@ -64,6 +62,7 @@ type IContractCaller interface {
 	DecodeSignerUpdateEvent(common.Address, *ethTypes.Receipt, uint64) (*stakinginfo.StakinginfoSignerChange, error)
 	// decode state events
 	DecodeStateSyncedEvent(common.Address, *ethTypes.Receipt, uint64) (*statesender.StatesenderStateSynced, error)
+	GetRootTokenType(string, string, common.Address) (common.Hash, error)
 
 	// decode slashing events
 	DecodeSlashedEvent(common.Address, *ethTypes.Receipt, uint64) (*stakinginfo.StakinginfoSlashed, error)
@@ -99,6 +98,7 @@ type IContractCaller interface {
 	GetTronHeaderInfo(headerID uint64, rootChainAddress string, childBlockInterval uint64) (root common.Hash, start, end, createdAt uint64, proposer types.HeimdallAddress, err error)
 	GetTronEventsByContractAddress(address []string, from, to int64) ([]ethTypes.Log, error)
 	GetTronTransactionReceipt(txID string) (*ethTypes.Receipt, error)
+	GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*ethTypes.Receipt, error)
 	GetTronLatestBlockNumber() (int64, error)
 
 	// checkpoint sync
@@ -164,7 +164,7 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	if err != nil {
 		return contractCallerObj, err
 	}
-
+	contractCallerObj.LatestBlockCache = make(map[string]uint64)
 	contractCallerObj.ContractInstanceCache = make(map[string]interface{})
 
 	// package global cache (string->ABI)
@@ -286,6 +286,51 @@ func (c *ContractCaller) GetMaticTokenInstance(maticTokenAddress common.Address)
 		return ci, err
 	}
 	return contractInstance.(*erc20.Erc20), nil
+}
+
+func (c *ContractCaller) GetRootTokenType(rootChainType string, rootChainManagerProxy string, rootToken common.Address) (common.Hash, error) {
+	data, err := rootChainManagerProxyABI.Pack("tokenToType", rootToken)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	var result []byte
+	switch rootChainType {
+	case hmTypes.RootChainTypeEth:
+		contractAddress := common.HexToAddress(rootChainManagerProxy)
+		result, err = c.MainChainClient.CallContract(context.Background(), eth.CallMsg{
+			To:   &contractAddress,
+			Data: data,
+		}, nil)
+	case hmTypes.RootChainTypeBsc:
+		contractAddress := common.HexToAddress(rootChainManagerProxy)
+		result, err = c.BscChainClient.CallContract(context.Background(), eth.CallMsg{
+			To:   &contractAddress,
+			Data: data,
+		}, nil)
+	case hmTypes.RootChainTypeTron:
+		result, err = c.TronChainRPC.TriggerConstantContract(rootChainManagerProxy, data)
+	default:
+		return common.Hash{}, errors.New("unknown root chain type")
+	}
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	outputs, err := rootChainManagerProxyABI.Unpack("tokenToType", result)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if len(outputs) != 1 {
+		return common.Hash{}, errors.New("invalid tokenToType response")
+	}
+
+	tokenType, ok := outputs[0].([32]byte)
+	if !ok {
+		return common.Hash{}, errors.New("invalid token type")
+	}
+
+	return common.BytesToHash(tokenType[:]), nil
 }
 
 // NewLru create instance of lru
@@ -470,7 +515,7 @@ func (c *ContractCaller) GetLogs(fromBlock *big.Int, toBlock *big.Int, addrs []c
 	ctx, cancel := context.WithTimeout(context.Background(), c.MaticChainTimeout)
 	defer cancel()
 
-	logs, err := c.MaticChainClient.FilterLogs(ctx, ethereum.FilterQuery{ //nolint:typecheck
+	logs, err := c.MaticChainClient.FilterLogs(ctx, eth.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
 		Addresses: addrs,
@@ -527,7 +572,7 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 		}
 	} else {
 		latestBlkNumber := c.LatestBlockCache[rootChain]
-		if latestBlkNumber-receipt.BlockNumber.Uint64() >= requiredConfirmations {
+		if latestBlkNumber >= receiptBlockNumber && latestBlkNumber-receiptBlockNumber >= requiredConfirmations {
 			Logger.Debug("receipt block is confirmed by cache",
 				"root", rootChain, "latestBlockCached", latestBlkNumber, "receiptBlock", receipt.BlockNumber.Uint64())
 
@@ -541,9 +586,9 @@ func (c *ContractCaller) GetConfirmedTxReceipt(tx common.Hash, requiredConfirmat
 			return nil, err
 		}
 		Logger.Debug("Latest block on main chain obtained", "root", rootChain, "Block", latestBlk.Number.Uint64())
-		c.LatestBlockCache[rootChain] = latestBlk.Number.Uint64()
-		diff := latestBlk.Number.Uint64() - receipt.BlockNumber.Uint64()
-		if diff < requiredConfirmations {
+		latestBlkNumber = latestBlk.Number.Uint64()
+		c.LatestBlockCache[rootChain] = latestBlkNumber
+		if latestBlkNumber < receiptBlockNumber || latestBlkNumber-receiptBlockNumber < requiredConfirmations {
 			return nil, errors.New("not enough confirmations")
 		}
 	}
@@ -881,6 +926,70 @@ func (c *ContractCaller) GetTronTransactionReceipt(txID string) (*ethTypes.Recei
 		return nil, err
 	}
 	return &transactionReceipt.Result, nil
+}
+
+// GetTronConfirmedTxReceipt returns confirmed tron tx receipt.
+func (c *ContractCaller) GetTronConfirmedTxReceipt(txID string, requiredConfirmations uint64) (*ethTypes.Receipt, error) {
+	var receipt *ethTypes.Receipt
+	cacheKey := hmTypes.RootChainTypeTron + ":" + txID
+
+	if c.ReceiptCache != nil {
+		if receiptCache, ok := c.ReceiptCache.Get(cacheKey); ok {
+			receipt, _ = receiptCache.(*ethTypes.Receipt)
+		}
+	}
+
+	if receipt == nil {
+		var err error
+
+		receipt, err = c.GetTronTransactionReceipt(txID)
+		if err != nil {
+			Logger.Error("Error while fetching tron receipt", "error", err, "txHash", txID)
+			return nil, err
+		}
+		if receipt == nil || receipt.BlockNumber == nil {
+			return nil, errors.New("not enough confirmations")
+		}
+
+		if c.ReceiptCache != nil {
+			c.ReceiptCache.Add(cacheKey, receipt)
+		}
+	}
+
+	receiptBlockNumber := receipt.BlockNumber.Uint64()
+	Logger.Debug("Tron tx included in block", "root", hmTypes.RootChainTypeTron, "block", receiptBlockNumber, "tx", txID)
+
+	latestBlkNumber := c.LatestBlockCache[hmTypes.RootChainTypeTron]
+	if latestBlkNumber >= receiptBlockNumber && latestBlkNumber-receiptBlockNumber >= requiredConfirmations {
+		Logger.Debug("tron receipt block is confirmed by cache",
+			"root", hmTypes.RootChainTypeTron, "latestBlockCached", latestBlkNumber, "receiptBlock", receiptBlockNumber)
+
+		return receipt, nil
+	}
+
+	latestBlk, err := c.GetTronLatestBlockNumber()
+	if err != nil {
+		Logger.Error("error getting latest block from tron chain", "Error", err)
+		return nil, err
+	}
+	if latestBlk < 0 {
+		return nil, errors.New("invalid latest tron block number")
+	}
+
+	latestBlkNumber = uint64(latestBlk)
+	Logger.Debug("Latest block on tron chain obtained", "root", hmTypes.RootChainTypeTron, "Block", latestBlkNumber)
+	c.LatestBlockCache[hmTypes.RootChainTypeTron] = latestBlkNumber
+
+	if latestBlkNumber < receiptBlockNumber || latestBlkNumber-receiptBlockNumber < requiredConfirmations {
+		return nil, errors.New("not enough confirmations")
+	}
+
+	return receipt, nil
+}
+
+// IsTronTransactionReceiptSuccessful returns true when a Tron transaction receipt indicates success.
+func IsTronTransactionReceiptSuccessful(receipt *ethTypes.Receipt) bool {
+	return receipt != nil && receipt.Status == ethTypes.ReceiptStatusSuccessful
 }
 
 // utility and helper methods

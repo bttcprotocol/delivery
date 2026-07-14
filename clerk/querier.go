@@ -119,7 +119,10 @@ func handleQueryRecordSequence(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		receipt, err = contractCallerObj.GetConfirmedTxReceipt(hmTypes.HexToHeimdallHash(params.TxHash).EthHash(),
 			bscChain.TxConfirmations, hmTypes.RootChainTypeBsc, false)
 	case hmTypes.RootChainTypeTron:
-		receipt, err = contractCallerObj.GetTronTransactionReceipt(hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex())
+		receipt, err = contractCallerObj.GetTronConfirmedTxReceipt(
+			hmTypes.HexToHeimdallHash(params.TxHash).TronHash().Hex(),
+			chainParams.TronchainTxConfirmations,
+		)
 	default:
 		return nil, sdk.ErrInternal(fmt.Sprintf("wrong chain type = " + params.RootChainType + "please pass correct chainType like eth or tron"))
 	}

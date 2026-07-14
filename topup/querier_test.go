@@ -88,7 +88,7 @@ func (suite *QuerierTestSuite) TestQuerySequence() {
 	app.TopupKeeper.SetTopupSequence(ctx, sequence.String())
 
 	// mock external calls
-	suite.contractCaller.On("GetTronTransactionReceipt", mock.Anything).Return(txReceipt, nil)
+	suite.contractCaller.On("GetTronConfirmedTxReceipt", mock.Anything, suite.chainParams.TronchainTxConfirmations).Return(txReceipt, nil)
 
 	path := []string{types.QuerySequence}
 	route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QuerySequence)
